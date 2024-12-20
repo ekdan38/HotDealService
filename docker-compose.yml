@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: hotdeal_mysql_container
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: hotdeal
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+    networks:
+      - hotdeal-network
+
+  redis:
+    image: redis:latest
+    container_name: hotdeal_redis_container
+    ports:
+      - "6379:6379"
+    networks:
+      - hotdeal-network
+
+  app:
+    build:
+      context: .
+    container_name: hotdeal_container
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/hotdeal
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: password
+    depends_on:
+      - db
+    networks:
+      - hotdeal-network
+
+volumes:
+  db-data:
+
+networks:
+  hotdeal-network:
