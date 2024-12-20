@@ -13,6 +13,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.boot.model.naming.IllegalIdentifierException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -104,12 +105,45 @@ public class SignupService {
     // 회원 가입 수행
     @Transactional
     public Long signup(SignupRequestDto requestDto) {
+        String username = requestDto.getUsername();
         String email = requestDto.getEmail();
         String status = redisTemplate.opsForValue().get(email + ":status");
         // 이메일 인증을 받지 않은 상태
         if (!status.equals("true")) {
             log.error("인증을 받지 않은 상태");
             throw new EmailVerificationException(ErrorCode.EMAIL_NOT_VERIFIED);
+        }
+
+        // username 검사
+        try {
+            if(userRepository.existsByUsername(aesUtil.encrypt(username, secretKey))){
+                log.error("이미 존재하는 username = {}", username);
+                throw new IllegalArgumentException("이미 존재 하는 username 입니다.");
+            }
+        }
+        catch (Exception e){
+            if(e instanceof IllegalArgumentException){
+                log.error("username 중복 조회 오류 = {}", e.getMessage());
+                throw new SignupException(ErrorCode.SIGNUP_EXISTS_USERNAME);
+            }
+            log.error("username 암호화 오류 = {}", e.getMessage());
+            throw new SignupException(ErrorCode.SIGNUP_ENCRYPT_FAIL);
+        }
+
+        // email 검사
+        try {
+            if(userRepository.existsByEmail(aesUtil.encrypt(email, secretKey))){
+                log.error("이미 존재하는 email = {}", email);
+                throw new IllegalArgumentException("이미 존재 하는 email 입니다.");
+            }
+        }
+        catch (Exception e){
+            if(e instanceof IllegalArgumentException){
+                log.error("email 중복 조회 오류 = {}", e.getMessage());
+                throw new SignupException(ErrorCode.SIGNUP_EXISTS_EMAIL);
+            }
+            log.error("email 암호화 오류 = {}", e.getMessage());
+            throw new SignupException(ErrorCode.SIGNUP_ENCRYPT_FAIL);
         }
 
         // 회원가입할 때 기본적으로 ROLE -> USER로 설정
@@ -131,6 +165,7 @@ public class SignupService {
             throw new SignupException(ErrorCode.SIGNUP_ENCRYPT_FAIL);
         }
     }
+
 
     private String generateCode() {
         return UUID.randomUUID().toString().substring(1, 7).toUpperCase();
