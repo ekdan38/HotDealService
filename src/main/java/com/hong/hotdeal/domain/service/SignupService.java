@@ -98,7 +98,7 @@ public class SignupService {
 
         // 인증 코드 ex 10분이라 자동 삭제
         // 인증 상태 변경
-        opsForValue.set(email + ":status", "true");
+        opsForValue.set(email + ":status", "true", 5, TimeUnit.MINUTES);
         return "이메일 인증 완료";
     }
 
