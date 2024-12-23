@@ -3,6 +3,7 @@ package com.hong.hotdeal.web.controller;
 import com.hong.hotdeal.service.ProductService;
 import com.hong.hotdeal.web.dto.request.product.ProductRequestDto;
 import com.hong.hotdeal.web.dto.response.ResponseDto;
+import com.hong.hotdeal.web.dto.response.product.ProductPagingResponseDto;
 import com.hong.hotdeal.web.dto.response.product.ProductResponseDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,17 +44,17 @@ public class ProductController {
 
     // 상품 페이징 조회
     @GetMapping
-    public ResponseEntity<ResponseDto<List<ProductResponseDto>>> getProducts(@RequestParam(required = false) Long cursor,
+    public ResponseEntity< ResponseDto<ProductPagingResponseDto>> getProducts(@RequestParam(required = false) Long cursor,
                                                                              @RequestParam(defaultValue = "10") int size,
                                                                              @RequestParam(required = false) Long categoryId,
                                                                              @RequestParam(required = false) String search) {
         if (cursor == null) {
             cursor = Long.MAX_VALUE;
         }
-        List<ProductResponseDto> result = productService.getProducts(cursor, size, categoryId, search);
+        ProductPagingResponseDto result = productService.getProducts(cursor, size, categoryId, search);
 
         // 응답 설정
-        ResponseDto<List<ProductResponseDto>> responseDto = new ResponseDto<>("상품 조회 성공.", result);
+        ResponseDto<ProductPagingResponseDto> responseDto = new ResponseDto<>("상품 조회 성공.", result);
         return ResponseEntity.ok().body(responseDto);
     }
 

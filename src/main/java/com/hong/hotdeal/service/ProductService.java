@@ -7,8 +7,10 @@ import com.hong.hotdeal.exception.ErrorCode;
 import com.hong.hotdeal.exception.custom.ProductException;
 import com.hong.hotdeal.repository.ProductRepository;
 import com.hong.hotdeal.web.dto.request.product.ProductRequestDto;
+import com.hong.hotdeal.web.dto.response.product.ProductPagingResponseDto;
 import com.hong.hotdeal.web.dto.response.product.ProductResponseDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,13 +49,18 @@ public class ProductService {
     }
 
     // 상품 페이징
-    public List<ProductResponseDto> getProducts(Long cursor, int size, Long categoryId, String search) {
+    public ProductPagingResponseDto getProducts(Long cursor, int size, Long categoryId, String search) {
         PageRequest pageRequest = PageRequest.of(0, size);
         // 조회
-        List<Product> page = productRepository.findProductsByCursorAndRequest(cursor, categoryId, search, pageRequest);
+        Page<Product> page = productRepository.findProductsByCursorAndRequest(cursor, categoryId, search, pageRequest);
 
         // Dto 변환
-        return page.stream().map(ProductResponseDto::new).collect(Collectors.toList());
+        List<ProductResponseDto> list = page.getContent().stream().map(ProductResponseDto::new).collect(Collectors.toList());
+
+        // cursor 갱신
+        Long newCursor = list.get(list.size() - 1).getId();
+
+        return new ProductPagingResponseDto(newCursor, list);
     }
 
     // 상품 상세 정보
@@ -89,9 +96,12 @@ public class ProductService {
     // 상품 삭제
     @Transactional
     public void deleteProduct(Long productId) {
-        Product foundProduct = productRepository.findById(productId)
-                .orElseThrow(() -> new ProductException(ErrorCode.PRODUCT_NOT_FOUND));
-
+        Product foundProduct = findById(productId);
         productRepository.deleteById(foundProduct.getId());
+    }
+
+    // 상품 조회
+    public Product findById(Long productId){
+        return productRepository.findById(productId).orElseThrow(() -> new ProductException(ErrorCode.PRODUCT_NOT_FOUND));
     }
 }
