@@ -1,6 +1,7 @@
 package com.hong.hotdeal.exception.handler;
 
 import com.hong.hotdeal.exception.ErrorResponseDto;
+import com.hong.hotdeal.exception.OrderException;
 import com.hong.hotdeal.exception.custom.*;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.ResponseEntity;
@@ -58,6 +59,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> wishlistException(WishlistException e){
         return ResponseEntity.status(e.getErrorCode().getStatus()).body(ErrorResponseDto.of(e.getErrorCode()));
     }
+
+    // 주문 예외
+    @ExceptionHandler(OrderException.class)
+    public ResponseEntity<?> orderException(OrderException e){
+        return ResponseEntity.status(e.getErrorCode().getStatus()).body(ErrorResponseDto.of(e.getErrorCode()));
+    }
+
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<?> constraintViolationException(ConstraintViolationException e){

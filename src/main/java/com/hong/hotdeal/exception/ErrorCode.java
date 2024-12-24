@@ -33,14 +33,22 @@ public enum ErrorCode {
 
     // 상품
     PRODUCT_EXISTS(HttpStatus.BAD_REQUEST, "PRODUCT_00", "이미 존재하는 상품 입니다."),
-    PRODUCT_NOT_FOUND(HttpStatus.BAD_REQUEST, "PRODUCT_01", "존재하지 않는 상품 입니다."),
+    PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "PRODUCT_01", "존재하지 않는 상품 입니다."),
     PRODUCT_EXISTS_CATEGORY(HttpStatus.BAD_REQUEST, "PRODUCT_02", "상품에 카테고리가 이미 설정되어 있습니다."),
+
+    // 주문
+    ORDER_PRODUCT_NO_STOCK(HttpStatus.BAD_REQUEST, "ORDER_00", "상품의 수량이 부족합니다."),
+    ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "ORDER_01", "주문을 찾을 수 없습니다."),
+    ORDER_CANCEL_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "ORDER_02", "배송중이거나 완료된 주문은 취소할 수 없습니다."),
+    ORDER_QUANTITY_INVALID(HttpStatus.BAD_REQUEST, "ORDER_03", "주문 수량은 0 이상부터 가능합니다."),
+
 
     // 카테고리
     CATEGORY_EXISTS(HttpStatus.BAD_REQUEST, "CATEGORY_00", "존재하지 않는 카테고리 입니다."),
 
+    // 위시리스트
     WISHLIST_PRODUCT_NOT_FOUND(HttpStatus.BAD_REQUEST, "WISHLIST_00", "상품이 존재하지 않습니다."),
-    WISHLIST_NOT_FOUND(HttpStatus.BAD_REQUEST, "WISHLIST_01", "wishlist 가 존재하지 않습니다.")
+    WISHLIST_NOT_FOUND(HttpStatus.NOT_FOUND, "WISHLIST_01", "wishlist 가 존재하지 않습니다.")
 
     ;
     private final HttpStatus status;

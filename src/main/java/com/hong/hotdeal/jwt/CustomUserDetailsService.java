@@ -26,7 +26,6 @@ public class CustomUserDetailsService implements UserDetailsService {
         try {
             String encryptUsername = aesUtil.encrypt(username);
             User user = userRepository.findByUsername(encryptUsername);
-            user.getName();
 
             if(user != null){
                 user.setDecryptUsername(aesUtil.decrypt(user.getUsername()));
