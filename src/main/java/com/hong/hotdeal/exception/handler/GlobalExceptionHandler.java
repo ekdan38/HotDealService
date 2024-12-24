@@ -47,6 +47,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(e.getErrorCode().getStatus()).body(ErrorResponseDto.of(e.getErrorCode()));
     }
 
+    // 유저 예외
+    @ExceptionHandler(UserException.class)
+    public ResponseEntity<?> userException(UserException e){
+        return ResponseEntity.status(e.getErrorCode().getStatus()).body(ErrorResponseDto.of(e.getErrorCode()));
+    }
+
+    // 위시리스트 예외
+    @ExceptionHandler(WishlistException.class)
+    public ResponseEntity<?> wishlistException(WishlistException e){
+        return ResponseEntity.status(e.getErrorCode().getStatus()).body(ErrorResponseDto.of(e.getErrorCode()));
+    }
+
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<?> constraintViolationException(ConstraintViolationException e){
         return ResponseEntity.badRequest().body("이메일 형식을 따라야 합니다.");

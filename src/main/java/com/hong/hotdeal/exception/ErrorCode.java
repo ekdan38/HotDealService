@@ -18,6 +18,10 @@ public enum ErrorCode {
     SIGNUP_EXISTS_USERNAME(HttpStatus.BAD_REQUEST, "SIGNUP_01", "이미 존재하는 Username 입니다."),
     SIGNUP_EXISTS_EMAIL(HttpStatus.BAD_REQUEST, "SIGNUP_02", "이미 존재하는 Email 입니다."),
 
+    // 유저
+    USER_NOT_FOUND(HttpStatus.BAD_REQUEST, "USER_00", "존재하지 않는 유저 입니다."),
+
+
     // 개인 정보 암호화 && 복호화
     CRYPTO_ENCRYPT_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "CRYPTO_01", "개인정보 암호화 처리중 오류가 발생했습니다."),
     CRYPTO_DECRYPT_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "CRYPTO_02", "개인정보 복호화 처리중 오류가 발생했습니다."),
@@ -33,8 +37,10 @@ public enum ErrorCode {
     PRODUCT_EXISTS_CATEGORY(HttpStatus.BAD_REQUEST, "PRODUCT_02", "상품에 카테고리가 이미 설정되어 있습니다."),
 
     // 카테고리
-    CATEGORY_EXISTS(HttpStatus.BAD_REQUEST, "CATEGORY_00", "존재하지 않는 카테고리 입니다.")
+    CATEGORY_EXISTS(HttpStatus.BAD_REQUEST, "CATEGORY_00", "존재하지 않는 카테고리 입니다."),
 
+    WISHLIST_PRODUCT_NOT_FOUND(HttpStatus.BAD_REQUEST, "WISHLIST_00", "상품이 존재하지 않습니다."),
+    WISHLIST_NOT_FOUND(HttpStatus.BAD_REQUEST, "WISHLIST_01", "wishlist 가 존재하지 않습니다.")
 
     ;
     private final HttpStatus status;
