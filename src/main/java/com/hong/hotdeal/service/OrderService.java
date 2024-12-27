@@ -15,6 +15,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -28,6 +29,7 @@ public class OrderService {
     private final ProductService productService;
     private final OrderRepository orderRepository;
 
+    // 주문
     @Transactional
     public OrderResponseDto createOrder(Long userId, OrderRequestDto requestDto){
         // 유저 조회
@@ -110,9 +112,22 @@ public class OrderService {
     }
 
     // 반품
+    public void returnOrder(Long userId, Long orderId){
+        // 주문 조회
+        Order foundOrder = orderRepository.findOrderWithProductsAndDelivery(orderId, userId)
+                .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
 
+        // 배송 상태 확인
+        // 배송 완료가 아니면 반품 불가능
+        if(foundOrder.getDelivery().getStatus() != DeliveryStatus.DELIVERED){
+            throw new OrderException(ErrorCode.ORDER_RETURN_NOT_ALLOWED);
+        }
+        // 배송 완료 상태에서 D+1 까지만 반품 가능
+        if(foundOrder.getDelivery().getCompletedAt().plusDays(1).isBefore(LocalDateTime.now())){
+            throw new OrderException(ErrorCode.ORDER_RETURN_PERIOD_EXPIRED);
+        }
 
-
-
-
+        // 반품 상태 변경
+        foundOrder.getDelivery().updateStatusToReturn();
+    }
 }
