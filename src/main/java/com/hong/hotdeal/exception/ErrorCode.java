@@ -41,6 +41,8 @@ public enum ErrorCode {
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "ORDER_01", "주문을 찾을 수 없습니다."),
     ORDER_CANCEL_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "ORDER_02", "배송중이거나 완료된 주문은 취소할 수 없습니다."),
     ORDER_QUANTITY_INVALID(HttpStatus.BAD_REQUEST, "ORDER_03", "주문 수량은 0 이상부터 가능합니다."),
+    ORDER_RETURN_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "ORDER_04", "반품이 불가능 합니다."),
+    ORDER_RETURN_PERIOD_EXPIRED(HttpStatus.BAD_REQUEST, "ORDER_05", "배송 완료 후 1일 까지 반품이 가능합니다."),
 
 
     // 카테고리

@@ -31,7 +31,7 @@ public class DeliveryScheduler {
         log.info("D+1 배송 상태 변경");
 
         // D+2 배송 상태 변경
-        deliveryRepository.updateStatusToShipped(twoDaysAgo);
+        deliveryRepository.updateStatusToShipped(twoDaysAgo, now);
         log.info("D+2 배송 상태 변경");
     }
 }
