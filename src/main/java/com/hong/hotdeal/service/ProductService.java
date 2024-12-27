@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -52,15 +51,13 @@ public class ProductService {
     public ProductPagingResponseDto getProducts(Long cursor, int size, Long categoryId, String search) {
         PageRequest pageRequest = PageRequest.of(0, size);
         // 조회
-        Page<Product> page = productRepository.findProductsByCursorAndRequest(cursor, categoryId, search, pageRequest);
-
-        // Dto 변환
-        List<ProductResponseDto> list = page.getContent().stream().map(ProductResponseDto::new).collect(Collectors.toList());
+        Page<ProductResponseDto> page = productRepository.findProductsByCursorAndRequest(cursor, categoryId, search, pageRequest);
+        List<ProductResponseDto> contents = page.getContent();
 
         // cursor 갱신
-        Long newCursor = list.get(list.size() - 1).getId();
+        Long newCursor = contents.isEmpty() ? 0 : contents.get(contents.size() - 1).getId();
 
-        return new ProductPagingResponseDto(newCursor, list);
+        return new ProductPagingResponseDto(newCursor, contents);
     }
 
     // 상품 상세 정보

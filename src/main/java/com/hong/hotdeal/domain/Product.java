@@ -41,4 +41,18 @@ public class Product extends TimeEntity {
         this.stock = stock;
     }
 
+    // == 주문 취소시 작동하는 로직 ==
+    public void addStock(int quantity){
+        this.stock += quantity;
+    }
+
+    // == 주문 시 작동하는 로직 ==
+    public void removeStock(int quantity){
+        int restStock = this.stock - quantity;
+        if(restStock < 0){
+            throw new IllegalArgumentException("더이상 감소 불가능");
+        }
+        this.stock = restStock;
+    }
+
 }

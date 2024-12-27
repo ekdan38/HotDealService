@@ -1,18 +1,15 @@
 package com.hong.hotdeal.web.dto.response.product;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.List;
 
 @Data
+@AllArgsConstructor
 public class ProductPagingResponseDto {
 
     private Long cursor;
 
-    private List<ProductResponseDto> list;
-
-    public ProductPagingResponseDto(Long cursor, List<ProductResponseDto> list) {
-        this.cursor = cursor;
-        this.list = list;
-    }
+    private List<ProductResponseDto> products;
 }

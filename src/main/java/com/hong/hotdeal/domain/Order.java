@@ -60,7 +60,7 @@ public class Order extends TimeEntity {
 
     // == 주문 취소 메서드 ==
     public void cancel(){
-        if(this.delivery.getStatus() == DeliveryStatus.SHIPPED){
+        if(this.delivery.getStatus() == DeliveryStatus.DELIVERED){
             throw new OrderException(ErrorCode.ORDER_CANCEL_NOT_ALLOWED);
         }
         this.status = OrderStatus.CANCEL;

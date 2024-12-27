@@ -37,6 +37,8 @@ public class Delivery {
 
     private LocalDateTime completedAt;
 
+    private LocalDateTime returnCreatedAt;
+
     private Delivery(Address address) {
         this.address = address;
         this.status = DeliveryStatus.PENDING;
@@ -52,14 +54,9 @@ public class Delivery {
         this.status = status;
     }
 
-//    public void startDelivery(){
-//        this.startedAt = LocalDateTime.now();
-//        this.status = DeliveryStatus.DELIVERING;
-//    }
-//
-//    public void completeDelivery(){
-//        this.completedAt = LocalDateTime.now();
-//        this.status = DeliveryStatus.SHIPPED;
-//    }
-
+    // == 배송 환불 상태 변경 메서드 ==
+    public void updateStatusToReturn(){
+        this.status = DeliveryStatus.RETURNING;
+        this.returnCreatedAt = LocalDateTime.now();
+    }
 }
