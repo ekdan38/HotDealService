@@ -12,57 +12,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // 이메일 전송 예외
-    @ExceptionHandler(MailSenderException.class)
-    public ResponseEntity<ErrorResponseDto> mailSenderException(MailSenderException e){
-        return ResponseEntity.status(e.getErrorCode().getStatus()).body(ErrorResponseDto.of(e.getErrorCode()));
-    }
-
-    // 이메일 인증 코드 검사 예외
-    @ExceptionHandler(EmailVerificationException.class)
-    public ResponseEntity<ErrorResponseDto> emailVerificationException(EmailVerificationException e){
-        return ResponseEntity.status(e.getErrorCode().getStatus()).body(ErrorResponseDto.of(e.getErrorCode()));
-    }
-
-    // 회원 가입 예외
-    @ExceptionHandler(SignupException.class)
-    public ResponseEntity<ErrorResponseDto> signupException(SignupException e){
-        return ResponseEntity.status(e.getErrorCode().getStatus()).body(ErrorResponseDto.of(e.getErrorCode()));
-    }
-
-    // RefreshToken 재발급 예외
-    @ExceptionHandler(RefreshTokenReissueException.class)
-    public ResponseEntity<?> refreshTokenReissueException(RefreshTokenReissueException e){
-        return ResponseEntity.status(e.getErrorCode().getStatus()).body(ErrorResponseDto.of(e.getErrorCode()));
-    }
-
-    // 상품 예외
-    @ExceptionHandler(ProductException.class)
-    public ResponseEntity<?> productException(ProductException e){
-        return ResponseEntity.status(e.getErrorCode().getStatus()).body(ErrorResponseDto.of(e.getErrorCode()));
-    }
-
-    // 카테고리 예외
-    @ExceptionHandler(CategoryException.class)
-    public ResponseEntity<?> categoryException(CategoryException e){
-        return ResponseEntity.status(e.getErrorCode().getStatus()).body(ErrorResponseDto.of(e.getErrorCode()));
-    }
-
-    // 유저 예외
-    @ExceptionHandler(UserException.class)
-    public ResponseEntity<?> userException(UserException e){
-        return ResponseEntity.status(e.getErrorCode().getStatus()).body(ErrorResponseDto.of(e.getErrorCode()));
-    }
-
-    // 위시리스트 예외
-    @ExceptionHandler(WishlistException.class)
-    public ResponseEntity<?> wishlistException(WishlistException e){
-        return ResponseEntity.status(e.getErrorCode().getStatus()).body(ErrorResponseDto.of(e.getErrorCode()));
-    }
-
-    // 주문 예외
-    @ExceptionHandler(OrderException.class)
-    public ResponseEntity<?> orderException(OrderException e){
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ErrorResponseDto> businessException(BusinessException e){
         return ResponseEntity.status(e.getErrorCode().getStatus()).body(ErrorResponseDto.of(e.getErrorCode()));
     }
 
