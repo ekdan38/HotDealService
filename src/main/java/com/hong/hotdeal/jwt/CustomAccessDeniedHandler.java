@@ -16,11 +16,11 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Slf4j(topic = "[CustomAuthenticationDeniedHandler]")
-public class CustomAuthenticationDeniedHandler implements AccessDeniedHandler {
+public class CustomAccessDeniedHandler implements AccessDeniedHandler {
 
     private final ObjectMapper objectMapper;
 
-    public CustomAuthenticationDeniedHandler(ObjectMapper objectMapper) {
+    public CustomAccessDeniedHandler(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
