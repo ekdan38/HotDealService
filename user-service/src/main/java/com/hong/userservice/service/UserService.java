@@ -1,0 +1,21 @@
+package com.hong.userservice.service;
+
+import com.hong.userservice.dto.UserDto;
+import com.hong.userservice.dto.reponse.SignupResponseDto;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+public interface UserService {
+    // 이메일 인증 요청 (인증 코드 발송)
+    public void emailVerification(String email);
+
+    // 인증 코드 확인
+    public String verifyCode(String email, String requestCode);
+
+    // 회원 가입
+    public SignupResponseDto signup(UserDto userDto);
+
+    // 토큰 재발급
+    public String reissueToken(HttpServletRequest request, HttpServletResponse response);
+
+}

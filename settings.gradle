@@ -1,3 +1,4 @@
 rootProject.name = 'hot-deal'
 
 
+include 'user-service'
