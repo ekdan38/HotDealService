@@ -2,3 +2,4 @@ rootProject.name = 'hot-deal'
 
 
 include 'user-service'
+include 'eureka-server'
