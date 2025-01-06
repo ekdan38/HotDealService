@@ -1,0 +1,72 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.4.0'
+    id 'io.spring.dependency-management' version '1.1.6'
+}
+
+group = 'com.hong'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    set('springCloudVersion', "2024.0.0")
+}
+
+dependencies {
+    implementation(project(':common')) {
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-data-jpa'
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-web'
+    }
+
+    dependencies {
+        implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
+        implementation 'io.jsonwebtoken:jjwt-impl:0.12.3'
+        implementation 'io.jsonwebtoken:jjwt-jackson:0.12.3'
+    }
+
+    // 외부 config 사용
+    // amqp
+    implementation 'org.springframework.cloud:spring-cloud-starter-bus-amqp'
+    // config-service 에 등록된 설정 파일 사용
+    implementation 'org.springframework.cloud:spring-cloud-starter-config'
+    // spring cloud bootstrap
+    implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap'
+    // actuator
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // webflux
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+
+    implementation 'org.springframework.cloud:spring-cloud-starter-gateway'
+    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+    }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
