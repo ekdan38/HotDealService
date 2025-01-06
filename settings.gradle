@@ -1,5 +1,9 @@
 rootProject.name = 'hot-deal'
 
 
-include 'user-service'
 include 'eureka-server'
+include 'user-service'
+include 'common'
+include 'apigateway-service'
+include 'product-service'
+include 'config-service'
