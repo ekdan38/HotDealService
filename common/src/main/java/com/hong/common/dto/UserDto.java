@@ -1,12 +1,12 @@
-package com.hong.userservice.dto;
+package com.hong.common.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Data
+@AllArgsConstructor
 public class UserDto {
     private Long userId;
-    private String username;
-    private String password;
     private String name;
     private String phoneNumber;
     private String city;
