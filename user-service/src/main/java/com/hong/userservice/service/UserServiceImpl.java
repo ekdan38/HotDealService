@@ -1,13 +1,12 @@
 package com.hong.userservice.service;
 
-import com.hong.common.dto.UserDto;
+import com.hong.common.entity.Address;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.EmailVerificationException;
 import com.hong.common.exception.custom.MailSenderException;
 import com.hong.common.exception.custom.RefreshTokenReissueException;
 import com.hong.common.exception.custom.SignupException;
 import com.hong.userservice.AESUtil;
-import com.hong.userservice.domain.Address;
 import com.hong.userservice.domain.Role;
 import com.hong.userservice.domain.User;
 import com.hong.userservice.jwt.JwtUtil;

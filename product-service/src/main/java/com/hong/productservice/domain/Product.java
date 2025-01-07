@@ -1,6 +1,6 @@
 package com.hong.productservice.domain;
 
-import com.hong.common.TimeEntity;
+import com.hong.common.entity.TimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
