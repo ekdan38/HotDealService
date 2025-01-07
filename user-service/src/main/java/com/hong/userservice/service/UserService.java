@@ -1,7 +1,8 @@
 package com.hong.userservice.service;
 
-import com.hong.userservice.dto.UserDto;
-import com.hong.userservice.dto.reponse.SignupResponseDto;
+import com.hong.common.dto.UserDto;
+import com.hong.userservice.dto.SignupResponseDto;
+import com.hong.userservice.web.dto.SignupRequestDto;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -13,7 +14,7 @@ public interface UserService {
     public String verifyCode(String email, String requestCode);
 
     // 회원 가입
-    public SignupResponseDto signup(UserDto userDto);
+    public SignupResponseDto signup(SignupRequestDto requestDto);
 
     // 토큰 재발급
     public String reissueToken(HttpServletRequest request, HttpServletResponse response);

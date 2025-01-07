@@ -1,4 +1,4 @@
-package com.hong.userservice.dto.reponse;
+package com.hong.userservice.dto;
 
 import com.hong.userservice.domain.Address;
 import lombok.AllArgsConstructor;

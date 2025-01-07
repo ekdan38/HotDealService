@@ -1,6 +1,5 @@
 package com.hong.userservice.jwt;
 
-import com.hong.userservice.domain.User;
 import com.hong.userservice.dto.UserDto;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;

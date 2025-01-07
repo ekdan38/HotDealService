@@ -1,9 +1,9 @@
 package com.hong.userservice.web;
 
 import com.hong.common.dto.ResponseDto;
-import com.hong.userservice.dto.UserDto;
+import com.hong.common.dto.UserDto;
 import com.hong.userservice.service.UserService;
-import com.hong.userservice.dto.reponse.SignupResponseDto;
+import com.hong.userservice.dto.SignupResponseDto;
 import com.hong.userservice.web.dto.EmailVerificationRequestDto;
 import com.hong.userservice.web.dto.EmailVerifyRequestDto;
 import com.hong.userservice.web.dto.SignupRequestDto;
@@ -73,9 +73,7 @@ public class AuthController {
             return ResponseEntity.badRequest().body(bindingResult);
         }
 
-        ModelMapper modelMapper = new ModelMapper();
-        UserDto userDto = modelMapper.map(requestDto, UserDto.class);
-        SignupResponseDto result = userService.signup(userDto);
+        SignupResponseDto result = userService.signup(requestDto);
 
         // 응답 설정
         ResponseDto<SignupResponseDto> responseDto = new ResponseDto<>("회원 가입 완료", result);

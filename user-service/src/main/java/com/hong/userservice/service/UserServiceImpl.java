@@ -1,5 +1,6 @@
 package com.hong.userservice.service;
 
+import com.hong.common.dto.UserDto;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.EmailVerificationException;
 import com.hong.common.exception.custom.MailSenderException;
@@ -9,10 +10,10 @@ import com.hong.userservice.AESUtil;
 import com.hong.userservice.domain.Address;
 import com.hong.userservice.domain.Role;
 import com.hong.userservice.domain.User;
-import com.hong.userservice.dto.UserDto;
 import com.hong.userservice.jwt.JwtUtil;
 import com.hong.userservice.repository.UserRepository;
-import com.hong.userservice.dto.reponse.SignupResponseDto;
+import com.hong.userservice.dto.SignupResponseDto;
+import com.hong.userservice.web.dto.SignupRequestDto;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -104,9 +105,9 @@ public class UserServiceImpl implements UserService{
     // 회원 가입
     @Override
     @Transactional
-    public SignupResponseDto signup(UserDto userDto) {
-        String username = userDto.getUsername();
-        String email = userDto.getEmail();
+    public SignupResponseDto signup(SignupRequestDto requestDto) {
+        String username = requestDto.getUsername();
+        String email = requestDto.getEmail();
         String status = redisTemplate.opsForValue().get(email + ":status");
 
         // 이메일 인증을 받지 않은 상태
@@ -157,15 +158,15 @@ public class UserServiceImpl implements UserService{
         try {
             // User 생성
             User user = User.create(
-                    aesUtil.encrypt(userDto.getUsername()),
-                    passwordEncoder.encode(userDto.getPassword()),
-                    aesUtil.encrypt(userDto.getName()),
-                    aesUtil.encrypt(userDto.getPhoneNumber()),
+                    aesUtil.encrypt(requestDto.getUsername()),
+                    passwordEncoder.encode(requestDto.getPassword()),
+                    aesUtil.encrypt(requestDto.getName()),
+                    aesUtil.encrypt(requestDto.getPhoneNumber()),
                     Address.create(
-                            aesUtil.encrypt(userDto.getCity()),
-                            aesUtil.encrypt(userDto.getStreet()),
-                            aesUtil.encrypt(userDto.getZipCode())),
-                    aesUtil.encrypt(userDto.getEmail()),
+                            aesUtil.encrypt(requestDto.getCity()),
+                            aesUtil.encrypt(requestDto.getStreet()),
+                            aesUtil.encrypt(requestDto.getZipCode())),
+                    aesUtil.encrypt(requestDto.getEmail()),
                     Role.USER
             );
             // User 저장
