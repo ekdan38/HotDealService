@@ -1,4 +1,4 @@
-package com.hong.common;
+package com.hong.common.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
