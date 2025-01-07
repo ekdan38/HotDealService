@@ -42,7 +42,7 @@ public class WishlistServiceImpl implements WishlistService {
     @Override
     public WishlistResponseDto createWishlist(Long userId, WishlistDto requestDto) {
         // feignClient 로 user-service 에서 user 가 존재 하는지 검증
-        UserDto userDto = userServiceClient.getUser(userId);
+        UserDto userDto = userServiceClient.getUserById(userId);
 
         // wishlist 에 등록 시도 하는 product 가 존재 하는지 확인
         Long productId = requestDto.getProductId();

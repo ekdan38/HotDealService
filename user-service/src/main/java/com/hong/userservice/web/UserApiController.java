@@ -35,7 +35,7 @@ public class UserApiController {
 
     // FeignClient
     @GetMapping("/users/{userId}")
-    public ResponseEntity<UserDto> getUser(@PathVariable("userId") Long userId){
+    public ResponseEntity<UserDto> getUserById(@PathVariable("userId") Long userId){
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
         UserDto userDto = new UserDto(

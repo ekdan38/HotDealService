@@ -12,7 +12,7 @@ public class FeignErrorDecoder implements ErrorDecoder {
     public Exception decode(String methodKey, Response response) {
         switch (response.status()){
             case 400:
-                if(methodKey.contains("getUser")){
+                if(methodKey.contains("getUserById")){
                     return new UserException(ErrorCode.USER_NOT_FOUND);
                 }
         }
