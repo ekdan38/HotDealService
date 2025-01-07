@@ -1,13 +1,12 @@
 package com.hong.productservice.service.wishlist;
 
-import com.hong.common.dto.UserDto;
+import com.hong.common.dto.UserCommonDto;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.WishlistException;
 import com.hong.productservice.client.UserServiceClient;
 import com.hong.productservice.domain.Product;
 import com.hong.productservice.domain.Wishlist;
 import com.hong.productservice.domain.WishlistProduct;
-import com.hong.productservice.dto.product.ProductResponseDto;
 import com.hong.productservice.dto.wishlist.WishlistProductDto;
 import com.hong.productservice.dto.wishlist.WishlistResponseDto;
 import com.hong.productservice.dto.wishlist.WishlistDto;
@@ -42,15 +41,16 @@ public class WishlistServiceImpl implements WishlistService {
     @Override
     public WishlistResponseDto createWishlist(Long userId, WishlistDto requestDto) {
         // feignClient 로 user-service 에서 user 가 존재 하는지 검증
-        UserDto userDto = userServiceClient.getUserById(userId);
+        UserCommonDto userCommonDto = userServiceClient.getUserById(userId);
+        Long validatedUserId = userCommonDto.getUserId();
 
         // wishlist 에 등록 시도 하는 product 가 존재 하는지 확인
         Long productId = requestDto.getProductId();
         Product product = productApiService.getProduct(productId);
 
         // wishlist 조회 (없으면 생성)
-        Wishlist wishlist = wishlistRepository.findWithProductsByUserId(userId)
-                .orElseGet(() -> wishlistRepository.save(Wishlist.create(userId)));
+        Wishlist wishlist = wishlistRepository.findWithProductsByUserId(validatedUserId)
+                .orElseGet(() -> wishlistRepository.save(Wishlist.create(validatedUserId)));
 
         // product 가 wishlist 에 이미 존재 하는지 확인
         WishlistProduct wishlistProduct = wishlist.getWishlistProducts().stream()
