@@ -37,7 +37,7 @@ public class WishlistProduct {
     }
 
     // == wishlist 에서 사용하는 연관관계 메서드 ==
-    public void setWishlist(Wishlist wishlist){
+    protected void setWishlist(Wishlist wishlist){
         this.wishlist = wishlist;
     }
 

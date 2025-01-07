@@ -32,7 +32,7 @@ public class CategoryProduct {
     }
 
     // == Product 에서 사용할 연관관계 메서드 ==
-    public void setProduct(Product product){
+    protected void setProduct(Product product){
         this.product = product;
     }
 
