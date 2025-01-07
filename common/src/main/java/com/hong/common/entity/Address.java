@@ -1,4 +1,4 @@
-package com.hong.userservice.domain;
+package com.hong.common.entity;
 
 import jakarta.persistence.Embeddable;
 import lombok.AccessLevel;
