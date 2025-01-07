@@ -11,7 +11,7 @@ public class UserServiceClient {
     private final WebClient webClient;
 
     public UserServiceClient(WebClient.Builder webClientBuilder) {
-        this.webClient = webClientBuilder.baseUrl("http://127.0.0.1:8080/user-service/api").build();
+        this.webClient = webClientBuilder.baseUrl("http://127.0.0.1:8080/user-service/user-service").build();
     }
 
     public Mono<Boolean> validateUser(String username){
