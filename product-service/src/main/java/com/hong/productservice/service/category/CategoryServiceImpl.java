@@ -7,6 +7,7 @@ import com.hong.productservice.domain.Category;
 import com.hong.productservice.dto.category.CategoryDto;
 import com.hong.productservice.dto.category.CategoryResponseDto;
 import com.hong.productservice.repository.CategoryRepository;
+import com.hong.productservice.web.dto.cateogry.CategoryRequestDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -31,7 +32,7 @@ public class CategoryServiceImpl implements CategoryService {
     // 최상위 category 생성
     @Transactional
     @Override
-    public CategoryResponseDto createCategory(CategoryDto requestDto) {
+    public CategoryResponseDto createCategory(CategoryRequestDto requestDto) {
 
         // root category 중 중복 되는 category 검증
         String title = requestDto.getTitle();
@@ -51,7 +52,7 @@ public class CategoryServiceImpl implements CategoryService {
     // 자식 category 생성
     @Transactional
     @Override
-    public CategoryResponseDto createChildCategory(Long parentCategoryId, CategoryDto requestDto) {
+    public CategoryResponseDto createChildCategory(Long parentCategoryId, CategoryRequestDto requestDto) {
 
         // parentCategory 조회
         Category parentCategory = categoryRepository.findById(parentCategoryId)
@@ -151,7 +152,7 @@ public class CategoryServiceImpl implements CategoryService {
     // category 수정(title)
     @Transactional
     @Override
-    public CategoryResponseDto updateCategory(Long categoryId, CategoryDto requestDto) {
+    public CategoryResponseDto updateCategory(Long categoryId, CategoryRequestDto requestDto) {
         // category 조회
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new CategoryException(ErrorCode.CATEGORY_PARENT_NOT_FOUND));

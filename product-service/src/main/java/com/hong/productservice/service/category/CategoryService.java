@@ -3,16 +3,17 @@ package com.hong.productservice.service.category;
 import com.hong.productservice.domain.Category;
 import com.hong.productservice.dto.category.CategoryDto;
 import com.hong.productservice.dto.category.CategoryResponseDto;
+import com.hong.productservice.web.dto.cateogry.CategoryRequestDto;
 
 import java.util.List;
 
 public interface CategoryService {
 
     // 최상위 category 생성
-    CategoryResponseDto createCategory(CategoryDto requestDto);
+    CategoryResponseDto createCategory(CategoryRequestDto requestDto);
 
     // 자식 category 생성
-    CategoryResponseDto createChildCategory(Long parentCategoryId, CategoryDto requestDto);
+    CategoryResponseDto createChildCategory(Long parentCategoryId, CategoryRequestDto requestDto);
 
     // 전체 category 조회
     List<CategoryResponseDto> getCategories();
@@ -21,7 +22,7 @@ public interface CategoryService {
     CategoryResponseDto getCategory(Long categoryId);
 
     // category 수정(title)
-    CategoryResponseDto updateCategory(Long categoryId, CategoryDto requestDto);
+    CategoryResponseDto updateCategory(Long categoryId, CategoryRequestDto requestDto);
 
     // category 삭제
     CategoryResponseDto deleteCategory(Long categoryId);

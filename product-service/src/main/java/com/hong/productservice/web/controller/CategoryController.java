@@ -34,10 +34,8 @@ public class CategoryController {
             return ResponseEntity.badRequest().body(bindingResult);
         }
 
-        // reqeustDto dto로 변환
-        CategoryDto categoryDto = modelMapper.map(requestDto, CategoryDto.class);
 
-        CategoryResponseDto resultDto = categoryService.createCategory(categoryDto);
+        CategoryResponseDto resultDto = categoryService.createCategory(requestDto);
 
         // 응답 설정
         ResponseDto<CategoryResponseDto> responseDto = new ResponseDto<>("최상위 카테고리 생성 완료", resultDto);
@@ -54,10 +52,7 @@ public class CategoryController {
             return ResponseEntity.badRequest().body(bindingResult);
         }
 
-        // reqeustDto dto로 변환
-        CategoryDto categoryDto = modelMapper.map(requestDto, CategoryDto.class);
-
-        CategoryResponseDto resultDto = categoryService.createChildCategory(parentCategoryId, categoryDto);
+        CategoryResponseDto resultDto = categoryService.createChildCategory(parentCategoryId, requestDto);
 
         // 응답 설정
         ResponseDto<CategoryResponseDto> responseDto = new ResponseDto<>("자식 카테고리 생성 완료", resultDto);
@@ -96,10 +91,7 @@ public class CategoryController {
             return ResponseEntity.badRequest().body(bindingResult);
         }
 
-        // reqeustDto dto로 변환
-        CategoryDto categoryDto = modelMapper.map(requestDto, CategoryDto.class);
-
-        CategoryResponseDto resultDto = categoryService.updateCategory(categoryId, categoryDto);
+        CategoryResponseDto resultDto = categoryService.updateCategory(categoryId, requestDto);
 
         // 응답 설정
         ResponseDto<CategoryResponseDto> responseDto = new ResponseDto<>("카테고리 수정 완료", resultDto);
