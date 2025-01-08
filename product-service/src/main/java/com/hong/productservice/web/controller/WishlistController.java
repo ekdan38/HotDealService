@@ -38,9 +38,7 @@ public class WishlistController {
             return ResponseEntity.badRequest().body(bindingResult);
         }
 
-        // reqeustDto dto로 변환
-        WishlistDto wishlistDto = modelMapper.map(requestDto, WishlistDto.class);
-        WishlistResponseDto resultDto = wishlistService.createWishlist(userId, wishlistDto);
+        WishlistResponseDto resultDto = wishlistService.createWishlist(userId, requestDto);
 
         // 응답 설정
         ResponseDto<WishlistResponseDto> responseDto = new ResponseDto<>("위시리스트 등록 완료", resultDto);

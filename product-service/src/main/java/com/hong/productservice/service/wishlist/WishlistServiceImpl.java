@@ -14,6 +14,7 @@ import com.hong.productservice.dto.wishlist.WishlistPagingResponseDto;
 import com.hong.productservice.repository.WishlistRepository;
 import com.hong.productservice.repository.wishlistProductRepository;
 import com.hong.productservice.service.product.ProductApiService;
+import com.hong.productservice.web.dto.wishlist.WishlistRequestDto;
 import com.hong.productservice.web.dto.wishlist.WishlistUpdateRequestDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +40,7 @@ public class WishlistServiceImpl implements WishlistService {
     // wishlist 에 product 등록
     @Transactional
     @Override
-    public WishlistResponseDto createWishlist(Long userId, WishlistDto requestDto) {
+    public WishlistResponseDto createWishlist(Long userId, WishlistRequestDto requestDto) {
         // feignClient 로 user-service 에서 user 가 존재 하는지 검증
         UserCommonDto userCommonDto = userServiceClient.getUserById(userId);
         Long validatedUserId = userCommonDto.getUserId();
