@@ -1,6 +1,8 @@
 package com.hong.productservice.domain;
 
 import com.hong.common.entity.TimeEntity;
+import com.hong.common.exception.ErrorCode;
+import com.hong.common.exception.custom.ProductException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -62,6 +64,19 @@ public class Product extends TimeEntity {
     // == CategoryProducts 연관관계 메서드 ==
     public void removeCategoryProducts(List<CategoryProduct> categoryProducts) {
         this.categoryProducts.removeAll(categoryProducts);
+    }
+
+    // == stock 감소 메서드 ==
+    public void decreaseStock(Integer quantity){
+        if(this.stock - quantity < 0){
+            throw new ProductException(ErrorCode.ORDER_PRODUCT_NO_STOCK);
+        }
+        this.stock -= quantity;
+    }
+
+    // == stock 증가 메서드 ==
+    public void increaseStock(Integer quantity){
+        this.stock += quantity;
     }
 
 }

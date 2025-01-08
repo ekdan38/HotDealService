@@ -24,21 +24,4 @@ public interface WishlistRepository extends JpaRepository<Wishlist, Long> {
             "LEFT JOIN FETCH wp.product " +
             "WHERE w.userId = :userId")
     Optional<Wishlist> findWithProductsByUserId(@Param("userId") Long userId);
-
-
-    // FetchJoin 으로 쿼리 최적화 하기 위해서 List 로 반환 페이징
-    // jpql은 limit 미지원 => pageable 사용 해서 size 적용
-    @Query("SELECT w " +
-            "FROM Wishlist w " +
-            "LEFT JOIN FETCH w.wishlistProducts wp " +
-            "LEFT JOIN FETCH wp.product p " +
-            "WHERE w.userId = :userId AND w.id < :cursor " +
-            "ORDER BY w.id DESC")
-    List<Wishlist> findWishlistsWithProductsByUserIdAndCursor(@Param("userId") Long userId,
-                                                              @Param("cursor") Long cursor,
-                                                              Pageable pageable);
-
-
-    // 앞에서 wishlistId
-    // 각각 상품의 productId, title, quantity
 }

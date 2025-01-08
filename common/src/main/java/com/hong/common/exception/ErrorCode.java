@@ -19,7 +19,7 @@ public enum ErrorCode {
     SIGNUP_EXISTS_EMAIL(HttpStatus.BAD_REQUEST, "SIGNUP_02", "이미 존재하는 Email 입니다."),
 
     // 유저
-    USER_NOT_FOUND(HttpStatus.BAD_REQUEST, "USER_00", "존재하지 않는 유저 입니다."),
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_00", "존재하지 않는 유저 입니다."),
 
 
     // 개인 정보 암호화 && 복호화
@@ -39,10 +39,9 @@ public enum ErrorCode {
     // 주문
     ORDER_PRODUCT_NO_STOCK(HttpStatus.BAD_REQUEST, "ORDER_00", "상품의 수량이 부족합니다."),
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "ORDER_01", "주문을 찾을 수 없습니다."),
-    ORDER_CANCEL_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "ORDER_02", "배송중이거나 완료된 주문은 취소할 수 없습니다."),
-    ORDER_QUANTITY_INVALID(HttpStatus.BAD_REQUEST, "ORDER_03", "주문 수량은 0 이상부터 가능합니다."),
-    ORDER_RETURN_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "ORDER_04", "반품이 불가능 합니다."),
-    ORDER_RETURN_PERIOD_EXPIRED(HttpStatus.BAD_REQUEST, "ORDER_05", "배송 완료 후 1일 까지 반품이 가능합니다."),
+    ORDER_CANCEL_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "ORDER_02", "주문 상태가 대기 일때만 주문 취소가 가능 합니다."),
+    ORDER_QUANTITY_INVALID(HttpStatus.BAD_REQUEST, "ORDER_03", "주문 수량은 1 이상부터 가능합니다."),
+    ORDER_RETURN_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "ORDER_04", "반품은 배송 완료 상태에서 +1 일까지 가능합니다."),
 
 
     // 카테고리

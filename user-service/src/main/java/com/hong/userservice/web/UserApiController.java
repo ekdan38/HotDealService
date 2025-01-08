@@ -1,6 +1,6 @@
 package com.hong.userservice.web;
 
-import com.hong.common.dto.UserDto;
+import com.hong.common.dto.UserCommonDto;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.UserException;
 import com.hong.userservice.domain.User;
@@ -35,10 +35,10 @@ public class UserApiController {
 
     // FeignClient
     @GetMapping("/users/{userId}")
-    public ResponseEntity<UserDto> getUserById(@PathVariable("userId") Long userId){
+    public ResponseEntity<UserCommonDto> getUserById(@PathVariable("userId") Long userId){
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
-        UserDto userDto = new UserDto(
+        UserCommonDto userCommonDto = new UserCommonDto(
                 user.getId(),
                 user.getName(),
                 user.getPhoneNumber(),
@@ -48,7 +48,7 @@ public class UserApiController {
                 user.getEmail(),
                 user.getRole().name());
 
-        return ResponseEntity.ok().body(userDto);
+        return ResponseEntity.ok().body(userCommonDto);
     }
 
 }
