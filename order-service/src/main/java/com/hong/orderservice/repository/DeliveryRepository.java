@@ -13,8 +13,8 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
     // 배송 상태 변경 벌크 업데이트
     @Modifying
     @Query("UPDATE Delivery d SET d.status = :newStatus " +
-            "WHERE d.status = :status AND d.startedAt <= :dayAgo")
+            "WHERE d.status = :oldStatus AND d.startedAt <= :dayAgo")
     void updateOrderStatus(@Param("dayAgo") LocalDateTime dayAgo,
                            @Param("newStatus") String newStatus,
-                           @Param("status") String status);
+                           @Param("oldStatus") String oldStatus);
 }

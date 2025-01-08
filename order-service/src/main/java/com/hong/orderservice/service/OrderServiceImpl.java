@@ -9,9 +9,9 @@ import com.hong.orderservice.domain.Delivery;
 import com.hong.orderservice.domain.Order;
 import com.hong.orderservice.domain.OrderProduct;
 import com.hong.orderservice.domain.status.DeliveryStatus;
-import com.hong.orderservice.domain.status.OrderStatus;
 import com.hong.orderservice.dto.OrderPagingResponseDto;
 import com.hong.orderservice.dto.OrderResponseDto;
+import com.hong.orderservice.repository.DeliveryRepository;
 import com.hong.orderservice.repository.OrderRepository;
 import com.hong.orderservice.web.dto.OrderRequestDto;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
 public class OrderServiceImpl implements OrderService{
 
     private final OrderRepository orderRepository;
+    private final DeliveryRepository deliveryRepository;
     private final ProductServiceClient productServiceClient;
 
     // 주문 생성
@@ -100,8 +101,14 @@ public class OrderServiceImpl implements OrderService{
     // 주문 내역 페이징
     @Override
     public OrderPagingResponseDto getOrders(Long userId, Long cursor, int size) {
-        // cursor 기반 페이징 진행 => order userid와 일치하는 order 페이징 조회, order_product에 id, title, quantity, price 다 있음
-        // delivery도 같이 가져와야한다.
+        // 스케쥴링과 별개로 사용자의 관점에서 배송 상태가 변경 되야 한다.
+        LocalDateTime oneDayAgo = LocalDateTime.now().minusDays(1);
+        LocalDateTime twoDaysAgo = LocalDateTime.now().minusDays(2);
+
+        // bulk update
+        deliveryRepository.updateOrderStatus(oneDayAgo, DeliveryStatus.DELIVERING.name(), DeliveryStatus.PENDING.name());
+        deliveryRepository.updateOrderStatus(twoDaysAgo, DeliveryStatus.DELIVERED.name(), DeliveryStatus.DELIVERING.name());
+
         // cursor 가 null 이면 가장 최근 데이터 조회 처리
         if(cursor == null) cursor = Long.MAX_VALUE;
 
@@ -136,6 +143,14 @@ public class OrderServiceImpl implements OrderService{
     // 주문 조회
     @Override
     public OrderResponseDto getOrder(Long userId, Long orderId) {
+        // 스케쥴링과 별개로 사용자의 관점에서 배송 상태가 변경 되야 한다.
+        LocalDateTime oneDayAgo = LocalDateTime.now().minusDays(1);
+        LocalDateTime twoDaysAgo = LocalDateTime.now().minusDays(2);
+
+        // bulk update
+        deliveryRepository.updateOrderStatus(oneDayAgo, DeliveryStatus.DELIVERING.name(), DeliveryStatus.PENDING.name());
+        deliveryRepository.updateOrderStatus(twoDaysAgo, DeliveryStatus.DELIVERED.name(), DeliveryStatus.DELIVERING.name());
+
         // Fetch Join 으로 orderProducts, delivery 조회
         Order order = orderRepository.findOrderByOrderIdAndUserIdWithOpAndD(orderId, userId);
 

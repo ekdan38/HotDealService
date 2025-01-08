@@ -12,6 +12,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 
 @Entity
+@EntityListeners(AuditingEntityListener.class)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 public class Delivery {
@@ -32,7 +33,11 @@ public class Delivery {
     @Column(nullable = false)
     private DeliveryStatus status;
 
+    @CreatedDate
     @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(updatable = false)
     private LocalDateTime startedAt;
 
     @Column(updatable = false)
