@@ -1,38 +1,36 @@
 package com.hong.productservice.web.controller;
 
 import com.hong.common.dto.ProductCommonDto;
-import com.hong.common.exception.ErrorCode;
-import com.hong.common.exception.custom.ProductException;
-import com.hong.productservice.domain.Product;
-import com.hong.productservice.repository.ProductRepository;
+import com.hong.common.dto.ProductStockDto;
 import com.hong.productservice.service.product.ProductApiService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/product-service")
 public class ProductApiController {
 
-    private final ProductRepository productRepository;
     private final ProductApiService productApiService;
 
-    @GetMapping("/products/{productId}")
-    ResponseEntity<ProductCommonDto> getProductById(@PathVariable("productId") Long productId){
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ProductException(ErrorCode.PRODUCT_NOT_FOUND));
+    @PostMapping("/products")
+    ResponseEntity<List<ProductCommonDto>> getProductsById(@RequestBody List<ProductStockDto> productIds){
+        List<Long> ids = productIds.stream()
+                .map(ProductStockDto::getProductId)
+                .collect(Collectors.toList());
 
-        ProductCommonDto productCommonDto =
-                new ProductCommonDto(product.getId(), product.getTitle(), product.getPrice(), product.getStock());
-
-        return ResponseEntity.ok().body(productCommonDto);
+        List<ProductCommonDto> productsByIds = productApiService.getProductsByIds(ids);
+        return ResponseEntity.ok().body(productsByIds);
     }
 
-    @PostMapping("/products/{productId}/decrease-stock")
-    void decreaseStock(@PathVariable ("productId") Long productId,
-                       @RequestParam ("quantity") Integer quantity){
-        productApiService.decreaseStock(productId, quantity);
+    @PostMapping("/products/decrease-stock")
+    ResponseEntity<String> decreaseStock(@RequestBody List<ProductStockDto> productStockDtos){
+        productApiService.decreaseStock(productStockDtos);
+        return ResponseEntity.ok().body("상품 수량 감소 성공");
     }
 
     @PostMapping("/products/{productId}/increase-stock")

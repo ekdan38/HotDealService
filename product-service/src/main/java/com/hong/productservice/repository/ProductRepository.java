@@ -35,4 +35,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             "JOIN FETCH cp.category c " +
             "WHERE p.id = :productId")
     Product findProductByProductIdWithCategoryProducts(@Param("productId") Long productId);
+
+    @Query("SELECT p " +
+            "FROM Product p " +
+            "WHERE p.id IN :productIds")
+    List<Product> findAllByProductIds(@Param("productIds") List<Long> productIds);
 }

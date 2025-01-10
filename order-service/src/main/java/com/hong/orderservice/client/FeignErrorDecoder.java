@@ -12,12 +12,14 @@ public class FeignErrorDecoder implements ErrorDecoder {
     @Override
     public Exception decode(String methodKey, Response response) {
         switch (response.status()){
+            case 400:
+                return new RuntimeException(response.reason());
             case 404:
-                if(methodKey.contains("getProductById")){
+                if(methodKey.contains("getProductsById")){
                     return new ProductException(ErrorCode.PRODUCT_NOT_FOUND);
                 }
-                else if(methodKey.contains("getUserById")){
-                    return new UserException(ErrorCode.USER_NOT_FOUND);
+                else if(methodKey.contains("decreaseStock")){
+                    return new ProductException(ErrorCode.PRODUCT_NOT_FOUND);
                 }
         }
 

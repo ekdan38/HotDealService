@@ -2,7 +2,6 @@ package com.hong.orderservice.scheduler;
 
 import com.hong.orderservice.domain.status.DeliveryStatus;
 import com.hong.orderservice.repository.DeliveryRepository;
-import com.hong.orderservice.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;

@@ -42,6 +42,7 @@ public enum ErrorCode {
     ORDER_CANCEL_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "ORDER_02", "주문 상태가 대기 일때만 주문 취소가 가능 합니다."),
     ORDER_QUANTITY_INVALID(HttpStatus.BAD_REQUEST, "ORDER_03", "주문 수량은 1 이상부터 가능합니다."),
     ORDER_RETURN_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "ORDER_04", "반품은 배송 완료 상태에서 +1 일까지 가능합니다."),
+    ORDER_LOCK_INTERRUPTED(HttpStatus.BAD_REQUEST, "ORDER_05", "락 획득 실패"),
 
 
     // 카테고리
