@@ -28,11 +28,11 @@ public class DeliveryScheduler {
         LocalDateTime twoDaysAgo = now.minusDays(2);
 
         // D+1 배송 상태 변경
-        deliveryRepository.updateOrderStatus(oneDayAgo, DeliveryStatus.DELIVERING.name(), DeliveryStatus.PENDING.name());
+        deliveryRepository.updateOrderStatus(oneDayAgo, DeliveryStatus.DELIVERING, DeliveryStatus.PENDING);
         log.info("D+1 배송 상태 변경");
 
         // D+2 배송 상태 변경
-        deliveryRepository.updateOrderStatus(twoDaysAgo, DeliveryStatus.DELIVERED.name(), DeliveryStatus.DELIVERING.name());
+        deliveryRepository.updateOrderStatus(twoDaysAgo, DeliveryStatus.DELIVERED, DeliveryStatus.DELIVERING);
         log.info("D+2 배송 상태 변경");
     }
 }

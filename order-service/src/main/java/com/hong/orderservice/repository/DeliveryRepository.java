@@ -1,6 +1,7 @@
 package com.hong.orderservice.repository;
 
 import com.hong.orderservice.domain.Delivery;
+import com.hong.orderservice.domain.status.DeliveryStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -15,6 +16,6 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
     @Query("UPDATE Delivery d SET d.status = :newStatus " +
             "WHERE d.status = :oldStatus AND d.startedAt <= :dayAgo")
     void updateOrderStatus(@Param("dayAgo") LocalDateTime dayAgo,
-                           @Param("newStatus") String newStatus,
-                           @Param("oldStatus") String oldStatus);
+                           @Param("newStatus") DeliveryStatus newStatus,
+                           @Param("oldStatus") DeliveryStatus oldStatus);
 }

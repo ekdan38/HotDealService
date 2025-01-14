@@ -167,7 +167,6 @@ public class OrderServiceImpl implements OrderService {
     }
 
 
-
     // 주문할 상품 Id 추출
     private List<Long> extractOrderProductIds(OrderRequestDto requestDto){
         // 주문 상품 목록
@@ -175,7 +174,6 @@ public class OrderServiceImpl implements OrderService {
         // 주문 productId 추출
         return productInfos.stream().map(OrderRequestDto.OrderProductRequest::getProductId).collect(Collectors.toList());
     }
-
 
     // 락 획득
     private List<RLock> acquireLocks(List<Long> productIds) throws InterruptedException {
@@ -306,8 +304,8 @@ public class OrderServiceImpl implements OrderService {
         LocalDateTime twoDaysAgo = LocalDateTime.now().minusDays(2);
 
         // bulk update
-        deliveryRepository.updateOrderStatus(oneDayAgo, DeliveryStatus.DELIVERING.name(), DeliveryStatus.PENDING.name());
-        deliveryRepository.updateOrderStatus(twoDaysAgo, DeliveryStatus.DELIVERED.name(), DeliveryStatus.DELIVERING.name());
+        deliveryRepository.updateOrderStatus(oneDayAgo, DeliveryStatus.DELIVERING, DeliveryStatus.PENDING);
+        deliveryRepository.updateOrderStatus(twoDaysAgo, DeliveryStatus.DELIVERED, DeliveryStatus.DELIVERING);
     }
 
     private Order getOrderWithOrderProductsAndDelivery(Long userId, Long orderId) {
@@ -343,6 +341,7 @@ public class OrderServiceImpl implements OrderService {
         }
         return stockIncreaseDto;
     }
+
     // DeliveryStatus 가 Delivered, 배송 완료 하루 까지 환불
     private void returnOrderIfDeliveredAndOneDay(Long userId, Long orderId, Order order) {
         DeliveryStatus deliveryStatus = order.getDelivery().getStatus();
@@ -358,6 +357,4 @@ public class OrderServiceImpl implements OrderService {
             throw new OrderException(ErrorCode.ORDER_RETURN_NOT_ALLOWED);
         }
     }
-
-
 }
