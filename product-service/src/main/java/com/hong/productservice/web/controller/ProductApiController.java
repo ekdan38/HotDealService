@@ -17,25 +17,22 @@ public class ProductApiController {
 
     private final ProductApiService productApiService;
 
-    @PostMapping("/products")
-    ResponseEntity<List<ProductCommonDto>> getProductsById(@RequestBody List<ProductStockDto> productIds){
-        List<Long> ids = productIds.stream()
-                .map(ProductStockDto::getProductId)
-                .collect(Collectors.toList());
+    @GetMapping("/products")
+    ResponseEntity<List<ProductCommonDto>> getProductsById(@RequestParam List<Long> productIds) {
 
-        List<ProductCommonDto> productsByIds = productApiService.getProductsByIds(ids);
+        List<ProductCommonDto> productsByIds = productApiService.getProductsByIds(productIds);
         return ResponseEntity.ok().body(productsByIds);
     }
 
     @PostMapping("/products/decrease-stock")
-    ResponseEntity<String> decreaseStock(@RequestBody List<ProductStockDto> productStockDtos){
-        productApiService.decreaseStock(productStockDtos);
-        return ResponseEntity.ok().body("상품 수량 감소 성공");
+    ResponseEntity<Boolean> decreaseStock(@RequestBody List<ProductStockDto> productStockDtos) {
+        Boolean result = productApiService.decreaseStock(productStockDtos);
+        return ResponseEntity.ok().body(result);
     }
 
-    @PostMapping("/products/{productId}/increase-stock")
-    void increaseStock(@PathVariable ("productId") Long productId,
-                       @RequestParam ("quantity") Integer quantity){
-        productApiService.increaseStock(productId, quantity);
+    @PostMapping("/products/increase-stock")
+    ResponseEntity<Boolean> increaseStock(@RequestBody List<ProductStockDto> productStockDtos) {
+        Boolean result = productApiService.increaseStock(productStockDtos);
+        return ResponseEntity.ok().body(result);
     }
 }

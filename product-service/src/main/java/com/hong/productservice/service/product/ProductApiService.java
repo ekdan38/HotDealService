@@ -23,14 +23,16 @@ public class ProductApiService {
 
     private final ProductRepository productRepository;
 
+    // product 조회
     public Product getProduct(Long productId) {
         return productRepository.findById(productId)
                 .orElseThrow(() -> new ProductException(ErrorCode.PRODUCT_NOT_FOUND));
     }
 
+    // productIds 로 products 조회
     public List<ProductCommonDto> getProductsByIds(List<Long> productIds) {
         List<Product> products = productRepository.findAllByProductIds(productIds);
-        if (productIds.isEmpty()) {
+        if (productIds.size() != products.size()) {
             throw new ProductException(ErrorCode.PRODUCT_NOT_FOUND);
         }
 
@@ -46,31 +48,50 @@ public class ProductApiService {
     }
 
     @Transactional
-    public void decreaseStock(List<ProductStockDto> productStockDtos) {
-        List<Long> productIds = productStockDtos.stream()
-                .map(ProductStockDto::getProductId)
-                .collect(Collectors.toList());
-
-        List<Product> products = productRepository.findAllByProductIds(productIds);
-
-        Map<Long, Product> productMap = products.stream()
-                .collect(Collectors.toMap(Product::getId, product -> product));
+    public Boolean decreaseStock(List<ProductStockDto> productStockDtos) {
+        // ProductStockDto 로 products 조회
+        Map<Long, Product> productMap = getProducts(productStockDtos);
 
         for (ProductStockDto dto : productStockDtos) {
             Product product = productMap.get(dto.getProductId());
             if (product == null) {
                 throw new ProductException(ErrorCode.PRODUCT_NOT_FOUND);
             }
-
             product.decreaseStock(dto.getQuantity());
         }
+        return true;
 
     }
 
+
+
     @Transactional
-    public void increaseStock(Long productId, Integer quantity) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ProductException(ErrorCode.PRODUCT_NOT_FOUND));
-        product.increaseStock(quantity);
+    public Boolean increaseStock(List<ProductStockDto> productStockDtos) {
+        // ProductStockDto 로 products 조회
+        Map<Long, Product> productMap = getProducts(productStockDtos);
+
+        for (ProductStockDto dto : productStockDtos) {
+            Product product = productMap.get(dto.getProductId());
+            if (product == null) {
+                throw new ProductException(ErrorCode.PRODUCT_NOT_FOUND);
+            }
+            product.increaseStock(dto.getQuantity());
+        }
+        return true;
+    }
+
+    // ProductStockDto 로 products 조회
+    private Map<Long, Product> getProducts(List<ProductStockDto> productStockDtos) {
+        // 상품 Id 추출
+        List<Long> productIds = productStockDtos.stream()
+                .map(ProductStockDto::getProductId)
+                .collect(Collectors.toList());
+        // 상품 조회
+        List<Product> products = productRepository.findAllByProductIds(productIds);
+
+        // map 변환
+        Map<Long, Product> productMap = products.stream()
+                .collect(Collectors.toMap(Product::getId, product -> product));
+        return productMap;
     }
 }

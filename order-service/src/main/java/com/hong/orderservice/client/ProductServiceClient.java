@@ -10,13 +10,12 @@ import java.util.List;
 @FeignClient(name = "product-service")
 public interface ProductServiceClient {
 
-    @PostMapping("/product-service/products")
-    List<ProductCommonDto> getProductsById(@RequestBody List<ProductStockDto> productIds);
+    @GetMapping("/product-service/products")
+    List<ProductCommonDto> getProductsById(@RequestBody List<Long> productIds);
 
     @PostMapping("/product-service/products/decrease-stock")
-    String decreaseStock(@RequestBody List<ProductStockDto> productStockDtos);
+    Boolean decreaseStock(@RequestBody List<ProductStockDto> productStockDtos);
 
-    @PostMapping("/product-service/products/{productId}/increase-stock")
-    void increaseStock(@PathVariable ("productId") Long productId,
-                       @RequestParam ("quantity") Integer quantity);
+    @PostMapping("/product-service/products/increase-stock")
+    Boolean increaseStock(@RequestBody List<ProductStockDto> productStockDtos);
 }

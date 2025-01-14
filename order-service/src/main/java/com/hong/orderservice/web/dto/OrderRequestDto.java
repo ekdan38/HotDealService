@@ -3,11 +3,13 @@ package com.hong.orderservice.web.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.List;
 
 @Data
+@AllArgsConstructor
 public class OrderRequestDto {
 
     @NotEmpty(message = "products 는 최소 1개 이상 이어야 합니다.")
@@ -26,6 +28,7 @@ public class OrderRequestDto {
     private String zipCode;
 
     @Data
+    @AllArgsConstructor
     public static class OrderProductRequest{
         private Long productId;
         private Integer quantity;

@@ -24,6 +24,7 @@ public class Order extends TimeEntity {
     @Column(name = "order_id")
     private Long id;
 
+    @Column(name = "user_id", nullable = false)
     private Long userId;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
