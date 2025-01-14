@@ -1,16 +1,13 @@
 package com.hong.productservice.service.wishlist;
 
-import com.hong.common.dto.UserCommonDto;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.WishlistException;
-import com.hong.productservice.client.UserServiceClient;
 import com.hong.productservice.domain.Product;
 import com.hong.productservice.domain.Wishlist;
 import com.hong.productservice.domain.WishlistProduct;
+import com.hong.productservice.dto.wishlist.WishlistPagingResponseDto;
 import com.hong.productservice.dto.wishlist.WishlistProductDto;
 import com.hong.productservice.dto.wishlist.WishlistResponseDto;
-import com.hong.productservice.dto.wishlist.WishlistDto;
-import com.hong.productservice.dto.wishlist.WishlistPagingResponseDto;
 import com.hong.productservice.repository.WishlistRepository;
 import com.hong.productservice.repository.wishlistProductRepository;
 import com.hong.productservice.service.product.ProductApiService;
@@ -34,42 +31,22 @@ public class WishlistServiceImpl implements WishlistService {
 
     private final wishlistProductRepository wishlistProductRepository;
     private final WishlistRepository wishlistRepository;
-    private final UserServiceClient userServiceClient;
     private final ProductApiService productApiService;
 
     // wishlist 에 product 등록
     @Transactional
     @Override
     public WishlistResponseDto createWishlist(Long userId, WishlistRequestDto requestDto) {
-        // feignClient 로 user-service 에서 user 가 존재 하는지 검증
-        UserCommonDto userCommonDto = userServiceClient.getUserById(userId);
-        Long validatedUserId = userCommonDto.getUserId();
-
         // wishlist 에 등록 시도 하는 product 가 존재 하는지 확인
         Long productId = requestDto.getProductId();
         Product product = productApiService.getProduct(productId);
 
         // wishlist 조회 (없으면 생성)
-        Wishlist wishlist = wishlistRepository.findWithProductsByUserId(validatedUserId)
-                .orElseGet(() -> wishlistRepository.save(Wishlist.create(validatedUserId)));
+        Wishlist wishlist = wishlistRepository.findWithProductsByUserId(userId)
+                .orElseGet(() -> wishlistRepository.save(Wishlist.create(userId)));
 
-        // product 가 wishlist 에 이미 존재 하는지 확인
-        WishlistProduct wishlistProduct = wishlist.getWishlistProducts().stream()
-                .filter(wp -> wp.getProduct().getId().equals(productId))
-                .findFirst()
-                .orElse(null);
-
-        // 이미 존재 한다면 quantity 증가
-        if (wishlistProduct != null) {
-            wishlistProduct.addQuantity(requestDto.getQuantity());
-        }
-        // 존재 하지 않는 다면 생성
-        else {
-            // 중간 테이블 생성
-            wishlistProduct = WishlistProduct.create(product, requestDto.getQuantity());
-            // 연관 관계 메서드 로 wishlist 에 wishlistProduct 추가
-            wishlist.addWishlistProducts(wishlistProduct);
-        }
+        //WishlistProduct 조회 또는 생성/수량 업데이트
+        WishlistProduct wishlistProduct = findOrCreateWishlistProduct(requestDto, wishlist, productId, product);
 
         Wishlist savedWishlist = wishlistRepository.save(wishlist);
 
@@ -80,7 +57,7 @@ public class WishlistServiceImpl implements WishlistService {
                 wishlistProduct.getQuantity());
     }
 
-    // wishlist 커서 기반 페이징 조회
+    // wishlist cursor 기반 페이징 조회
     @Override
     public WishlistPagingResponseDto getWishlists(Long userId, Long cursor, int size) {
         // wishlist 조회
@@ -163,5 +140,27 @@ public class WishlistServiceImpl implements WishlistService {
         Long wishlistId = wishlist.getId();
         wishlistRepository.deleteById(wishlist.getId());
         return wishlistId;
+    }
+
+    //WishlistProduct 조회 또는 생성/수량 업데이트
+    private WishlistProduct findOrCreateWishlistProduct(WishlistRequestDto requestDto, Wishlist wishlist, Long productId, Product product) {
+        // product 가 wishlist 에 이미 존재 하는지 확인
+        WishlistProduct wishlistProduct = wishlist.getWishlistProducts().stream()
+                .filter(wp -> wp.getProduct().getId().equals(productId))
+                .findFirst()
+                .orElse(null);
+
+        // 이미 존재 한다면 quantity 증가
+        if (wishlistProduct != null) {
+            wishlistProduct.addQuantity(requestDto.getQuantity());
+        }
+        // 존재 하지 않는 다면 생성
+        else {
+            // 중간 테이블 생성
+            wishlistProduct = WishlistProduct.create(product, requestDto.getQuantity());
+            // 연관 관계 메서드 로 wishlist 에 wishlistProduct 추가
+            wishlist.addWishlistProducts(wishlistProduct);
+        }
+        return wishlistProduct;
     }
 }
