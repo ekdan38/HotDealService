@@ -32,23 +32,4 @@ public class UserApiController {
         boolean userExists = userRepository.existsByUsername(decodedUsername);
         return ResponseEntity.ok(userExists);
     }
-
-    // FeignClient
-    @GetMapping("/users/{userId}")
-    public ResponseEntity<UserCommonDto> getUserById(@PathVariable("userId") Long userId){
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
-        UserCommonDto userCommonDto = new UserCommonDto(
-                user.getId(),
-                user.getName(),
-                user.getPhoneNumber(),
-                user.getAddress().getCity(),
-                user.getAddress().getStreet(),
-                user.getAddress().getZipCode(),
-                user.getEmail(),
-                user.getRole().name());
-
-        return ResponseEntity.ok().body(userCommonDto);
-    }
-
 }
