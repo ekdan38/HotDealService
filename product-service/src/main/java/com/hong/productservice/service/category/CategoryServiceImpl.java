@@ -27,15 +27,14 @@ import java.util.stream.Collectors;
 public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
-    private final ModelMapper modelMapper;
 
     // 최상위 category 생성
     @Transactional
     @Override
     public CategoryResponseDto createCategory(CategoryRequestDto requestDto) {
+        String title = requestDto.getTitle();
 
         // root category 중 중복 되는 category 검증
-        String title = requestDto.getTitle();
         if(categoryRepository.existsByParentIsNullAndTitle(title)) {
             log.error("이미 존재 하는 최상위 카테고리 입니다. 등록 시도 = {}", title);
             throw new CategoryException(ErrorCode.CATEGORY_ROOT_EXISTS);
@@ -46,43 +45,39 @@ public class CategoryServiceImpl implements CategoryService {
 
         // category 저장
         Category savedCategory = categoryRepository.save(category);
-        return modelMapper.map(savedCategory, CategoryResponseDto.class);
+
+        return new CategoryResponseDto(savedCategory.getId(), savedCategory.getTitle());
     }
 
     // 자식 category 생성
     @Transactional
     @Override
     public CategoryResponseDto createChildCategory(Long parentCategoryId, CategoryRequestDto requestDto) {
+        String title = requestDto.getTitle();
 
         // parentCategory 조회
         Category parentCategory = categoryRepository.findById(parentCategoryId)
                 .orElseThrow(() -> new CategoryException(ErrorCode.CATEGORY_PARENT_NOT_FOUND));
 
-        String title = requestDto.getTitle();
-        // parentCategory 와 childCategory 의 이름이 같은지 검증
-        if(parentCategory.getTitle().equals(title)){
-            log.error("부모 카테고리와 자식 카테고리의 이름이 같습니다.  parent = {}, child = {}", parentCategory.getTitle(), title);
-            throw new CategoryException(ErrorCode.CATEGORY_PARENT_CHILD_SAME);
-        }
-
-        // parentCategory 아래 이미 존재 하는 childCategory 인지 검사
-        if(categoryRepository.existsByTitleAndParentId(title, parentCategoryId)){
-            log.error("부모 카테고리에 이미 존재하는 자식 카테고리 입니다. parent = {}, child = {}", parentCategory.getTitle(), title);
-            throw new CategoryException(ErrorCode.CATEGORY_PARENT_UNDER_CHILD_EXISTS);
-        }
+        // 생성 요청 childCategory 에 대한 검증
+        validateChildCategory(parentCategoryId, parentCategory, title);
 
         // childCategory 생성 시작
         Category childCategory = Category.create(title);
 
         // parentCategory 와 childCategory 연결
         parentCategory.addChildrenCategory(childCategory);
+
         // 명시적으로 childCategory save
         Category savedChildCategory = categoryRepository.save(childCategory);
+
         return new CategoryResponseDto(
                 savedChildCategory.getId(),
                 savedChildCategory.getTitle(),
                 parentCategory.getId());
     }
+
+
 
     // 전체 category 조회(모든 최상위 카테고리 부터 자식 카테고리 까지)
     @Override
@@ -92,12 +87,7 @@ public class CategoryServiceImpl implements CategoryService {
         // 조회 쿼리 1번으로 최적화
 
         // Map 으로 변환
-        Map<Long, CategoryResponseDto> categoryMap = new HashMap<>();
-        categories.forEach(category -> categoryMap.put(category.getId(), new CategoryResponseDto(
-                category.getId(),
-                category.getTitle(),
-                new ArrayList<>()
-        )));
+        Map<Long, CategoryResponseDto> categoryMap = buildCategoryMap(categories);
 
         // parent, child 관계 정리
         categories.forEach(category -> {
@@ -127,12 +117,7 @@ public class CategoryServiceImpl implements CategoryService {
         }
 
         // Map 으로 변환
-        Map<Long, CategoryResponseDto> categoryMap = new HashMap<>();
-        categories.forEach(category -> categoryMap.put(category.getId(), new CategoryResponseDto(
-                category.getId(),
-                category.getTitle(),
-                new ArrayList<>()
-        )));
+        Map<Long, CategoryResponseDto> categoryMap = buildCategoryMap(categories);
 
         // parent, child 관계 정리
         categories.forEach(category -> {
@@ -144,10 +129,10 @@ public class CategoryServiceImpl implements CategoryService {
                 }
             }
         });
-
         // 최상위 카테고리 반환
         return categoryMap.get(categoryId);
     }
+
 
     // category 수정(title)
     @Transactional
@@ -158,21 +143,11 @@ public class CategoryServiceImpl implements CategoryService {
                 .orElseThrow(() -> new CategoryException(ErrorCode.CATEGORY_PARENT_NOT_FOUND));
 
         String newTitle = requestDto.getTitle();
-        // root category 인 경우 root category 중에서 newTitle 이 중복 되는지 검증
-        if(category.getParent() == null){
-            if(categoryRepository.existsByParentIsNullAndTitle(newTitle)) {
-                log.error("이미 존재 하는 최상위 카테고리 입니다. 등록 시도 = {}", newTitle);
-                throw new CategoryException(ErrorCode.CATEGORY_ROOT_EXISTS);
-            }
-        }
-        else{
-            // child category 경우, 동일 parent category 중에서 newTitle 이 중복 되는지 검증
-            if (categoryRepository.existsByTitleAndParentId(newTitle, category.getParent().getId())) {
-                log.error("부모 카테고리 아래 이미 존재하는 카테고리입니다. 등록 시도 = {}", newTitle);
-                throw new CategoryException(ErrorCode.CATEGORY_PARENT_UNDER_CHILD_EXISTS);
-            }
-        }
 
+        // root, child category 경우에 따라 newTitle 중복 검증
+        validateCategoryTitle(category, newTitle);
+
+        // category update 처리
         category.updateTitle(newTitle);
         return new CategoryResponseDto(category.getId(), newTitle);
     }
@@ -222,4 +197,47 @@ public class CategoryServiceImpl implements CategoryService {
         return categoryList;
     }
 
+    // 생성 요청 childCategory 검증
+    private void validateChildCategory(Long parentCategoryId, Category parentCategory, String title) {
+        // parentCategory 와 childCategory 의 이름이 같은지 검증
+        if(parentCategory.getTitle().equals(title)){
+            log.error("부모 카테고리와 자식 카테고리의 이름이 같습니다.  parent = {}, child = {}", parentCategory.getTitle(), title);
+            throw new CategoryException(ErrorCode.CATEGORY_PARENT_CHILD_SAME);
+        }
+
+        // parentCategory 아래 이미 존재 하는 childCategory 인지 검사
+        if(categoryRepository.existsByTitleAndParentId(title, parentCategoryId)){
+            log.error("부모 카테고리에 이미 존재하는 자식 카테고리 입니다. parent = {}, child = {}", parentCategory.getTitle(), title);
+            throw new CategoryException(ErrorCode.CATEGORY_PARENT_UNDER_CHILD_EXISTS);
+        }
+    }
+
+    // Map 으로 변환
+    private Map<Long, CategoryResponseDto> buildCategoryMap(List<Category> categories) {
+        Map<Long, CategoryResponseDto> categoryMap = new HashMap<>();
+        categories.forEach(category -> categoryMap.put(category.getId(), new CategoryResponseDto(
+                category.getId(),
+                category.getTitle(),
+                new ArrayList<>()
+        )));
+        return categoryMap;
+    }
+
+    // root, child category 경우에 따라 newTitle 중복 검증
+    private void validateCategoryTitle(Category category, String newTitle) {
+        // root category 인 경우 root category 중에서 newTitle 이 중복 되는지 검증
+        if(category.getParent() == null){
+            if(categoryRepository.existsByParentIsNullAndTitle(newTitle)) {
+                log.error("이미 존재 하는 최상위 카테고리 입니다. 등록 시도 = {}", newTitle);
+                throw new CategoryException(ErrorCode.CATEGORY_ROOT_EXISTS);
+            }
+        }
+        else{
+            // child category 경우, 동일 parent category 중에서 newTitle 이 중복 되는지 검증
+            if (categoryRepository.existsByTitleAndParentId(newTitle, category.getParent().getId())) {
+                log.error("부모 카테고리 아래 이미 존재하는 카테고리입니다. 등록 시도 = {}", newTitle);
+                throw new CategoryException(ErrorCode.CATEGORY_PARENT_UNDER_CHILD_EXISTS);
+            }
+        }
+    }
 }

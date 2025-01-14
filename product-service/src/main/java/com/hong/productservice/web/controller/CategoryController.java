@@ -22,7 +22,6 @@ import java.util.List;
 public class CategoryController {
 
     private final CategoryService categoryService;
-    private final ModelMapper modelMapper;
 
     // 최상위 category 생성
     @PostMapping
