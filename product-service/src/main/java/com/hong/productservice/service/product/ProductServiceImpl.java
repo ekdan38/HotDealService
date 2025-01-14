@@ -33,8 +33,8 @@ public class ProductServiceImpl implements ProductService{
     @Transactional
     @Override
     public ProductResponseDto createProduct(ProductDto requestDto) {
-        // product 가 존재 하는지 검증
         String title = requestDto.getTitle();
+        // product 가 존재 하는지 검증
         if(productRepository.existsByTitle(title)){
             log.error("이미 존재 하는 상품 명 입니다. 등록 시도 = {}", title);
             throw new ProductException(ErrorCode.PRODUCT_EXISTS);
@@ -53,17 +53,7 @@ public class ProductServiceImpl implements ProductService{
         Product product = Product.create(requestDto.getTitle(), requestDto.getPrice(), requestDto.getStock(), categoryProducts);
         Product savedProduct = productRepository.save(product);
 
-        // categoryDtos 변환
-        List<CategoryDto> categoryDtos = categories.stream()
-                .map(category -> new CategoryDto(category.getId(), category.getTitle()))
-                .collect(Collectors.toList());
-
-        return new ProductResponseDto(
-                savedProduct.getId(),
-                savedProduct.getTitle(),
-                savedProduct.getPrice(),
-                savedProduct.getStock(),
-                categoryDtos);
+        return convertProductResponseDto(savedProduct);
     }
 
     // product 커서 기반 페이징 조회
@@ -81,15 +71,7 @@ public class ProductServiceImpl implements ProductService{
 
         // Dto로 변환
         List<ProductResponseDto> productResponseDtos = page.stream()
-                .map(product -> new ProductResponseDto(
-                        product.getId(),
-                        product.getTitle(),
-                        product.getPrice(),
-                        product.getStock(),
-                        product.getCategoryProducts().stream()
-                                .map(cp -> new CategoryDto(cp.getCategory().getId(),
-                                        cp.getCategory().getTitle()))
-                                .collect(Collectors.toList())))
+                .map(this::convertProductResponseDto)
                 .collect(Collectors.toList());
 
         // nextCursor 지정
@@ -107,17 +89,10 @@ public class ProductServiceImpl implements ProductService{
             log.error("존재 하지 않는 상품입니다. 요청 시도 productId = {}", productId);
             throw new ProductException(ErrorCode.PRODUCT_NOT_FOUND);
         }
-
-        return new ProductResponseDto(
-                product.getId(),
-                product.getTitle(),
-                product.getPrice(),
-                product.getStock(),
-                product.getCategoryProducts().stream()
-                        .map(cp -> new CategoryDto(cp.getCategory().getId(),
-                                cp.getCategory().getTitle()))
-                        .collect(Collectors.toList()));
+        return convertProductResponseDto(product);
     }
+
+
 
     // product 수정
     @Transactional
@@ -141,6 +116,51 @@ public class ProductServiceImpl implements ProductService{
             }
         }
 
+        // product 수정, 연관 관계 적용
+        updateProductAndSetAssociations(requestDto, product);
+
+        // product 명시적으로 저장
+        Product updatedProduct = productRepository.save(product);
+
+        return convertProductResponseDto(updatedProduct);
+    }
+
+
+    // product 삭제
+    @Transactional
+    @Override
+    public ProductResponseDto deleteProduct(Long productId) {
+        // product 가 존재 하는지 검증
+        // fetch join 으로 product, categoryProduct, category 조회
+        Product product = productRepository.findProductByProductIdWithCategoryProducts(productId);
+        if(product == null){
+            log.error("존재 하지 않는 상품 입니다. 요청 시도 productId = {}", productId);
+            throw new ProductException(ErrorCode.PRODUCT_NOT_FOUND);
+        }
+
+        // 상품 삭제
+        // cascade, orphanRemoval 로 categoryProducts 삭제
+        productRepository.delete(product);
+
+        return convertProductResponseDto(product);
+    }
+
+    // ProductResponseDto 변환
+    private ProductResponseDto convertProductResponseDto(Product product) {
+        return new ProductResponseDto(
+                product.getId(),
+                product.getTitle(),
+                product.getPrice(),
+                product.getStock(),
+                product.getCategoryProducts().stream()
+                        .map(cp -> new CategoryDto(
+                                cp.getCategory().getId(),
+                                cp.getCategory().getTitle()))
+                        .collect(Collectors.toList()));
+    }
+
+    // product 수정, 연관 관계 적용
+    private void updateProductAndSetAssociations(ProductDto requestDto, Product product) {
         // product 수정
         product.update(requestDto.getTitle(), requestDto.getPrice(), requestDto.getStock());
 
@@ -167,51 +187,5 @@ public class ProductServiceImpl implements ProductService{
         // product 의 연관 관계 메서드 처리
         product.addCategoryProducts(newCategoryProducts);
         product.removeCategoryProducts(removeCategoryProducts);
-
-        // product 명시적으로 저장
-        Product updatedProduct = productRepository.save(product);
-
-        // dto 변환
-        List<CategoryDto> categoryDtos = updatedProduct.getCategoryProducts().stream()
-                .map(cp -> new CategoryDto(cp.getCategory().getId(), cp.getCategory().getTitle()))
-                .toList();
-
-        return new ProductResponseDto(
-                updatedProduct.getId(),
-                updatedProduct.getTitle(),
-                updatedProduct.getPrice(),
-                updatedProduct.getStock(),
-                categoryDtos);
-    }
-
-    // product 삭제
-    @Transactional
-    @Override
-    public ProductResponseDto deleteProduct(Long productId) {
-        // product 가 존재 하는지 검증
-        // fetch join 으로 product, categoryProduct, category 조회
-        Product product = productRepository.findProductByProductIdWithCategoryProducts(productId);
-        if(product == null){
-            log.error("존재 하지 않는 상품 입니다. 요청 시도 productId = {}", productId);
-            throw new ProductException(ErrorCode.PRODUCT_NOT_FOUND);
-        }
-
-        // 상품 삭제
-        // cascade, orphanRemoval 로 categoryProducts 삭제
-        productRepository.delete(product);
-
-        // dto 변환
-        List<CategoryProduct> categoryProducts = product.getCategoryProducts();
-        List<CategoryDto> categoryDtos = categoryProducts.stream()
-                .map(cp -> new CategoryDto(cp.getCategory().getId(), cp.getCategory().getTitle()))
-                .toList();
-
-        return new ProductResponseDto(
-                product.getId(),
-                product.getTitle(),
-                product.getPrice(),
-                product.getStock(),
-                categoryDtos
-        );
     }
 }
