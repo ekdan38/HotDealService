@@ -1,6 +1,5 @@
 package com.hong.userservice.service;
 
-import com.hong.common.dto.UserDto;
 import com.hong.userservice.dto.SignupResponseDto;
 import com.hong.userservice.web.dto.SignupRequestDto;
 import jakarta.servlet.http.HttpServletRequest;

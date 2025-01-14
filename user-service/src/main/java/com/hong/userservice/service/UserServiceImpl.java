@@ -75,6 +75,106 @@ public class UserServiceImpl implements UserService{
         // 인증 상태 조회
         String status = redisTemplate.opsForValue().get(email + ":status");
 
+        // 이메일 인증 코드 검증
+        validateEmailCode(requestCode, code, status);
+
+        // 인증 상태 변경
+        opsForValue.set(email + ":status", "true", 5, TimeUnit.MINUTES);
+        return "이메일 인증 완료";
+    }
+
+
+    // 회원 가입
+    @Override
+    @Transactional
+    public SignupResponseDto signup(SignupRequestDto requestDto) {
+        String username = requestDto.getUsername();
+        String email = requestDto.getEmail();
+
+        // 이메일 인증 상태 검증
+        validateEmailStatus(email);
+        // username, email 중복 검증
+        validateDuplicateUser(username, email);
+
+        // user 생성, 저장
+        User savedUser = createAndSaveUser(requestDto);
+
+        return convertSignupResponseDto(savedUser);
+    }
+
+    // 토큰 재발급
+    @Override
+    public String reissueToken(HttpServletRequest request, HttpServletResponse response) {
+        // Cookie 에서 refreshToken 추출
+        String refresh = extractRefreshToken(request);
+
+        // refreshToken 검증
+        validateRefreshToken(refresh);
+
+        Long userId = jwtUtil.getUserId(refresh);
+        String username = jwtUtil.getUsername(refresh);
+        String role = jwtUtil.getRole(refresh);
+
+        // Access, Refresh Token 재발급 => TokenRotation
+        String newAccess = jwtUtil.createJwt("access", userId, username, role, 600000L);
+        String newRefresh = jwtUtil.createJwt("refresh", userId, username, role, 86400000L);
+
+        // redis 에 refreshToken 저장
+        ValueOperations<String, String> opsForValue = redisTemplate.opsForValue();
+        opsForValue.set(username + ":refresh", refresh, 24, TimeUnit.HOURS);
+
+        // 응답 설정
+        response.setHeader("Authorization", "Bearer " + newAccess);
+        response.addCookie(createCookie("refresh", newRefresh));
+        return "AccessToken, RefreshToken 재발급 완료.";
+    }
+
+    private void validateRefreshToken(String refresh) {
+        // 만료 체크
+        try {
+            jwtUtil.isExpired(refresh);
+        } catch (ExpiredJwtException e) {
+            log.error("만료된 RefreshToken = {}", refresh);
+            throw new RefreshTokenReissueException(ErrorCode.REFRESH_TOKEN_EXPIRED);
+        }
+
+        // 토큰이 refresh인지 확인 (발급시 페이로드에 명시)
+        String category = jwtUtil.getCategory(refresh);
+
+        if (!category.equals("refresh")) {
+            log.error("RefreshToken 이 아님 = {}", refresh);
+            throw new RefreshTokenReissueException(ErrorCode.REFRESH_TOKEN_INVALID);
+        }
+    }
+
+    private Cookie createCookie(String key, String value){
+        Cookie cookie = new Cookie(key, value);
+        cookie.setMaxAge(24 * 60 * 60); // 24시간
+        cookie.setPath("/");
+        cookie.setHttpOnly(true);
+        return cookie;    }
+
+    // emailCode 생성
+    private String generateCode() {
+        return UUID.randomUUID().toString().substring(1, 7).toUpperCase();
+    }
+
+    // emailCode 메시지 작성
+    private void sendEmailCode(String email, String code) throws MessagingException {
+        MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+        mimeMessage.setFrom(email);
+        mimeMessage.setRecipients(MimeMessage.RecipientType.TO, email);
+        mimeMessage.setSubject("이메일 인증");
+        String body = "";
+        body += "<h3>요청하신 인증 번호입니다.</h3>";
+        body += "<h1>" + code + "</h1>";
+        body += "<h3>인증 확인란에 입력해주세요.</h3>";
+        mimeMessage.setText(body, "UTF-8", "html");
+        javaMailSender.send(mimeMessage);
+    }
+
+    // 이메일 인증 코드 검증
+    private void validateEmailCode(String requestCode, String code, String status) {
         if (code == null) {
             log.error("이메일 인증 코드가 없음");
             throw new EmailVerificationException(ErrorCode.EMAIL_VERIFICATION_CODE_NOT_FOUND);
@@ -95,32 +195,21 @@ public class UserServiceImpl implements UserService{
             log.error("인증 코드가 다름 : {}", code);
             throw new EmailVerificationException(ErrorCode.EMAIL_VERIFICATION_CODE_MISMATCH);
         }
-
-        // 인증 상태 변경
-        opsForValue.set(email + ":status", "true", 5, TimeUnit.MINUTES);
-        return "이메일 인증 완료";
     }
 
-    // 회원 가입
-    @Override
-    @Transactional
-    public SignupResponseDto signup(SignupRequestDto requestDto) {
-        String username = requestDto.getUsername();
-        String email = requestDto.getEmail();
+    // email 인증 상태 검증
+    private void validateEmailStatus(String email) {
+        // 이메일 인증 상태 검증
         String status = redisTemplate.opsForValue().get(email + ":status");
-
-        // 이메일 인증을 받지 않은 상태
-        if (status == null) {
+        if (status == null || !status.equals("true")) {
             log.error("인증을 받지 않은 상태");
             throw new EmailVerificationException(ErrorCode.EMAIL_NOT_VERIFIED);
         }
+    }
 
-        // 이메일 인증을 받지 않은 상태
-        if (!status.equals("true")) {
-            log.error("인증을 받지 않은 상태");
-            throw new EmailVerificationException(ErrorCode.EMAIL_NOT_VERIFIED);
-        }
 
+    // username, email 중복 검증
+    private void validateDuplicateUser(String username, String email) {
         // username 검사
         try {
             if(userRepository.existsByUsername(aesUtil.encrypt(username))){
@@ -152,10 +241,12 @@ public class UserServiceImpl implements UserService{
             log.error("email 암호화 오류 = {}", e.getMessage());
             throw new SignupException(ErrorCode.CRYPTO_ENCRYPT_ERROR);
         }
+    }
 
+    // user 생성, 저장
+    private User createAndSaveUser(SignupRequestDto requestDto) {
         // 회원가입할 때 기본적으로 ROLE -> USER로 설정
         try {
-            // User 생성
             User user = User.create(
                     aesUtil.encrypt(requestDto.getUsername()),
                     passwordEncoder.encode(requestDto.getPassword()),
@@ -164,14 +255,22 @@ public class UserServiceImpl implements UserService{
                     Address.create(
                             aesUtil.encrypt(requestDto.getCity()),
                             aesUtil.encrypt(requestDto.getStreet()),
-                            aesUtil.encrypt(requestDto.getZipCode())),
+                            aesUtil.encrypt(requestDto.getZipCode())
+                    ),
                     aesUtil.encrypt(requestDto.getEmail()),
                     Role.USER
             );
-            // User 저장
-            User savedUser = userRepository.save(user);
+            return userRepository.save(user);
+        } catch (Exception e) {
+            log.error("User 생성, 저장 중 오류: {}", e.getMessage());
+            throw new SignupException(ErrorCode.CRYPTO_ENCRYPT_ERROR);
+        }
+    }
 
-            Address savedAddress = savedUser.getAddress();
+    // 회원 가입 응답 Dto 변환
+    private SignupResponseDto convertSignupResponseDto(User savedUser) {
+        try {
+            Address addr = savedUser.getAddress();
             return new SignupResponseDto(
                     savedUser.getId(),
                     aesUtil.decrypt(savedUser.getUsername()),
@@ -179,88 +278,28 @@ public class UserServiceImpl implements UserService{
                     aesUtil.decrypt(savedUser.getPhoneNumber()),
                     aesUtil.decrypt(savedUser.getEmail()),
                     Address.create(
-                            aesUtil.decrypt(savedAddress.getCity()),
-                            aesUtil.decrypt(savedAddress.getStreet()),
-                            aesUtil.decrypt(savedAddress.getZipCode())
+                            aesUtil.decrypt(addr.getCity()),
+                            aesUtil.decrypt(addr.getStreet()),
+                            aesUtil.decrypt(addr.getZipCode())
                     )
             );
-
         } catch (Exception e) {
-            log.error("회원 가입 처리중 오류 : {}", e.getMessage());
+            log.error("회원가입 응답 변환 중 오류: {}", e.getMessage());
             throw new SignupException(ErrorCode.CRYPTO_ENCRYPT_ERROR);
         }
     }
 
-    // 토큰 재발급
-    @Override
-    public String reissueToken(HttpServletRequest request, HttpServletResponse response) {
-        // Refresh Token 추출
-        String refresh = null;
+    // Cookie 에서 refreshToken 추출
+    private String extractRefreshToken(HttpServletRequest request) {
         Cookie[] cookies = request.getCookies();
-        for (Cookie cookie : cookies) {
-            if (cookie.getName().equals("refresh")) {
-                refresh = cookie.getValue();
-            }
-        }
-
-        if (refresh == null) {
-            log.error("RefreshToken 이 null = {}", refresh);
+        if (cookies == null) {
             throw new RefreshTokenReissueException(ErrorCode.REFRESH_TOKEN_NULL);
         }
-
-        // 만료 체크
-        try {
-            jwtUtil.isExpired(refresh);
-        } catch (ExpiredJwtException e) {
-            log.error("만료된 RefreshToken = {}", refresh);
-            throw new RefreshTokenReissueException(ErrorCode.REFRESH_TOKEN_EXPIRED);
+        for (Cookie cookie : cookies) {
+            if (cookie.getName().equals("refresh")) {
+                return cookie.getValue();
+            }
         }
-
-        // 토큰이 refresh인지 확인 (발급시 페이로드에 명시)
-        String category = jwtUtil.getCategory(refresh);
-
-        if (!category.equals("refresh")) {
-            log.error("RefreshToken 이 아님 = {}", refresh);
-            throw new RefreshTokenReissueException(ErrorCode.REFRESH_TOKEN_INVALID);
-        }
-
-        Long userId = jwtUtil.getUserId(refresh);
-        String username = jwtUtil.getUsername(refresh);
-        String role = jwtUtil.getRole(refresh);
-
-        // Access, Refresh Token 재발급 => TokenRotation
-        String newAccess = jwtUtil.createJwt("access", userId, username, role, 600000L);
-        String newRefresh = jwtUtil.createJwt("refresh", userId, username, role, 86400000L);
-
-        ValueOperations<String, String> opsForValue = redisTemplate.opsForValue();
-        opsForValue.set(username + ":refresh", refresh, 24, TimeUnit.HOURS);
-
-        // 응답 설정
-        response.setHeader("Authorization", "Bearer " + newAccess);
-        response.addCookie(createCookie("refresh", newRefresh));
-        return "AccessToken, RefreshToken 재발급 완료.";
-    }
-    private Cookie createCookie(String key, String value){
-        Cookie cookie = new Cookie(key, value);
-        cookie.setMaxAge(24 * 60 * 60); // 24시간
-        cookie.setPath("/");
-        cookie.setHttpOnly(true);
-        return cookie;    }
-
-    private String generateCode() {
-        return UUID.randomUUID().toString().substring(1, 7).toUpperCase();
-    }
-
-    private void sendEmailCode(String email, String code) throws MessagingException {
-        MimeMessage mimeMessage = javaMailSender.createMimeMessage();
-        mimeMessage.setFrom(email);
-        mimeMessage.setRecipients(MimeMessage.RecipientType.TO, email);
-        mimeMessage.setSubject("이메일 인증");
-        String body = "";
-        body += "<h3>요청하신 인증 번호입니다.</h3>";
-        body += "<h1>" + code + "</h1>";
-        body += "<h3>인증 확인란에 입력해주세요.</h3>";
-        mimeMessage.setText(body, "UTF-8", "html");
-        javaMailSender.send(mimeMessage);
+        throw new RefreshTokenReissueException(ErrorCode.REFRESH_TOKEN_NULL);
     }
 }
