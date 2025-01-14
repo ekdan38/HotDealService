@@ -11,7 +11,7 @@ import java.util.List;
 public interface ProductServiceClient {
 
     @GetMapping("/product-service/products")
-    List<ProductCommonDto> getProductsById(@RequestBody List<Long> productIds);
+    List<ProductCommonDto> getProductsById(@RequestParam List<Long> productIds);
 
     @PostMapping("/product-service/products/decrease-stock")
     Boolean decreaseStock(@RequestBody List<ProductStockDto> productStockDtos);
