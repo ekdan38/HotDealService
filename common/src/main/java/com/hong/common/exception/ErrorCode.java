@@ -44,7 +44,9 @@ public enum ErrorCode {
     ORDER_RETURN_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "ORDER_04", "반품은 배송 완료 상태에서 +1 일까지 가능합니다."),
     ORDER_LOCK_FAILED(HttpStatus.BAD_REQUEST, "ORDER_05", "락 획득 실패"),
     ORDER_PRODUCT_DECREASE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_06", "상품 재고 감소 실패"),
-    ORDER_PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "ORDER_07", "주문과 일치하는 상품이 존재하지 않습니다."),
+    ORDER_PRODUCT_INCREASE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_07", "상품 재고 복구 실패"),
+    ORDER_PRODUCT_FETCH_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_08", "상품 조회 실패"),
+    ORDER_PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "ORDER_09", "주문과 일치하는 상품이 존재하지 않습니다."),
 
 
     // 카테고리

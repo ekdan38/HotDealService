@@ -6,6 +6,7 @@ import com.hong.common.entity.Address;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.OrderException;
 import com.hong.orderservice.client.ProductServiceClient;
+import com.hong.orderservice.client.Resilience4JProductServiceClient;
 import com.hong.orderservice.domain.Delivery;
 import com.hong.orderservice.domain.Order;
 import com.hong.orderservice.domain.OrderProduct;
@@ -19,6 +20,8 @@ import com.hong.orderservice.web.dto.OrderRequestDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
+import org.springframework.cloud.client.circuitbreaker.CircuitBreaker;
+import org.springframework.cloud.client.circuitbreaker.CircuitBreakerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,8 +40,8 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final DeliveryRepository deliveryRepository;
-    private final ProductServiceClient productServiceClient;
     private final RedissonLockService redissonLockService;
+    private final Resilience4JProductServiceClient resilience4JProductServiceClient;
 
     // 주문 생성
     @Transactional
@@ -65,7 +68,7 @@ public class OrderServiceImpl implements OrderService {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new OrderException(ErrorCode.ORDER_LOCK_FAILED);
-        }finally {
+        } finally {
             // 모든 락 해제
             releaseLocks(locks);
         }
@@ -129,17 +132,17 @@ public class OrderServiceImpl implements OrderService {
 
         // 획득 한 락 List
         List<RLock> locks = new ArrayList<>();
-        try{
+        try {
             // 락 획득
             acquireLocks(productIds);
 
             // order 취소 변경
             List<ProductStockDto> stockIncreaseDto = cancelOrderIfPending(userId, orderId, order, orderProducts);
 
-            // feignClient 로 재고 복구 호출 => CircuitBreaker 적용 필요
-            productServiceClient.increaseStock(stockIncreaseDto);
+            // feignClient 로 재고 복구 호출
+            increaseStockAndValidate(stockIncreaseDto);
 
-        }catch (InterruptedException e){
+        } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             // todo 고치기
             throw new OrderException(ErrorCode.ORDER_LOCK_FAILED);
@@ -148,6 +151,7 @@ public class OrderServiceImpl implements OrderService {
         }
         return convertToOrderResponse(order);
     }
+
 
 
     // 반품
@@ -168,7 +172,7 @@ public class OrderServiceImpl implements OrderService {
 
 
     // 주문할 상품 Id 추출
-    private List<Long> extractOrderProductIds(OrderRequestDto requestDto){
+    private List<Long> extractOrderProductIds(OrderRequestDto requestDto) {
         // 주문 상품 목록
         List<OrderRequestDto.OrderProductRequest> productInfos = requestDto.getProducts();
         // 주문 productId 추출
@@ -188,7 +192,7 @@ public class OrderServiceImpl implements OrderService {
         for (String lockKey : lockKeys) {
             RLock lock = redissonLockService.tryLock(lockKey, 3L, 10L);
             // tryLock 로직에서 Lock 획득 못하면 예외를 던지지만, 혹시나 null일 상황 대비 로직
-            if(lock == null){
+            if (lock == null) {
                 log.error("락 획득 실패 key = {}", lockKey);
                 throw new OrderException(ErrorCode.ORDER_LOCK_FAILED);
             }
@@ -197,12 +201,19 @@ public class OrderServiceImpl implements OrderService {
         return locks;
     }
 
+
     // Product 조회, 검증
     private Map<Long, ProductCommonDto> fetchAndValidateProducts(List<Long> productIds,
                                                                  List<OrderRequestDto.OrderProductRequest> productRequests,
-                                                                 Long userId){
-        // feignClient 로 Product 조회 => CircuitBreaker 적용 필요
-        List<ProductCommonDto> productCommonDtos = productServiceClient.getProductsById(productIds);
+                                                                 Long userId) {
+
+        // feignClient 로 Product 조회
+        List<ProductCommonDto> productCommonDtos = resilience4JProductServiceClient.getProductsByIds(productIds);
+
+        if(productCommonDtos.isEmpty()){
+            log.error("상품 정보를 찾을 수 없습니다. : productId = {}", productIds);
+            throw new OrderException(ErrorCode.ORDER_PRODUCT_FETCH_FAILED);
+        }
 
         // map 으로 변환
         Map<Long, ProductCommonDto> productMap = productCommonDtos.stream().collect(
@@ -212,12 +223,7 @@ public class OrderServiceImpl implements OrderService {
             Long productId = requestProduct.getProductId();
             Integer requestQuantity = requestProduct.getQuantity();
 
-            // Map 에 해당 상품이 없으면 조회 실패 (CircuitBreaker 빈 리스트 반환)
             ProductCommonDto productCommonDto = productMap.get(productId);
-            if(productCommonDto == null){
-                log.error("상품 정보가 없습니다. : userId={}, productId={}", userId, productId);
-                throw new OrderException(ErrorCode.ORDER_PRODUCT_NOT_FOUND);
-            }
 
             // 최소 주문 수량 확인
             if (requestQuantity < 1) {
@@ -235,10 +241,11 @@ public class OrderServiceImpl implements OrderService {
         return productMap;
     }
 
+
     // Order 생성, 저장
     private Order createAndSaveOrder(Long userId,
                                      OrderRequestDto requestDto,
-                                     Map<Long, ProductCommonDto> productMap){
+                                     Map<Long, ProductCommonDto> productMap) {
         // 주문 상품을 저장할 List
         List<OrderProduct> orderProducts = new ArrayList<>();
         // 재고 감소 요청에 사용할 List
@@ -256,11 +263,8 @@ public class OrderServiceImpl implements OrderService {
             orderProducts.add(OrderProduct.create(productId, productCommonDto.getTitle(), requestQuantity, productCommonDto.getPrice()));
         }
 
-        // feignClient 로 재고 감소 호출 => CircuitBreaker 적용 필요
-        if(!productServiceClient.decreaseStock(stockDecreaseDto)){
-            log.error("재고 감소 호출 실패");
-            throw new OrderException(ErrorCode.ORDER_PRODUCT_DECREASE_FAILED);
-        }
+        // feignClient 로 재고 감소 호출
+        decreaseStockAndValidate(stockDecreaseDto);
 
         // Delivery 생성
         Address address = Address.create(requestDto.getCity(), requestDto.getStreet(), requestDto.getZipCode());
@@ -355,6 +359,22 @@ public class OrderServiceImpl implements OrderService {
             log.error("반품은 배송 완료 상태에서 +1 일까지 가능합니다. userId = {}, orderId = {}, deliveryStatus = {}, completedAt = {}",
                     userId, orderId, deliveryStatus, completedAt);
             throw new OrderException(ErrorCode.ORDER_RETURN_NOT_ALLOWED);
+        }
+    }
+
+    // feignClient 로 재고 복구 호출
+    private void increaseStockAndValidate(List<ProductStockDto> stockIncreaseDto){
+        if(!resilience4JProductServiceClient.increaseStock(stockIncreaseDto)){
+            log.error("IncreaseStock 호출 실패");
+            throw new OrderException(ErrorCode.ORDER_PRODUCT_INCREASE_FAILED);
+        }
+    }
+
+    // feignClient 로 재고 감소 호출
+    private void decreaseStockAndValidate(List<ProductStockDto> stockDecreaseDto){
+        if(!resilience4JProductServiceClient.decreaseStock(stockDecreaseDto)){
+            log.error("DecreaseStock 호출 실패");
+            throw new OrderException(ErrorCode.ORDER_PRODUCT_DECREASE_FAILED);
         }
     }
 }
