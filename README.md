@@ -3,83 +3,58 @@
 ## 📌프로젝트 소개
 <br>
 HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정 된 수량의 상품을 "핫 딜 가격"으로 선착순 판매하는 온라인 플랫폼의 MSA 아키텍처 백엔드 API 서버 입니다.
-사용자 인증, 위시리스트, 상품, 핫딜, 주문 기능을 제공합니다.
+사용자 인증, 위시리스트 관리, 상품 관리, 핫딜, 주문, 결제 기능을 제공합니다.
 
 
 ##### 프로젝트 진행 기간
-2024.12.18 ~ 진행중
+2024.12 ~ 2025.01
 
 ## 💻기술 스택
-#### 프로그래밍 언어 및 프레임워크
-- JAVA 21
-- SpringBoot 3.4.0
-#### 데이터베이스
-- Redis
-- Mysql
-- H2
-  - 테스트
-#### 데이터 접근
-- JPA
-#### 보안
-- SpringSecurity
-  - 사용자 인증 및 권한 관리를 처리
-#### API 게이트웨이 및 서비스 디스커버리
-- Spring Cloud Gateway
-  - 모든 요청을 중앙에서 라우팅하고 관리
-- Spring Cloud Eureka
-  - 서비스 디스커리를 톻애 마이크로서비스 간의 동적 상호작용 지원
-#### Config 관리, 메시징 처리
-- RabbitMQ
-- Spring Cloud Config Server
-- Spring Bus with AMQP
-  - 외부 Config 관리 : 중앙 집중식 Config 관리, Config 번경 사항을 RabbitMQ를 통해 전파
-#### SpringBoot Actuator
-- 애플리케이션의 모니터링과 관리 엔드포인트를 제공
-#### 신뢰성 및 회복력
-- Resilience4j
-  - 마이크로서비스 간 장애 복구 및 서비스 안정성을 위해 CircuitBreaker, Retry 를 사용
-#### API 테스트
-- Postman
-- Junit5
-#### Docker
-아직 도커에 띄우지 않았습니다.(Todo)
-#### 개발 도구
-- Intellij IDEA
-- Git & GitHub
+
+[//]: # (#### 프로그래밍 언어 및 프레임워크)
+<div style="text-align: left;">
+  <img src="https://img.shields.io/badge/java21-007396?style=for-the-badge&logo=OpenJDK&logoColor=white" alt="Java 21">
+  <img src="https://img.shields.io/badge/Spring Boot3.4.0-6DB33F?style=for-the-badge&logo=Spring Boot&logoColor=white" alt="Spring Boot 3.4.0">
+  <img src="https://img.shields.io/badge/Spring Security-6DB33F?style=for-the-badge&logo=Spring Security&logoColor=white" alt="Spring Security">
+  <img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=MySQL&logoColor=white" alt="MySQL">
+  <img src="https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=Redis&logoColor=white" alt="Redis">
+  <img src="https://img.shields.io/badge/RabbitMQ-FF6600?style=for-the-badge&logo=RabbitMQ&logoColor=white" alt="RabbitMQ">
+  <img src="https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
+  <img src="https://img.shields.io/badge/Hibernate-59666C?style=for-the-badge&logo=Hibernate&logoColor=white" alt="Hibernate">
+  <img src="https://img.shields.io/badge/PostMan-FF6C37?style=for-the-badge&logo=Postman&logoColor=white" alt="Postman">
+  <img src="https://img.shields.io/badge/JUnit5-25A162?style=for-the-badge&logo=JUnit5&logoColor=white" alt="JUnit 5">
+  <img src="https://img.shields.io/badge/Spring Cloud Gateway-25A162?style=for-the-badge&logo=Spring&logoColor=white" alt="Spring Cloud Gateway">
+  <img src="https://img.shields.io/badge/Spring Cloud Eureka-25A162?style=for-the-badge&logo=Spring&logoColor=white" alt="Spring Cloud Eureka">
+  <img src="https://img.shields.io/badge/Resilience4J-59666C?style=for-the-badge&&logoColor=white" alt="Resilience4J">
+ <img src="https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=Git&logoColor=white" alt="Spring Cloud Eureka">
+ <img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=GitHub&logoColor=white" alt="Spring Cloud Eureka">
+</div>
 
 
 ## 🛠 ERD
-업데이트 예정
-
+![Image](https://github.com/user-attachments/assets/54f9acd0-f17c-4cde-a2b3-1dc9371e72f5)
 
 ## 🛠 아키텍처
-![Image](https://github.com/user-attachments/assets/32748e58-7e23-4018-b415-27757036a5fb)
+![Image](https://github.com/user-attachments/assets/eca2262b-aef1-4c26-82bd-7f0d52af181a)
 
 ## 🎨주요 기능
-### 사용자 인증
-- 권한 부여
-  - USER, ADMIN 권한 기반 API 접근 자원 제한
-- 회원 가입
-  - 회원 가입시 이메일 인증 코드 발송, 인증 코드 검사
-- 로그인 및 로그아웃
-  - JwtToken 기반 인증(Access, Refresh Token)
-### 카테고리
-- 카테고리 등록, 조회, 수정, 삭제
-  - 카테고리 부모 자식 관계 설정 가능
 ### 상품 관리
-- 상품 등록, 조회, 수정, 삭제
+- 재고에 대한 동시성 처리로 안정적인 상품 재고 관리
 - 카테고리별 상품 분류
+- 위시리스트 기능
 ### 핫딜 관리
-- 핫딜 이벤트 등록, 조회, 수정, 삭제
 - 핫딜 상품, 할인률, 기간 설정
 ### 주문, 결제 관리
-- 주문 생성, 조회, 취소, 반품
-  - 주문 : 상품 재고 조회, 주문시에 상품에 재고에 관한 동시성 처리
-  - 취소 : 배송 상태 아니고, 주문 후 하루 까지 가능
-  - 반품 : 배송 완료 후 하루 까지 가능
-    - 취소, 반품 완료시에 상품 재고에 관한 동시성 처리
+- 주문 : 동시성 제어로 안전한 수량 제한된 핫딜 상품 구매
+- 취소 : 미배송 상태, 주문 후 하루 까지 가능
+- 반품 : 배송 완료 후 하루 까지 가능
 
-## ❗ 트러블 슈팅
+
+## 🚨 트러블 슈팅
+- 예외 상황 응답 일관성 및 코드 중복을 줄이기 위해 에러코드 관리
+  - 글 따로 빼면서, 왜 에러코드 썻는지랑 에러 코드 정리해서 올리자
+
+
 - 이메일 인증 코드 발송 비동기 처리
   - 이메일 인증 코드 발송 시에 응답 까지 약 10초 시간 소요 => 비동기 처리
 
