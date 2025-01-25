@@ -7,6 +7,7 @@ import com.hong.hotdealservice.domain.status.HotDealStatus;
 import com.hong.hotdealservice.repository.HotDealProductRepository;
 import com.hong.hotdealservice.repository.HotDealRepository;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -53,8 +54,14 @@ class HotDealApiServiceTest {
         hotDeals.add(hotDeal2);
     }
 
+    @AfterEach
+    void after(){
+        hotDealProductRepository.deleteAll();
+        hotDealRepository.deleteAll();
+    }
+
     @Test
-    @DisplayName("HotDeal 조회, 상품 재고 감소_성공")
+    @DisplayName("멀티 스레드 HotDeal 조회, 상품 재고 감소_성공")
     public void fetchAndDecreaseStock_Success() throws InterruptedException {
         //given
         List<HotDealProductDto> hotDealProductDtos = new ArrayList<>();
@@ -87,6 +94,45 @@ class HotDealApiServiceTest {
             for (HotDealProduct hotDealProduct : hotDeal.getHotDealProducts()) {
                 HotDealProduct foundHotDealProduct = hotDealProductRepository.findById(hotDealProduct.getId()).orElseThrow();
                 Assertions.assertThat(foundHotDealProduct.getStock()).isEqualTo(0);
+
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("멀티 스레드 HotDeal 조회, 상품 재고 증가_성공")
+    public void fetchAndIncreaseStock_Success() throws InterruptedException {
+        //given
+        List<HotDealProductDto> hotDealProductDtos = new ArrayList<>();
+        for (HotDeal hotDeal : hotDeals) {
+            for (HotDealProduct hotDealProduct : hotDeal.getHotDealProducts()) {
+                hotDealProductDtos.add(new HotDealProductDto(hotDeal.getId(), hotDealProduct.getId(), 1));
+            }
+        }
+
+        int numberOfThreads = 100;
+        ExecutorService executorService = Executors.newFixedThreadPool(numberOfThreads);
+        CountDownLatch latch = new CountDownLatch(numberOfThreads);
+
+
+        //when
+        for(int i = 0; i < numberOfThreads; i++){
+            executorService.submit(() -> {
+                try{
+                    hotDealApiService.fetchAndIncreaseStock(hotDealProductDtos);
+                }
+                finally {
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await();
+
+        //then
+        for (HotDeal hotDeal : hotDeals) {
+            for (HotDealProduct hotDealProduct : hotDeal.getHotDealProducts()) {
+                HotDealProduct foundHotDealProduct = hotDealProductRepository.findById(hotDealProduct.getId()).orElseThrow();
+                Assertions.assertThat(foundHotDealProduct.getStock()).isEqualTo(200);
 
             }
         }
