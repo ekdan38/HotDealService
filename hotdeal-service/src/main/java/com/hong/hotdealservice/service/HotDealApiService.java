@@ -30,6 +30,7 @@ public class HotDealApiService {
     private final HotDealRepository hotDealRepository;
     private final RedissonClient redissonClient;
 
+    // 핫딜 상품 재고 감소
     @Transactional
     public Boolean fetchAndDecreaseStock(List<HotDealProductDto> hotDealProductDtos){
         // hotDealProductIds 추출
@@ -60,6 +61,39 @@ public class HotDealApiService {
         }
         return true;
     }
+
+    // 핫딜 상품 재고 증가
+    @Transactional
+    public Boolean fetchAndIncreaseStock(List<HotDealProductDto> hotDealProductDtos){
+        // hotDealProductIds 추출
+        List<Long> hotDealProductIds = extractHotDealProductIds(hotDealProductDtos);
+        try{
+            // 락 획득
+            List<RLock> locks = acquireLocks(hotDealProductIds);
+            // <hotDealId, <HotDealProductDto> 형태 Map 변환
+            Map<Long, List<HotDealProductDto>> hotDealProductMap = buildHotDealProductMap(hotDealProductDtos);
+            // hotDealIds 추출
+            List<Long> hotDealIds = extractHotDealIds(hotDealProductDtos);
+            // hotDeal 조회, 검증
+            List<HotDeal> hotDeals = fetchHotDealWithProductsAndValidate(hotDealIds);
+            // hotDealProducts 요청 검증, 재고 증가
+            increaseStockAndValidateRequestedHotDealProducts(hotDeals, hotDealProductMap);
+
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    releaseLocks(locks);
+                }
+            });
+
+        }
+        catch (InterruptedException e){
+            Thread.currentThread().interrupt();
+            throw new HotDealException(ErrorCode.HOTDEAL_LOCK_FAILED);
+        }
+        return true;
+    }
+
 
     // hotDealProductIds 추출
     private List<Long> extractHotDealProductIds(List<HotDealProductDto> hotDealProductDtos) {
@@ -118,10 +152,37 @@ public class HotDealApiService {
             for (HotDealProduct hotDealProduct : hotDealProducts) {
                 Integer quantity = dtos.stream().filter(dto -> dto.getHotDealProductId().equals(hotDealProduct.getId())).findFirst()
                         .map(HotDealProductDto::getQuantity)
-                        .orElseThrow(() -> new IllegalStateException("수량 없음"));
+                        .orElseThrow(() -> new HotDealException(ErrorCode.HOTDEAL_PRODUCT_INVALID_QUANTITY));
                 log.info("hotDealProductId = {}, 조회 재고 = {}", hotDealProduct.getProductId(), hotDealProduct.getStock());
                 // 재고 감소
                 hotDealProduct.decreaseStock(quantity);
+                log.info("hotDealProductId = {}, 재고 감소 = {}", hotDealProduct.getProductId(), hotDealProduct.getStock());
+            }
+        }
+    }
+
+    // hotDeal 재고 증가, hotDealProducts 요청 검증
+    private void increaseStockAndValidateRequestedHotDealProducts(List<HotDeal> hotDeals, Map<Long, List<HotDealProductDto>> hotDealProductMap) {
+        for (HotDeal hotDeal : hotDeals) {
+            // hotDealId로 map에서 추출
+            // hotDealPorudctId 랑  dto의 productId랑 같은거 추출
+            List<HotDealProductDto> dtos = hotDealProductMap.get(hotDeal.getId());
+            List<HotDealProduct> hotDealProducts = hotDeal.getHotDealProducts().stream().filter(hp -> dtos.stream()
+                            .anyMatch(dto -> dto.getHotDealProductId().equals(hp.getId())))
+                    .collect(Collectors.toList());
+
+            if(hotDealProducts.size() != dtos.size()){
+                log.error("주문 요청된 핫딜 상품중에 잘못된 상품이 존재합니다.");
+                throw new HotDealException(ErrorCode.HOTDEAL_NOT_FOUND_PRODUCT);
+            }
+
+            for (HotDealProduct hotDealProduct : hotDealProducts) {
+                Integer quantity = dtos.stream().filter(dto -> dto.getHotDealProductId().equals(hotDealProduct.getId())).findFirst()
+                        .map(HotDealProductDto::getQuantity)
+                        .orElseThrow(() -> new HotDealException(ErrorCode.HOTDEAL_PRODUCT_INVALID_QUANTITY));
+                log.info("hotDealProductId = {}, 조회 재고 = {}", hotDealProduct.getProductId(), hotDealProduct.getStock());
+                // 재고 증가
+                hotDealProduct.increaseStock(quantity);
                 log.info("hotDealProductId = {}, 재고 감소 = {}", hotDealProduct.getProductId(), hotDealProduct.getStock());
             }
         }
