@@ -3,13 +3,13 @@ package com.hong.hotdealservice.service;
 import com.hong.common.dto.ProductCommonDto;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.HotDealException;
-import com.hong.common.exception.custom.OrderException;
 import com.hong.hotdealservice.client.Resilience4JProductServiceClient;
 import com.hong.hotdealservice.domain.HotDeal;
 import com.hong.hotdealservice.domain.HotDealProduct;
 import com.hong.hotdealservice.dto.HotDealPagingResponseDto;
 import com.hong.hotdealservice.dto.HotDealResponseDto;
 import com.hong.hotdealservice.repository.HotDealRepository;
+import com.hong.hotdealservice.web.dto.HotDealProductRequestDto;
 import com.hong.hotdealservice.web.dto.HotDealRequestDto;
 import com.hong.hotdealservice.web.dto.HotDealUpdateRequestDto;
 import jakarta.validation.Valid;
@@ -46,13 +46,14 @@ public class HotDealServiceImpl implements HotDealService {
         // HotDeal 시작 시간, 종료 시간 검증
         validateHotDealDate(requestDto.getStartTime(), requestDto.getEndTime());
 
-        // 상품이 존재 하는지 검증
+        // product 의 id만 추출
+        List<Long> requestedProductIds = extractProductIdsFromRequestDto(requestDto.getProductInfos());
 
-        // 상품의 id만 추출
-        List<Long> productIds = extractProductIdsFromRequestDto(requestDto);
+        // product 별 quantity Map 변환
+        Map<Long, Integer> quantityMap = buildIdQuantityMap(requestDto.getProductInfos());
 
         // products 조회, 검증
-        Map<Long, ProductCommonDto> productMap = fetchAndValidate(productIds);
+        Map<Long, ProductCommonDto> productMap = fetchAndValidate(requestedProductIds, quantityMap);
 
         // HotDeal 생성, 저장
         HotDeal savedHotDeal = createHotDealAndSave(adminId, requestDto, productMap);
@@ -115,7 +116,7 @@ public class HotDealServiceImpl implements HotDealService {
 
         // 요청된 Product 정보와 기존 HotDealProducts 추출
         // 요청된 ProductId 추출
-        List<Long> requestedProductIds = extractRequestedProductIdsFromUpdateDto(updateRequestDto);
+        List<Long> requestedProductIds = extractProductIdsFromRequestDto(updateRequestDto.getProductInfos());
 
         // 기존 ProductId 추출
         List<Long> existingProductIds = extractExistsProductIdsFromHotDeal(hotDeal);
@@ -123,11 +124,14 @@ public class HotDealServiceImpl implements HotDealService {
         // 삭제할 HotDealProducts 삭제
         deleteHotDealProducts(hotDeal, requestedProductIds);
 
+        // product 별 quantity Map 변환
+        Map<Long, Integer> quantityMap = buildIdQuantityMap(updateRequestDto.getProductInfos());
+
         // feignClient 상품 조회, map 변환
-        Map<Long, ProductCommonDto> validProductInfoMap = fetchAndValidate(requestedProductIds);
+        Map<Long, ProductCommonDto> productMap = fetchAndValidate(requestedProductIds, quantityMap);
 
         // HotDealProduct 수정, HotDeal 저장
-        HotDeal savedHotDeal = updateHotDealProductsAndSaveHotDeal(updateRequestDto, hotDeal, existingProductIds, validProductInfoMap);
+        HotDeal savedHotDeal = updateHotDealProductsAndSaveHotDeal(updateRequestDto, hotDeal, existingProductIds, productMap);
 
         // Dto 변환
         return convertHotDealResponseDto(savedHotDeal);
@@ -170,18 +174,17 @@ public class HotDealServiceImpl implements HotDealService {
 
 
     // RequestDto 에서 상품의 id만 추출
-    private List<Long> extractProductIdsFromRequestDto(HotDealRequestDto requestDto) {
-        List<HotDealRequestDto.@Valid HotDealProductRequest> productInfos = requestDto.getProductInfos();
-        return productInfos.stream().map(HotDealRequestDto.HotDealProductRequest::getProductId)
+    private List<Long> extractProductIdsFromRequestDto(List<@Valid HotDealProductRequestDto> productRequestDtos) {
+        return productRequestDtos.stream()
+                .map(HotDealProductRequestDto::getProductId)
                 .collect(Collectors.toList());
     }
 
-    // UpdateDto 에서 상품의 id만 추출
-    private List<Long> extractRequestedProductIdsFromUpdateDto(HotDealUpdateRequestDto updateRequestDto) {
-        List<HotDealUpdateRequestDto.HotDealProductRequest> productInfos = updateRequestDto.getProductInfos();
-        return productInfos.stream()
-                .map(HotDealUpdateRequestDto.HotDealProductRequest::getProductId)
-                .collect(Collectors.toList());
+    // HotDealProductRequestDto <ProductId, Quantity> 형식 Map으로 변환
+    private Map<Long, Integer> buildIdQuantityMap(List<HotDealProductRequestDto> productRequestDtos){
+        return productRequestDtos
+                .stream()
+                .collect(Collectors.toMap(HotDealProductRequestDto::getProductId, HotDealProductRequestDto::getQuantity));
     }
 
     // HotDeal 에서 기존 상품 id 추출
@@ -204,8 +207,9 @@ public class HotDealServiceImpl implements HotDealService {
     private HotDeal createHotDealAndSave(Long adminId, HotDealRequestDto requestDto, Map<Long, ProductCommonDto> productMap) {
         // 핫딜 상품을 저장할 List
         List<HotDealProduct> hotDealProducts = new ArrayList<>();
+
         // HotDealProduct 생성
-        for (HotDealRequestDto.HotDealProductRequest requestProduct : requestDto.getProductInfos()) {
+        for (HotDealProductRequestDto requestProduct : requestDto.getProductInfos()) {
             Long productId = requestProduct.getProductId();
             ProductCommonDto productCommonDto = productMap.get(productId);
 
@@ -245,17 +249,34 @@ public class HotDealServiceImpl implements HotDealService {
     }
 
     // feignClient 상품 조회, map 변환
-    private Map<Long, ProductCommonDto> fetchAndValidate(List<Long> requestedProductIds) {
+    private Map<Long, ProductCommonDto> fetchAndValidate(List<Long> requestedProductIds, Map<Long, Integer> requestedQuantities) {
+
         // feignClient 로 Product 조회
         List<ProductCommonDto> productCommonDtos = resilience4JProductServiceClient.getProductsByIds(requestedProductIds);
+
+        // 상품 정보가 없다면
         if(productCommonDtos.isEmpty()){
             log.error("상품 정보를 찾을 수 없습니다. : productId = {}", requestedProductIds);
             throw new HotDealException(ErrorCode.HOTDEAL_PRODUCT_FETCH_FAILED);
         }
 
-        // ProductId를 기준으로 Map 변환
-        return  productCommonDtos.stream()
+        // productId 기준 Map 변환
+        Map<Long, ProductCommonDto> productMap = productCommonDtos.stream()
                 .collect(Collectors.toMap(ProductCommonDto::getId, product -> product));
+
+        // 상품 재고, 핫딜 요청 재고 비교 검증
+        for (Map.Entry<Long, Integer> entry : requestedQuantities.entrySet()) {
+            Long productId = entry.getKey();
+            Integer quantity = entry.getValue();
+            Integer productStock = productMap.get(productId).getStock();
+            if(productStock < quantity){
+                log.error("핫딜 상품 수량보다 상품의 재고가 부족합니다. : productId = {}, productStock = {}, requestedQuantity = {}",
+                        productId, productStock, quantity);
+                throw new HotDealException(ErrorCode.HOTDEAL_INVALID_PRODUCT_QUANTITY);
+            }
+        }
+        // ProductId를 기준으로 Map 변환
+        return productMap;
     }
 
 
@@ -264,15 +285,15 @@ public class HotDealServiceImpl implements HotDealService {
     private HotDeal updateHotDealProductsAndSaveHotDeal(HotDealUpdateRequestDto updateRequestDto, HotDeal hotDeal, List<Long> existingProductIds, Map<Long, ProductCommonDto> validProductInfoMap) {
         // HotDealProducts 수정 처리
         hotDeal.getHotDealProducts().forEach(hotDealProduct -> {
-            HotDealUpdateRequestDto.HotDealProductRequest updatedInfo = updateRequestDto.getProductInfos().stream()
+            HotDealProductRequestDto updatedInfo = updateRequestDto.getProductInfos().stream()
                     .filter(info -> info.getProductId().equals(hotDealProduct.getProductId()))
                     .findFirst()
                     .orElse(null);
-            if (updatedInfo != null) hotDealProduct.update(updatedInfo.getQuantity(), updatedInfo.getDiscountRate());
+            if (updatedInfo != null) hotDealProduct.updateQuantityAndDiscountRate(updatedInfo.getQuantity(), updatedInfo.getDiscountRate());
         });
 
         // HotDealProducts 등록 처리
-        List<HotDealUpdateRequestDto.HotDealProductRequest> productsToAdd = updateRequestDto.getProductInfos().stream()
+        List<HotDealProductRequestDto> productsToAdd = updateRequestDto.getProductInfos().stream()
                 .filter(info -> !existingProductIds.contains(info.getProductId()))
                 .collect(Collectors.toList());
 
@@ -318,7 +339,7 @@ public class HotDealServiceImpl implements HotDealService {
                         hp.getOriginalPrice(),
                         hp.getHotDealPrice(),
                         hp.getDiscountRate(),
-                        hp.getQuantity()))
+                        hp.getStock()))
                 .collect(Collectors.toList());
     }
 

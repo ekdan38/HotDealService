@@ -1,7 +1,6 @@
 package com.hong.hotdealservice.client;
 
 import com.hong.common.dto.ProductCommonDto;
-import com.hong.common.dto.ProductStockDto;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;

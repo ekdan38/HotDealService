@@ -1,8 +1,6 @@
 package com.hong.hotdealservice.repository;
 
-import com.hong.common.dto.HotDealProductDto;
 import com.hong.hotdealservice.domain.HotDeal;
-import com.hong.hotdealservice.domain.HotDealProduct;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
