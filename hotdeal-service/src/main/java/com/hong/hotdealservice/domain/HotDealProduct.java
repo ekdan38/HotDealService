@@ -1,5 +1,8 @@
 package com.hong.hotdealservice.domain;
 
+import com.hong.common.exception.ErrorCode;
+import com.hong.common.exception.custom.HotDealException;
+import com.hong.common.exception.custom.ProductException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -36,19 +39,19 @@ public class HotDealProduct {
     private Double discountRate;
 
     @Column(nullable = false)
-    private Integer quantity;
+    private Integer stock;
 
-    private HotDealProduct(Long productId, String productTitle, Integer originalPrice, Double discountRate, Integer quantity) {
+    private HotDealProduct(Long productId, String productTitle, Integer originalPrice, Double discountRate, Integer stock) {
         this.productId = productId;
         this.productTitle = productTitle;
         this.originalPrice = originalPrice;
         this.discountRate = discountRate;
-        this.quantity = quantity;
+        this.stock = stock;
     }
 
     // == 생성 메서드 ==
-    public static HotDealProduct create(Long productId, String productTitle, Integer originalPrice, Double discountRate, Integer quantity){
-        HotDealProduct hotDealProduct = new HotDealProduct(productId, productTitle, originalPrice, discountRate, quantity);
+    public static HotDealProduct create(Long productId, String productTitle, Integer originalPrice, Double discountRate, Integer stock){
+        HotDealProduct hotDealProduct = new HotDealProduct(productId, productTitle, originalPrice, discountRate, stock);
         hotDealProduct.setHotDealPrice(discountRate);
         return hotDealProduct;
     }
@@ -63,9 +66,23 @@ public class HotDealProduct {
         this.hotDealPrice = (int) Math.floor(this.originalPrice * (1 - discountRate));
     }
 
-    // == HotDealProduct update 메서드 ==
-    public void update(int quantity, double discountRate){
-        this.quantity = quantity;
+    // == stock 감소 메서드 ==
+    public void decreaseStock(Integer quantity){
+        if(this.stock - quantity < 0){
+            throw new HotDealException(ErrorCode.HOTDEAL_PRODUCT_NO_STOCK);
+        }
+        this.stock -= quantity;
+    }
+
+    // == stock 증가 메서드 ==
+    public void increaseStock(Integer quantity){
+        this.stock += quantity;
+    }
+
+
+    // == quantity, discountRate update 메서드 ==
+    public void updateQuantityAndDiscountRate(int quantity, double discountRate){
+        this.stock = quantity;
         setHotDealPrice(discountRate);
     }
 

@@ -1,5 +1,6 @@
 package com.hong.hotdealservice.repository;
 
+import com.hong.common.dto.HotDealProductDto;
 import com.hong.hotdealservice.domain.HotDeal;
 import com.hong.hotdealservice.domain.HotDealProduct;
 import org.springframework.data.domain.Pageable;
@@ -30,4 +31,12 @@ public interface HotDealRepository extends JpaRepository<HotDeal, Long> {
             "JOIN FETCH h.hotDealProducts hp " +
             "WHERE h.id = :hotDealId")
     HotDeal findByIdWithHotDealProducts(@Param("hotDealId") Long hotDealId);
+
+
+    @Query("SELECT h " +
+            "FROM HotDeal h " +
+            "JOIN FETCH h.hotDealProducts hp " +
+            "WHERE h.id IN :hotDealIds")
+    List<HotDeal> findByIdsWithHotDealProducts(@Param("hotDealIds") List<Long> hotDealIds);
+
 }
