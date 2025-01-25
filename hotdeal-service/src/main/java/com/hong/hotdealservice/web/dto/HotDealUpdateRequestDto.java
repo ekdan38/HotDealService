@@ -30,22 +30,5 @@ public class HotDealUpdateRequestDto {
     private HotDealStatus status;
 
     @NotEmpty(message = "productInfos 는 최소 1개 이상이어야 합니다.")
-    private List<@Valid HotDealProductRequest> productInfos;
-
-    @Data
-    @AllArgsConstructor
-    public static class HotDealProductRequest{
-        @NotNull(message = "productId 는 필수입니다.")
-        @Positive(message = "productId 는 양수여야 합니다.")
-        private Long productId;
-
-        @NotNull(message = "quantity 는 필수입니다.")
-        @Positive(message = "quantity 는 양수여야 합니다.")
-        private Integer quantity;
-
-        @NotNull(message = "discountRate 는 필수입니다.")
-        @DecimalMin(value = "0.0",  message = "discountRate 는 0.0 이상이어야 합니다.")
-        @DecimalMax(value = "1.0",  message = "discountRate 는 1.0 이하이어야 합니다.")
-        private Double discountRate;
-    }
+    private List<@Valid HotDealProductRequestDto> productInfos;
 }
