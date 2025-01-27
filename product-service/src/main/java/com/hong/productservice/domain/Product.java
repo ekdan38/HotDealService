@@ -69,7 +69,7 @@ public class Product extends TimeEntity {
     // == stock 감소 메서드 ==
     public void decreaseStock(Integer quantity){
         if(this.stock - quantity < 0){
-            throw new ProductException(ErrorCode.ORDER_PRODUCT_NO_STOCK);
+            throw new ProductException(ErrorCode.PRODUCT_NO_STOCK);
         }
         this.stock -= quantity;
     }

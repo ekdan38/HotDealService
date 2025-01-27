@@ -1,14 +1,17 @@
 package com.hong.productservice.web.controller;
 
 import com.hong.common.dto.ProductCommonDto;
-import com.hong.common.dto.ProductStockDto;
+import com.hong.productservice.dto.product.ProductDto;
 import com.hong.productservice.service.product.ProductApiService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequiredArgsConstructor
@@ -17,22 +20,15 @@ public class ProductApiController {
 
     private final ProductApiService productApiService;
 
-    @GetMapping("/products")
-    ResponseEntity<List<ProductCommonDto>> getProductsById(@RequestParam List<Long> productIds) {
-
-        List<ProductCommonDto> productsByIds = productApiService.getProductsByIds(productIds);
-        return ResponseEntity.ok().body(productsByIds);
-    }
-
     @PostMapping("/products/decrease-stock")
-    ResponseEntity<Boolean> decreaseStock(@RequestBody List<ProductStockDto> productStockDtos) {
-        Boolean result = productApiService.decreaseStock(productStockDtos);
-        return ResponseEntity.ok().body(result);
+    ResponseEntity<List<ProductCommonDto>> fetchAndDecreaseStock(@RequestBody List<ProductCommonDto> productCommonDtos) {
+        List<ProductCommonDto> responseDtos = productApiService.decreaseStock(productCommonDtos);
+        return ResponseEntity.ok().body(responseDtos);
     }
 
     @PostMapping("/products/increase-stock")
-    ResponseEntity<Boolean> increaseStock(@RequestBody List<ProductStockDto> productStockDtos) {
-        Boolean result = productApiService.increaseStock(productStockDtos);
-        return ResponseEntity.ok().body(result);
+    ResponseEntity<List<ProductCommonDto>> fetchAndIncreaseStock(@RequestBody List<ProductCommonDto> productCommonDtos) {
+        List<ProductCommonDto> responseDtos = productApiService.increaseStock(productCommonDtos);
+        return ResponseEntity.ok().body(responseDtos);
     }
 }
