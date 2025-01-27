@@ -41,6 +41,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     // feign client
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+    // redis
+    implementation group: 'org.redisson', name: 'redisson-spring-boot-starter', version: '3.41.0'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
     implementation 'org.modelmapper:modelmapper:3.0.0'
 

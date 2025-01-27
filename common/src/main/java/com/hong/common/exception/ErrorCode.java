@@ -35,6 +35,8 @@ public enum ErrorCode {
     PRODUCT_EXISTS(HttpStatus.BAD_REQUEST, "PRODUCT_00", "이미 존재하는 상품 입니다."),
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "PRODUCT_01", "존재하지 않는 상품 입니다."),
     PRODUCT_EXISTS_CATEGORY(HttpStatus.BAD_REQUEST, "PRODUCT_02", "상품에 카테고리가 이미 설정되어 있습니다."),
+    PRODUCT_NO_STOCK(HttpStatus.BAD_REQUEST, "PRODUCT_03", "상품의 수량이 부족합니다."),
+    PRODUCT_LOCK_FAILED(HttpStatus.CONFLICT, "PRODUCT_04", "락 획득 실패"),
 
     // 주문
     ORDER_PRODUCT_NO_STOCK(HttpStatus.BAD_REQUEST, "ORDER_00", "상품의 수량이 부족합니다."),
@@ -48,10 +50,21 @@ public enum ErrorCode {
     ORDER_PRODUCT_FETCH_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_08", "상품 조회 실패"),
     ORDER_PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "ORDER_09", "주문과 일치하는 상품이 존재하지 않습니다."),
 
-    HOTDEAL_EXISTS_TITLE(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_00", "이미 존재하는 핫딜 제목 입니다."),
-    HOTDEAL_NOT_FOUND(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_01", "존재 하지 않는 핫딜 입니다."),
-    HOTDEAL_INVALID_TIME(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_02", "잘못된 핫딜 시작, 종료 시간 입니다."),
+    ORDER_HOTDEAL_PRODUCT_NO_STOCK(HttpStatus.BAD_REQUEST, "ORDER_00", "핫딜 상품의 수량이 부족합니다."),
+    ORDER_HOTDEAL_PRODUCT_DECREASE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_06", "핫딜 상품 재고 감소 실패"),
+    ORDER_HOTDEAL_PRODUCT_INCREASE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_07", "핫딜 상품 재고 복구 실패"),
+    ORDER_HOTDEAL_PRODUCT_FETCH_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_08", "핫딜 상품 조회 실패"),
+
+    HOTDEAL_EXISTS_TITLE(HttpStatus.BAD_REQUEST, "ORDER_00", "이미 존재하는 핫딜 제목 입니다."),
+    HOTDEAL_NOT_FOUND(HttpStatus.NOT_FOUND, "ORDER_01", "존재 하지 않는 핫딜 입니다."),
+    HOTDEAL_INVALID_TIME(HttpStatus.BAD_REQUEST, "ORDER_02", "잘못된 핫딜 시작, 종료 시간 입니다."),
     HOTDEAL_PRODUCT_FETCH_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_03", "상품 조회 실패"),
+    HOTDEAL_INVALID_PRODUCT_QUANTITY(HttpStatus.BAD_REQUEST, "ORDER_04", "핫딜 상품 수량보다 상품의 재고가 부족합니다."),
+    HOTDEAL_IS_NOT_ACTIVE(HttpStatus.BAD_REQUEST, "ORDER_05", "활성화 된 핫딜이 아닙니다."),
+    HOTDEAL_NOT_FOUND_PRODUCT(HttpStatus.NOT_FOUND, "ORDER_06", "존재하는 핫딜 상품이 아닙니다."),
+    HOTDEAL_PRODUCT_NO_STOCK(HttpStatus.BAD_REQUEST, "ORDER_06", "핫딜 상품 수량이 부족합니다."),
+    HOTDEAL_LOCK_FAILED(HttpStatus.BAD_REQUEST, "ORDER_05", "락 획득 실패"),
+    HOTDEAL_PRODUCT_INVALID_QUANTITY(HttpStatus.BAD_REQUEST, "ORDER_05", "요청 수량이 없습니다."),
 
     // 카테고리
     CATEGORY_EXISTS(HttpStatus.BAD_REQUEST, "CATEGORY_00", "이미 존재하는 카테고리 입니다."),
