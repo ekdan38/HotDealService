@@ -1,16 +1,11 @@
 package com.hong.productservice.web.controller;
 
 import com.hong.common.dto.ProductCommonDto;
-import com.hong.productservice.dto.product.ProductDto;
 import com.hong.productservice.service.product.ProductApiService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -19,6 +14,12 @@ import java.util.List;
 public class ProductApiController {
 
     private final ProductApiService productApiService;
+    @GetMapping("/products")
+    ResponseEntity<List<ProductCommonDto>> getProductsById(@RequestParam List<Long> productIds) {
+
+        List<ProductCommonDto> productsByIds = productApiService.getProductsByIds(productIds);
+        return ResponseEntity.ok().body(productsByIds);
+    }
 
     @PostMapping("/products/decrease-stock")
     ResponseEntity<List<ProductCommonDto>> fetchAndDecreaseStock(@RequestBody List<ProductCommonDto> productCommonDtos) {
