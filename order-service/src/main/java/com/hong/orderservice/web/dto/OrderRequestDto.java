@@ -1,8 +1,6 @@
 package com.hong.orderservice.web.dto;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -30,7 +28,14 @@ public class OrderRequestDto {
     @Data
     @AllArgsConstructor
     public static class OrderProductRequest{
+        // hotDeal 상품이면 hotDealId, productId 는 hotDealProductId
+        // 일반 상품이면 productId 는 productId
+        @NotNull(message = "productId 는 필수입니다.")
         private Long productId;
+        private Long hotDealId;
+        private Long hotDealProductId;
+        @NotNull(message = "quantity 는 필수입니다.")
+        @Positive(message = "quantity 는 양수여야 합니다.")
         private Integer quantity;
     }
 }
