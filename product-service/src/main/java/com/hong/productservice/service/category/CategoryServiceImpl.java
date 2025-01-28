@@ -14,10 +14,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,10 +33,9 @@ public class CategoryServiceImpl implements CategoryService {
 
         // root category 중 중복 되는 category 검증
         if(categoryRepository.existsByParentIsNullAndTitle(title)) {
-            log.error("이미 존재 하는 최상위 카테고리 입니다. 등록 시도 = {}", title);
-            throw new CategoryException(ErrorCode.CATEGORY_ROOT_EXISTS);
+            log.debug("이미 존재 하는 최상위 카테고리 입니다. title = {}", title);
+            throw new CategoryException(ErrorCode.CATEGORY_ROOT_EXISTS, title);
         }
-
         // 최상위 category 생성 시작
         Category category = Category.create(title);
 
@@ -57,7 +53,10 @@ public class CategoryServiceImpl implements CategoryService {
 
         // parentCategory 조회
         Category parentCategory = categoryRepository.findById(parentCategoryId)
-                .orElseThrow(() -> new CategoryException(ErrorCode.CATEGORY_PARENT_NOT_FOUND));
+                .orElseThrow(() -> {
+                    log.debug("존재 하지 않는 부모 카테고리 입니다. parentCategoryId = {}", parentCategoryId);
+                    return new CategoryException(ErrorCode.CATEGORY_PARENT_NOT_FOUND, parentCategoryId);
+                });
 
         // 생성 요청 childCategory 에 대한 검증
         validateChildCategory(parentCategoryId, parentCategory, title);
@@ -113,7 +112,8 @@ public class CategoryServiceImpl implements CategoryService {
         List<Category> categories = categoryRepository.findCategoryByCategoryIdWithChildren(categoryId);
 
         if (categories.isEmpty()) {
-            throw new CategoryException(ErrorCode.CATEGORY_NOT_FOUND);
+            log.debug("요청된 카테고리가 존재하지 않습니다. categoryId = {}", categoryId);
+            throw new CategoryException(ErrorCode.CATEGORY_NOT_FOUND, categoryId);
         }
 
         // Map 으로 변환
@@ -162,17 +162,16 @@ public class CategoryServiceImpl implements CategoryService {
 
         // childCategory 존재 하는지 확인
         if (!category.getChilds().isEmpty()) {
-            log.error("삭제하려는 카테고리에게 자식 카테고리가 존재합니다. 삭제 시도 = {}", category);
-            throw new CategoryException(ErrorCode.CATEGORY_HAS_CHILDREN);
+            log.debug("삭제하려는 카테고리에게 자식 카테고리가 존재합니다. categoryId = {}", categoryId);
+            throw new CategoryException(ErrorCode.CATEGORY_HAS_CHILDREN, categoryId);
         }
 
         // category 를 사용 하는 product 가 존재 하는지 확인
         if(categoryRepository.existsProductCategoryByCategoryId(categoryId)){
-            log.error("삭제하려는 카테고리를 사용하는 상품이 존재합니다. 삭제 시도 = {}", category);
-            throw new CategoryException(ErrorCode.CATEGORY_IN_USE_BY_PRODUCT);
+            log.debug("삭제하려는 카테고리를 사용하는 상품이 존재합니다. 삭제 시도 = {}", categoryId);
+            throw new CategoryException(ErrorCode.CATEGORY_IN_USE_BY_PRODUCT, categoryId);
         }
-
-
+        // 삭제
         categoryRepository.delete(category);
         return new CategoryResponseDto(category.getId(), category.getTitle());
     }
@@ -201,14 +200,14 @@ public class CategoryServiceImpl implements CategoryService {
     private void validateChildCategory(Long parentCategoryId, Category parentCategory, String title) {
         // parentCategory 와 childCategory 의 이름이 같은지 검증
         if(parentCategory.getTitle().equals(title)){
-            log.error("부모 카테고리와 자식 카테고리의 이름이 같습니다.  parent = {}, child = {}", parentCategory.getTitle(), title);
-            throw new CategoryException(ErrorCode.CATEGORY_PARENT_CHILD_SAME);
+            log.debug("부모 카테고리와 자식 카테고리의 title이 같습니다. parent's Title = {}, child's Title = {}", parentCategory.getTitle(), title);
+            throw new CategoryException(ErrorCode.CATEGORY_PARENT_CHILD_SAME_TITLE, parentCategory.getTitle(), title);
         }
 
         // parentCategory 아래 이미 존재 하는 childCategory 인지 검사
         if(categoryRepository.existsByTitleAndParentId(title, parentCategoryId)){
-            log.error("부모 카테고리에 이미 존재하는 자식 카테고리 입니다. parent = {}, child = {}", parentCategory.getTitle(), title);
-            throw new CategoryException(ErrorCode.CATEGORY_PARENT_UNDER_CHILD_EXISTS);
+            log.debug("부모 카테고리에 이미 존재하는 자식 카테고리 입니다. parent's Title = {}, child's Title = {}", parentCategory.getTitle(), title);
+            throw new CategoryException(ErrorCode.CATEGORY_PARENT_UNDER_CHILD_EXISTS, parentCategory.getTitle(), title);
         }
     }
 

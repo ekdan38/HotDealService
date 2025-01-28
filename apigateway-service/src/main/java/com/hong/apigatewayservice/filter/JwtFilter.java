@@ -46,8 +46,10 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
 
     @Override
     public GatewayFilter apply(Config config) {
-        secretKey = new SecretKeySpec(env.getProperty("jwt.secret.key").getBytes(StandardCharsets.UTF_8), Jwts.SIG.HS256.key().build().getAlgorithm());
-//        log.info("secretKey = {}", secretKey);
+        secretKey = new SecretKeySpec(env.getProperty("jwt.secret.key")
+                .getBytes(StandardCharsets.UTF_8),
+                Jwts.SIG.HS256.key().build()
+                        .getAlgorithm());
 
         return ((exchange, chain) -> {
             ServerHttpRequest request = exchange.getRequest();
@@ -57,7 +59,7 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
             if (!request.getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
                 log.error("Authorization 헤더가 없습니다.");
                 // 응답 설정
-                return setResponse(response, "Authorization 헤더가 필요합니다.", null, HttpStatus.UNAUTHORIZED);
+                return setResponse(response, "Authorization 헤더가 없습니다.", null, HttpStatus.UNAUTHORIZED);
             }
 
             // accessToken 검증
@@ -90,7 +92,6 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
                                     // 유효한 User라면 요청 헤더에 정보 추가
                                     ServerHttpRequest modifiedRequest = request.mutate()
                                             .header("X-User-Id", String.valueOf(userId))
-                                            .header("X-User-Role", getRole(accessToken))
                                             .build();
 
                                     return chain.filter(exchange.mutate().request(modifiedRequest).build());
@@ -104,7 +105,7 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
         accessToken = request.getHeaders().getFirst(org.springframework.http.HttpHeaders.AUTHORIZATION);
 
         if (!accessToken.startsWith("Bearer ")) {
-            log.error("AccessToken 형식이 잘못됨 = {}", accessToken);
+            log.error("잘못된 형식의 AccessToken 입니다. = {}", accessToken);
             // 응답 설정
             return setResponse(response, "잘못된 형식의 AccessToken 입니다.", accessToken, HttpStatus.UNAUTHORIZED)
                     .thenReturn(false);
@@ -112,7 +113,7 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
 
         String[] split = accessToken.split(" ");
         if (split.length < 2) {
-            log.error("AccessToken 형식이 잘못됨 = {}", accessToken);
+            log.error("잘못된 형식의 AccessToken 입니다. = {}", accessToken);
             // 응답 설정
             return setResponse(response, "잘못된 형식의 AccessToken 입니다.", accessToken, HttpStatus.UNAUTHORIZED)
                     .thenReturn(false);
@@ -139,7 +140,7 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
         String category = getCategory(accessToken);
 
         if (!"access".equals(category)) {
-            log.error("AccessToken 이 아님 = {}", accessToken);
+            log.error("AccessToken 이 아닙니다. = {}", accessToken);
             // 응답 설정
             return setResponse(response, "AccessToken 이 아닙니다.", accessToken, HttpStatus.UNAUTHORIZED)
                     .thenReturn(false);

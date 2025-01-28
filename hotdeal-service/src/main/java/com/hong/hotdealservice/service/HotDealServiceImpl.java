@@ -3,6 +3,7 @@ package com.hong.hotdealservice.service;
 import com.hong.common.dto.ProductCommonDto;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.HotDealException;
+import com.hong.common.exception.custom.HotDealProductException;
 import com.hong.hotdealservice.client.Resilience4JProductServiceClient;
 import com.hong.hotdealservice.domain.HotDeal;
 import com.hong.hotdealservice.domain.HotDealProduct;
@@ -158,8 +159,8 @@ public class HotDealServiceImpl implements HotDealService {
     // 같은 title 로 HotDeal 이 존재 하는지 검증
     private void existsByTitleAndValidate(HotDealRequestDto requestDto) {
         if (hotDealRepository.existsByTitle(requestDto.getTitle())) {
-            log.error("이미 존재 하는 title 입니다. title = {}", requestDto.getTitle());
-            throw new HotDealException(ErrorCode.HOTDEAL_EXISTS_TITLE);
+            log.debug("이미 존재하는 핫딜 Title 입니다. hotDealTitle = {}", requestDto.getTitle());
+            throw new HotDealException(ErrorCode.HOTDEAL_TITLE_ALREADY_EXISTS, requestDto.getTitle());
         }
     }
 
@@ -167,11 +168,10 @@ public class HotDealServiceImpl implements HotDealService {
     private void validateHotDealDate(LocalDateTime startTime, LocalDateTime endTime) {
         // 시작 시간이 종료 시간보다 늦으면
         if (startTime.isAfter(endTime)) {
-            log.error("시작 시간이 종료 시간보다 이후일 수 없습니다. startTime = {}, endTime = {}", startTime, endTime);
-            throw new HotDealException(ErrorCode.HOTDEAL_INVALID_TIME);
+            log.debug("시작 시간이 종료 시간보다 이후일 수 없습니다. startTime = {}, endTime = {}", startTime, endTime);
+            throw new HotDealException(ErrorCode.HOTDEAL_INVALID_TIME, startTime, endTime);
         }
     }
-
 
     // RequestDto 에서 상품의 id만 추출
     private List<Long> extractProductIdsFromRequestDto(List<@Valid HotDealProductRequestDto> productRequestDtos) {
@@ -232,18 +232,17 @@ public class HotDealServiceImpl implements HotDealService {
     private HotDeal findByIdWithHotDealProductsAndValidate(Long hotDealId) {
         HotDeal hotDeal = hotDealRepository.findByIdWithHotDealProducts(hotDealId);
         if (hotDeal == null) {
-            log.error("존재 하지 않는 HotDeal 입니다. hotDealId = {}", hotDeal);
-            throw new HotDealException(ErrorCode.HOTDEAL_NOT_FOUND);
+            log.debug("요청된 핫딜이 존재하지 않습니다. hotDealId = {}", hotDealId);
+            throw new HotDealException(ErrorCode.HOTDEAL_NOT_FOUND, hotDealId);
         }
         return hotDeal;
     }
 
-
     private String validateNewTitle(HotDealUpdateRequestDto requestDto, HotDeal hotDeal) {
         String title = requestDto.getTitle();
         if (hotDealRepository.existsByTitle(title) && !title.equals(hotDeal.getTitle())) {
-            log.error("이미 존재하는 title입니다. title = {}", title);
-            throw new HotDealException(ErrorCode.HOTDEAL_EXISTS_TITLE);
+            log.debug("이미 존재하는 핫딜 title입니다. hotDealTitle = {}", title);
+            throw new HotDealException(ErrorCode.HOTDEAL_TITLE_ALREADY_EXISTS, title);
         }
         return title;
     }
@@ -256,8 +255,8 @@ public class HotDealServiceImpl implements HotDealService {
 
         // 상품 정보가 없다면
         if(productCommonDtos.isEmpty()){
-            log.error("상품 정보를 찾을 수 없습니다. : productId = {}", requestedProductIds);
-            throw new HotDealException(ErrorCode.HOTDEAL_PRODUCT_FETCH_FAILED);
+            log.debug("요청된 핫딜 상품이 존재하지 않습니다. hotDealProductId = {}", requestedProductIds);
+            throw new HotDealProductException(ErrorCode.HOTDEAL_PRODUCT_NOT_FOUND, requestedProductIds);
         }
 
         // productId 기준 Map 변환
@@ -270,17 +269,15 @@ public class HotDealServiceImpl implements HotDealService {
             Integer quantity = entry.getValue();
             Integer productStock = productMap.get(productId).getStock();
             if(productStock < quantity){
-                log.error("핫딜 상품 수량보다 상품의 재고가 부족합니다. : productId = {}, productStock = {}, requestedQuantity = {}",
+                log.debug("요청 수량보다 재고가 부족합니다. hotDealProductId = {}, 요청 수량 = {}, 재고 수량 = {}",
                         productId, productStock, quantity);
-                throw new HotDealException(ErrorCode.HOTDEAL_INVALID_PRODUCT_QUANTITY);
+                throw new HotDealException(ErrorCode.HOTDEAL_PRODUCT_INSUFFICIENT_STOCK, productId, productStock, quantity);
             }
         }
         // ProductId를 기준으로 Map 변환
         return productMap;
     }
-
-
-
+    
     // HotDealProduct 수정, HotDeal 저장
     private HotDeal updateHotDealProductsAndSaveHotDeal(HotDealUpdateRequestDto updateRequestDto, HotDeal hotDeal, List<Long> existingProductIds, Map<Long, ProductCommonDto> validProductInfoMap) {
         // HotDealProducts 수정 처리

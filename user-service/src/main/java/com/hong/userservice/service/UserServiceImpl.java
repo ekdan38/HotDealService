@@ -2,10 +2,7 @@ package com.hong.userservice.service;
 
 import com.hong.common.entity.Address;
 import com.hong.common.exception.ErrorCode;
-import com.hong.common.exception.custom.EmailVerificationException;
-import com.hong.common.exception.custom.MailSenderException;
-import com.hong.common.exception.custom.RefreshTokenReissueException;
-import com.hong.common.exception.custom.SignupException;
+import com.hong.common.exception.custom.UserException;
 import com.hong.userservice.AESUtil;
 import com.hong.userservice.domain.Role;
 import com.hong.userservice.domain.User;
@@ -60,8 +57,8 @@ public class UserServiceImpl implements UserService{
 
             sendEmailCode(email, code);
         } catch (Exception e) {
-            log.error("이메일 인증 요청 오류 = {}", e.getMessage());
-            throw new MailSenderException(ErrorCode.EMAIL_SENDER_FAIL);
+            log.debug("이메일 인증 코드 전송을 실패했습니다. errorMessage = {}", e.getMessage());
+            throw new UserException(ErrorCode.EMAIL_SENDER_FAILED, e.getMessage());
         }
     }
 
@@ -76,7 +73,7 @@ public class UserServiceImpl implements UserService{
         String status = redisTemplate.opsForValue().get(email + ":status");
 
         // 이메일 인증 코드 검증
-        validateEmailCode(requestCode, code, status);
+        validateEmailCode(email, requestCode, code, status);
 
         // 인증 상태 변경
         opsForValue.set(email + ":status", "true", 5, TimeUnit.MINUTES);
@@ -134,16 +131,16 @@ public class UserServiceImpl implements UserService{
         try {
             jwtUtil.isExpired(refresh);
         } catch (ExpiredJwtException e) {
-            log.error("만료된 RefreshToken = {}", refresh);
-            throw new RefreshTokenReissueException(ErrorCode.REFRESH_TOKEN_EXPIRED);
+            log.debug("만료된 RefreshToken 입니다. refreshToken = {}", refresh);
+            throw new UserException(ErrorCode.REFRESH_TOKEN_EXPIRED);
         }
 
         // 토큰이 refresh인지 확인 (발급시 페이로드에 명시)
         String category = jwtUtil.getCategory(refresh);
 
         if (!category.equals("refresh")) {
-            log.error("RefreshToken 이 아님 = {}", refresh);
-            throw new RefreshTokenReissueException(ErrorCode.REFRESH_TOKEN_INVALID);
+            log.debug("만료된 RefreshToken 입니다. = {}", refresh);
+            throw new UserException(ErrorCode.REFRESH_TOKEN_INVALID);
         }
     }
 
@@ -152,7 +149,8 @@ public class UserServiceImpl implements UserService{
         cookie.setMaxAge(24 * 60 * 60); // 24시간
         cookie.setPath("/");
         cookie.setHttpOnly(true);
-        return cookie;    }
+        return cookie;
+    }
 
     // emailCode 생성
     private String generateCode() {
@@ -174,26 +172,25 @@ public class UserServiceImpl implements UserService{
     }
 
     // 이메일 인증 코드 검증
-    private void validateEmailCode(String requestCode, String code, String status) {
+    private void validateEmailCode(String email, String requestCode, String code, String status) {
         if (code == null) {
-            log.error("이메일 인증 코드가 없음");
-            throw new EmailVerificationException(ErrorCode.EMAIL_VERIFICATION_CODE_NOT_FOUND);
+            log.debug("요청에 이메일 인증 코드가 존재하지 않습니다. email = {}", email);
+            throw new UserException(ErrorCode.EMAIL_EMPTY_CODE, email);
         }
-
         // 인증 상태가 null 이거나 true 이면
         if (status == null) {
-            log.error("이메일 인증 상태가 없음");
-            throw new EmailVerificationException(ErrorCode.EMAIL_VERIFICATION_STATUS_NOT_FOUND);
+            log.debug("이메일 인증 상태가 존재하지 않습니다. email = {}", email);
+            throw new UserException(ErrorCode.EMAIL_VERIFICATION_STATUS_NOT_FOUND, email);
         }
         if (status.equals("true")) {
-            log.error("이미 인증 됨");
-            throw new EmailVerificationException(ErrorCode.EMAIL_VERIFICATION_STATUS_ALREADY_VERIFIED);
+            log.debug("이미 이메일 인증을 완료 했습니다. email = {}", email);
+            throw new UserException(ErrorCode.EMAIL_VERIFICATION_STATUS_ALREADY_VERIFIED, email);
         }
 
         // 요청 코드랑 redis 코드랑 같은지 확인
         if (!requestCode.equals(code)) {
-            log.error("인증 코드가 다름 : {}", code);
-            throw new EmailVerificationException(ErrorCode.EMAIL_VERIFICATION_CODE_MISMATCH);
+            log.debug("이메일 인증 코드가 다릅니다. email = {}", email);
+            throw new UserException(ErrorCode.EMAIL_VERIFICATION_CODE_MISMATCH, email);
         }
     }
 
@@ -202,44 +199,35 @@ public class UserServiceImpl implements UserService{
         // 이메일 인증 상태 검증
         String status = redisTemplate.opsForValue().get(email + ":status");
         if (status == null || !status.equals("true")) {
-            log.error("인증을 받지 않은 상태");
-            throw new EmailVerificationException(ErrorCode.EMAIL_NOT_VERIFIED);
+            log.debug("이메일 인증을 받지 않았습니다. email = {}", email);
+            throw new UserException(ErrorCode.EMAIL_VERIFICATION_NOT_VERIFIED, email);
         }
     }
-
 
     // username, email 중복 검증
     private void validateDuplicateUser(String username, String email) {
         // username 검사
         try {
             if(userRepository.existsByUsername(aesUtil.encrypt(username))){
-                log.error("이미 존재하는 username = {}", username);
-                throw new IllegalArgumentException("이미 존재 하는 username 입니다.");
+                log.debug("이미 존재하는 username 입니다. username = {}", username);
+                throw new UserException(ErrorCode.USER_USERNAME_ALREADY_EXISTS, username);
             }
         }
         catch (Exception e){
-            if(e instanceof IllegalArgumentException){
-                log.error("username 중복 조회 오류 = {}", e.getMessage());
-                throw new SignupException(ErrorCode.SIGNUP_EXISTS_USERNAME);
-            }
-            log.error("username 암호화 오류 = {}", e.getMessage());
-            throw new SignupException(ErrorCode.CRYPTO_ENCRYPT_ERROR);
+            log.debug("암호화 처리중 오류가 발생했습니다. 대상 = {}, 암호화 오류 = {}",username, e.getMessage());
+            throw new UserException(ErrorCode.CRYPTO_ENCRYPT_ERROR);
         }
 
         // email 검사
         try {
             if(userRepository.existsByEmail(aesUtil.encrypt(email))){
-                log.error("이미 존재하는 email = {}", email);
-                throw new IllegalArgumentException("이미 존재 하는 email 입니다.");
+                log.debug("이미 존재하는 email 입니다. email = {}", email);
+                throw new UserException(ErrorCode.USER_EMAIL_ALREADY_EXISTS, email);
             }
         }
         catch (Exception e){
-            if(e instanceof IllegalArgumentException){
-                log.error("email 중복 조회 오류 = {}", e.getMessage());
-                throw new SignupException(ErrorCode.SIGNUP_EXISTS_EMAIL);
-            }
-            log.error("email 암호화 오류 = {}", e.getMessage());
-            throw new SignupException(ErrorCode.CRYPTO_ENCRYPT_ERROR);
+            log.debug("암호화 처리중 오류가 발생했습니다. 대상 = {}, 암호화 오류 = {}",email, e.getMessage());
+            throw new UserException(ErrorCode.CRYPTO_ENCRYPT_ERROR);
         }
     }
 
@@ -261,9 +249,10 @@ public class UserServiceImpl implements UserService{
                     Role.USER
             );
             return userRepository.save(user);
-        } catch (Exception e) {
-            log.error("User 생성, 저장 중 오류: {}", e.getMessage());
-            throw new SignupException(ErrorCode.CRYPTO_ENCRYPT_ERROR);
+        }
+        catch (Exception e){
+            log.debug("암호화 처리중 오류가 발생했습니다. 대상 = {}, 암호화 오류 = {}",requestDto, e.getMessage());
+            throw new UserException(ErrorCode.CRYPTO_ENCRYPT_ERROR);
         }
     }
 
@@ -283,9 +272,10 @@ public class UserServiceImpl implements UserService{
                             aesUtil.decrypt(addr.getZipCode())
                     )
             );
-        } catch (Exception e) {
-            log.error("회원가입 응답 변환 중 오류: {}", e.getMessage());
-            throw new SignupException(ErrorCode.CRYPTO_ENCRYPT_ERROR);
+        }
+        catch (Exception e){
+            log.debug("복호화 처리중 오류가 발생했습니다. 대상 = {}, 암호화 오류 = {}", savedUser, e.getMessage());
+            throw new UserException(ErrorCode.CRYPTO_DECRYPT_ERROR);
         }
     }
 
@@ -293,13 +283,15 @@ public class UserServiceImpl implements UserService{
     private String extractRefreshToken(HttpServletRequest request) {
         Cookie[] cookies = request.getCookies();
         if (cookies == null) {
-            throw new RefreshTokenReissueException(ErrorCode.REFRESH_TOKEN_NULL);
+            log.debug("RefreshToken 이 존재 하지 않습니다.");
+            throw new UserException(ErrorCode.REFRESH_TOKEN_NULL);
         }
         for (Cookie cookie : cookies) {
             if (cookie.getName().equals("refresh")) {
                 return cookie.getValue();
             }
         }
-        throw new RefreshTokenReissueException(ErrorCode.REFRESH_TOKEN_NULL);
+        log.debug("RefreshToken 이 존재 하지 않습니다.");
+        throw new UserException(ErrorCode.REFRESH_TOKEN_NULL);
     }
 }

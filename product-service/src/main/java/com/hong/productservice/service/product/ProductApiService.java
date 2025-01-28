@@ -33,7 +33,10 @@ public class ProductApiService {
     // product 단건 조회
     public Product getProduct(Long productId) {
         return productRepository.findById(productId)
-                .orElseThrow(() -> new ProductException(ErrorCode.PRODUCT_NOT_FOUND));
+                .orElseThrow(() -> {
+                    log.debug("요청된 상품이 존재하지 않습니다. productId = {}", productId);
+                    return new ProductException(ErrorCode.PRODUCT_NOT_FOUND, productId);
+                });
     }
     //  products 조회
     public List<ProductCommonDto> getProductsByIds(List<Long> productIds) {
@@ -64,6 +67,7 @@ public class ProductApiService {
         List<Product> products = fetchAndValidate(productCommonDtos);
         // 재고 감소
         responseDtos = decreaseStock(productCommonDtos, products);
+        // 트랜잭션 commit 후 락 해제
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
@@ -86,6 +90,7 @@ public class ProductApiService {
         List<Product> products = fetchAndValidate(productCommonDtos);
         // 재고 감소
         responseDtos = increaseStock(productCommonDtos, products);
+        // 트랜잭션 commit 후 락 해제
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
@@ -108,7 +113,7 @@ public class ProductApiService {
             product.decreaseStock(productDto.getQuantity());
             log.info("productId = {}, 재고 감소 = {}", productDto.getId(), productDto.getQuantity());
             responseDtos.add(new ProductCommonDto(product.getId(), product.getTitle(),
-                    product.getPrice(), null, productDto.getQuantity()));
+                    product.getPrice(), productDto.getQuantity(), productDto.getIsHotDealProduct()));
         }
         return responseDtos;
     }
@@ -125,7 +130,7 @@ public class ProductApiService {
             product.increaseStock(productDto.getQuantity());
             log.info("productId = {}, 재고 감소 = {}", productDto.getId(), productDto.getQuantity());
             responseDtos.add(new ProductCommonDto(product.getId(), product.getTitle(),
-                    product.getPrice(), null, productDto.getQuantity()));
+                    product.getPrice(),  productDto.getQuantity(), productDto.getIsHotDealProduct()));
         }
         return responseDtos;
     }
@@ -134,11 +139,20 @@ public class ProductApiService {
     private List<Product> fetchAndValidate(List<ProductCommonDto> productDtos) {
         List<Long> productIds = productDtos.stream().map(ProductCommonDto::getId)
                 .sorted()
+                .distinct()
                 .collect(Collectors.toList());
+        // product 조회
         List<Product> products = productRepository.findAllByProductIds(productIds);
+
+        // 요청과, 조회된 product 와 다른 productIds 추출(디버깅, 예외 처리용)
+        List<Product> noneMathProductIds = products.stream()
+                .filter(product -> productIds.stream()
+                        .noneMatch(id -> product.getId().equals(id)))
+                .collect(Collectors.toList());
+
         if (products.size() != productIds.size()) {
-            log.error("존재하지 않는 상품이 포함되어 있습니다.");
-            throw new ProductException(ErrorCode.PRODUCT_NOT_FOUND);
+            log.debug("요청된 상품이 존재하지 않습니다. productId = {}", noneMathProductIds);
+            throw new ProductException(ErrorCode.PRODUCT_NOT_FOUND, noneMathProductIds);
         }
         return products;
     }
@@ -146,6 +160,7 @@ public class ProductApiService {
     // productIds 추출
     private List<Long> extractProductIds(List<ProductCommonDto> productCommonDtos) {
         return productCommonDtos.stream().map(ProductCommonDto::getId)
+                .distinct()
                 .collect(Collectors.toList());
     }
 

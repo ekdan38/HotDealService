@@ -7,8 +7,10 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Entity
+@Slf4j
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 public class HotDealProduct {
@@ -69,14 +71,17 @@ public class HotDealProduct {
     // == stock 감소 메서드 ==
     public void decreaseStock(Integer quantity){
         if(this.stock - quantity < 0){
-            throw new HotDealException(ErrorCode.HOTDEAL_PRODUCT_NO_STOCK);
+            log.debug("요청 수량보다 재고가 부족합니다. hotDealProductId = {}, 요청 수량 = {}, 재고 수량 = {}", this.id, quantity, this.stock);
+            throw new HotDealException(ErrorCode.HOTDEAL_PRODUCT_INSUFFICIENT_STOCK, quantity, this.stock);
         }
         this.stock -= quantity;
+        log.info("재고 감소 성공 hotDealProductId = {}, 차감 수량 = {}, 재고 수량 = {}", this.id, quantity, this.stock);
     }
 
     // == stock 증가 메서드 ==
     public void increaseStock(Integer quantity){
         this.stock += quantity;
+        log.info("재고 증가 성공 hotDealProductId = {}, 증가 수량 = {}, 재고 수량 = {}", this.id, quantity, this.stock);
     }
 
 

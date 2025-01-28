@@ -36,8 +36,8 @@ public class ProductServiceImpl implements ProductService{
         String title = requestDto.getTitle();
         // product 가 존재 하는지 검증
         if(productRepository.existsByTitle(title)){
-            log.error("이미 존재 하는 상품 명 입니다. 등록 시도 = {}", title);
-            throw new ProductException(ErrorCode.PRODUCT_EXISTS);
+            log.debug("이미 존재하는 상품 title 입니다. title = {}", title);
+            throw new ProductException(ErrorCode.PRODUCT_TITLE_ALREADY_EXISTS, title);
         }
 
         // product 는 여러 개의 category 를 가질 수 있다.
@@ -111,8 +111,8 @@ public class ProductServiceImpl implements ProductService{
         // title 수정 요청 시에 title 이 이미 존재 하는지 검증
         if(!product.getTitle().equals(requestDto.getTitle())){
             if(productRepository.existsByTitle(requestDto.getTitle())){
-                log.error("이미 존재 하는 상품 명 입니다. 수정 시도 = {}", requestDto.getTitle());
-                throw new ProductException(ErrorCode.PRODUCT_EXISTS);
+                log.debug("이미 존재하는 상품 title 입니다. title = {}", requestDto.getTitle());
+                throw new ProductException(ErrorCode.PRODUCT_TITLE_ALREADY_EXISTS, requestDto.getTitle());
             }
         }
 

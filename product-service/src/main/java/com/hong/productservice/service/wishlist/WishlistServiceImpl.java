@@ -1,6 +1,7 @@
 package com.hong.productservice.service.wishlist;
 
 import com.hong.common.exception.ErrorCode;
+import com.hong.common.exception.custom.ProductException;
 import com.hong.common.exception.custom.WishlistException;
 import com.hong.productservice.domain.Product;
 import com.hong.productservice.domain.Wishlist;
@@ -104,7 +105,10 @@ public class WishlistServiceImpl implements WishlistService {
 
         // wishlist, wishlistProduct fetch join
         Wishlist wishlist = wishlistRepository.findByUserIdWithProducts(userId)
-                .orElseThrow(() -> new WishlistException(ErrorCode.WISHLIST_NOT_FOUND));
+                .orElseThrow(() -> {
+                    log.debug("위시리스트가 존재하지 않습니다. {}", userId);
+                    return new WishlistException(ErrorCode.WISHLIST_NOT_FOUND, userId);
+                });
         Long wishlistId = wishlist.getId();
 
         // 수정 해야할 productId
@@ -119,7 +123,10 @@ public class WishlistServiceImpl implements WishlistService {
             // 변경 대상 entity 중에 productId가 존재 하는지 검사
             WishlistProduct wishlistProduct = wishlistProducts.stream()
                     .filter(wp -> wp.getProduct().getId().equals(update.getProductId())).findFirst()
-                    .orElseThrow(() -> new WishlistException(ErrorCode.WISHLIST_PRODUCT_NOT_FOUND));
+                    .orElseThrow(() -> {
+                        log.debug("요청된 상품이 존재하지 않습니다. productId = {}", update.getProductId());
+                        return new ProductException(ErrorCode.PRODUCT_NOT_FOUND, update.getProductId());
+                    });
 
             // 수량 변경
             if(update.getMethod().equals("update")) wishlistProduct.updateQuantity(update.getQuantity());

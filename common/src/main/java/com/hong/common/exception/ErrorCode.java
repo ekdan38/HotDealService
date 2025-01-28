@@ -5,83 +5,126 @@ import org.springframework.http.HttpStatus;
 
 @Getter
 public enum ErrorCode {
-    // 이메일 인증
-    EMAIL_SENDER_FAIL(HttpStatus.INTERNAL_SERVER_ERROR, "EMAIL_CODE_00", "이메일 인증 코드 발송을 실패했습니다."),
-    EMAIL_VERIFICATION_CODE_NOT_FOUND(HttpStatus.NOT_FOUND, "EMAIL_CODE_01", "인증 코드가 존재하지 않습니다."),
-    EMAIL_VERIFICATION_CODE_MISMATCH(HttpStatus.BAD_REQUEST, "EMAIL_CODE_02", "인증 코드가 일치하지 않습니다."),
-    EMAIL_NOT_VERIFIED(HttpStatus.BAD_REQUEST, "EMAIL_CODE_03", "이메일 인증을 받지 않았습니다."),
-    EMAIL_VERIFICATION_STATUS_INVALID(HttpStatus.BAD_REQUEST, "EMAIL_CODE_04", "이메일 인증을 받지 않았습니다."),
-    EMAIL_VERIFICATION_STATUS_NOT_FOUND(HttpStatus.NOT_FOUND, "EMAIL_CODE_05", "이메일 인증 요청을 먼저 보내세요."),
-    EMAIL_VERIFICATION_STATUS_ALREADY_VERIFIED(HttpStatus.BAD_REQUEST, "EMAIL_CODE_06", "이미 인증 되었습니다."),
 
-    // 회원 가입
-    SIGNUP_EXISTS_USERNAME(HttpStatus.BAD_REQUEST, "SIGNUP_01", "이미 존재하는 Username 입니다."),
-    SIGNUP_EXISTS_EMAIL(HttpStatus.BAD_REQUEST, "SIGNUP_02", "이미 존재하는 Email 입니다."),
+    // hotDealProduct
+    HOTDEAL_PRODUCT_NOT_FOUND(HttpStatus.BAD_REQUEST, "HOTDEAL_PRODUCT_00",
+            "요청된 핫딜 상품이 존재하지 않습니다. hotDealProductId = %s"),
 
-    // 유저
-    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_00", "존재하지 않는 유저 입니다."),
+    HOTDEAL_PRODUCT_INSUFFICIENT_STOCK(HttpStatus.BAD_REQUEST, "HOTDEAL_PRODUCT_01",
+            "요청 수량보다 재고가 부족합니다. hotDealProductId = %s, 요청 수량 = %s, 재고 수량 = %s"),
+
+    HOTDEAL_PRODUCT_INVALID_FOUND(HttpStatus.BAD_REQUEST, "HOTDEAL_PRODUCT_02",
+            "요청된 핫딜 상품에 대한 수량이 누락 되었습니다. hotDealProductId = %s"),
+
+    HOTDEAL_PRODUCT_LOCK_FAILED(HttpStatus.CONFLICT, "HOTDEAL_PRODUCT_03",
+            "hotDealProduct = %s 에 대한 락 획득에 실패했습니다."),
+
+    HOTDEAL_PRODUCT_LOCK_INTERRUPTED(HttpStatus.SERVICE_UNAVAILABLE, "HOTDEAL_PRODUCT_04",
+            "hotDealProduct = %s 에 대한 락 획득중 입터럽트가 발생했습니다."),
+
+    // hotDeal
+    HOTDEAL_NOT_FOUND(HttpStatus.BAD_REQUEST, "HOTDEAL_00",
+            "요청된 핫딜이 존재하지 않습니다. hotDealId = %s"),
+
+    HOTDEAL_TITLE_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "HOTDEAL_01",
+            "이미 존재하는 핫딜 Title 입니다. hotDealTitle = %s"),
+
+    HOTDEAL_INVALID_TIME(HttpStatus.BAD_REQUEST, "HOTDEAL_02",
+            "시작 시간이 종료 시간보다 이후일 수 없습니다. startTime = %s, endTime = %s"),
 
 
-    // 개인 정보 암호화 && 복호화
-    CRYPTO_ENCRYPT_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "CRYPTO_01", "개인정보 암호화 처리중 오류가 발생했습니다."),
-    CRYPTO_DECRYPT_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "CRYPTO_02", "개인정보 복호화 처리중 오류가 발생했습니다."),
+    HOTDEAL_NON_ACTIVE(HttpStatus.BAD_REQUEST, "HOTDEAL_03",
+            "활성화 된 핫딜이 아닙니다. hotDealId = %s"),
 
-    // RefreshToken
-    REFRESH_TOKEN_NULL(HttpStatus.BAD_REQUEST, "REFRESH_TOKEN_00", "RefreshToken 이 null 입니다."),
-    REFRESH_TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "REFRESH_TOKEN_01", "만료된 RefreshToken 입니다."),
-    REFRESH_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "REFRESH_TOKEN_02", "RefreshToken 이 아닙니다."),
+    // order
+    ORDER_DECREASE_HOTDEAL_PRODUCT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_00",
+            "핫딜 상품 재고 감소 호출을 실패했습니다. hotDealProducts = %s"),
 
-    // 상품
-    PRODUCT_EXISTS(HttpStatus.BAD_REQUEST, "PRODUCT_00", "이미 존재하는 상품 입니다."),
-    PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "PRODUCT_01", "존재하지 않는 상품 입니다."),
-    PRODUCT_EXISTS_CATEGORY(HttpStatus.BAD_REQUEST, "PRODUCT_02", "상품에 카테고리가 이미 설정되어 있습니다."),
-    PRODUCT_NO_STOCK(HttpStatus.BAD_REQUEST, "PRODUCT_03", "상품의 수량이 부족합니다."),
-    PRODUCT_LOCK_FAILED(HttpStatus.CONFLICT, "PRODUCT_04", "락 획득 실패"),
+    ORDER_DECREASE_PRODUCT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_01",
+            "상품 재고 감소 호출을 실패했습니다. products = %s"),
 
-    // 주문
-    ORDER_PRODUCT_NO_STOCK(HttpStatus.BAD_REQUEST, "ORDER_00", "상품의 수량이 부족합니다."),
-    ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "ORDER_01", "주문을 찾을 수 없습니다."),
-    ORDER_CANCEL_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "ORDER_02", "주문 상태가 대기 일때만 주문 취소가 가능 합니다."),
-    ORDER_QUANTITY_INVALID(HttpStatus.BAD_REQUEST, "ORDER_03", "주문 수량은 1 이상부터 가능합니다."),
-    ORDER_RETURN_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "ORDER_04", "반품은 배송 완료 상태에서 +1 일까지 가능합니다."),
-    ORDER_LOCK_FAILED(HttpStatus.BAD_REQUEST, "ORDER_05", "락 획득 실패"),
-    ORDER_PRODUCT_DECREASE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_06", "상품 재고 감소 실패"),
-    ORDER_PRODUCT_INCREASE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_07", "상품 재고 복구 실패"),
-    ORDER_PRODUCT_FETCH_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_08", "상품 조회 실패"),
-    ORDER_PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "ORDER_09", "주문과 일치하는 상품이 존재하지 않습니다."),
+    // category
+    CATEGORY_NOT_FOUND(HttpStatus.BAD_REQUEST, "CATEGORY_00",
+            "요청된 카테고리가 존재하지 않습니다. categoryId = %s"),
 
-    ORDER_HOTDEAL_PRODUCT_NO_STOCK(HttpStatus.BAD_REQUEST, "ORDER_00", "핫딜 상품의 수량이 부족합니다."),
-    ORDER_HOTDEAL_PRODUCT_DECREASE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_06", "핫딜 상품 재고 감소 실패"),
-    ORDER_HOTDEAL_PRODUCT_INCREASE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_07", "핫딜 상품 재고 복구 실패"),
-    ORDER_HOTDEAL_PRODUCT_FETCH_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_08", "핫딜 상품 조회 실패"),
+    CATEGORY_ROOT_EXISTS(HttpStatus.BAD_REQUEST, "CATEGORY_01",
+            "이미 존재 하는 최상위 카테고리 title 입니다. title = %s"),
 
-    HOTDEAL_EXISTS_TITLE(HttpStatus.BAD_REQUEST, "ORDER_00", "이미 존재하는 핫딜 제목 입니다."),
-    HOTDEAL_NOT_FOUND(HttpStatus.NOT_FOUND, "ORDER_01", "존재 하지 않는 핫딜 입니다."),
-    HOTDEAL_INVALID_TIME(HttpStatus.BAD_REQUEST, "ORDER_02", "잘못된 핫딜 시작, 종료 시간 입니다."),
-    HOTDEAL_PRODUCT_FETCH_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_03", "상품 조회 실패"),
-    HOTDEAL_INVALID_PRODUCT_QUANTITY(HttpStatus.BAD_REQUEST, "ORDER_04", "핫딜 상품 수량보다 상품의 재고가 부족합니다."),
-    HOTDEAL_IS_NOT_ACTIVE(HttpStatus.BAD_REQUEST, "ORDER_05", "활성화 된 핫딜이 아닙니다."),
-    HOTDEAL_NOT_FOUND_PRODUCT(HttpStatus.NOT_FOUND, "ORDER_06", "존재하는 핫딜 상품이 아닙니다."),
-    HOTDEAL_PRODUCT_NO_STOCK(HttpStatus.BAD_REQUEST, "ORDER_06", "핫딜 상품 수량이 부족합니다."),
-    HOTDEAL_LOCK_FAILED(HttpStatus.BAD_REQUEST, "ORDER_05", "락 획득 실패"),
-    HOTDEAL_PRODUCT_INVALID_QUANTITY(HttpStatus.BAD_REQUEST, "ORDER_05", "요청 수량이 없습니다."),
+    CATEGORY_PARENT_NOT_FOUND(HttpStatus.BAD_REQUEST, "CATEGORY_02",
+            "존재 하지 않는 부모 카테고리 입니다. parentCategoryId = %s"),
 
-    // 카테고리
-    CATEGORY_EXISTS(HttpStatus.BAD_REQUEST, "CATEGORY_00", "이미 존재하는 카테고리 입니다."),
-    CATEGORY_ROOT_EXISTS(HttpStatus.BAD_REQUEST, "CATEGORY_01", "이미 존재하는 최상위 카테고리 입니다."),
-    CATEGORY_PARENT_UNDER_CHILD_EXISTS(HttpStatus.BAD_REQUEST, "CATEGORY_02", "부모 카테고리에 이미 존재하는 자식 카테고리 입니다."),
-    CATEGORY_PARENT_CHILD_SAME(HttpStatus.BAD_REQUEST, "CATEGORY_02", "부모 카테고리와 자식 카테고리의 이름이 같습니다."),
+    CATEGORY_PARENT_CHILD_SAME_TITLE(HttpStatus.BAD_REQUEST, "CATEGORY_03",
+            "부모 카테고리와 자식 카테고리의 title이 같습니다. parent's Title = %s, child's Title = %s"),
 
-    CATEGORY_NOT_FOUND(HttpStatus.BAD_REQUEST, "CATEGORY_02", "존재하지 않는 카테고리 입니다."),
-    CATEGORY_PARENT_NOT_FOUND(HttpStatus.BAD_REQUEST, "CATEGORY_03", "존재하지 않는 부모 카테고리 입니다."),
-    CATEGORY_PARENT_NOT_ALLOWED_FOR_ROOT(HttpStatus.BAD_REQUEST, "CATEGORY_04", "최상위 카테고리 생성에는 부모 카테고리 값이 존재해서는 안됩니다."),
-    CATEGORY_PARENT_REQUIRED_FOR_CHILD(HttpStatus.BAD_REQUEST, "CATEGORY_05", "자식 카테고리 생성에는 부모 카테고리의 Id가 필요합니다."),
-    CATEGORY_HAS_CHILDREN(HttpStatus.BAD_REQUEST, "CATEGORY_06", "삭제하려는 카테고리에게 자식 카테고리가 존재합니다."),
-    CATEGORY_IN_USE_BY_PRODUCT(HttpStatus.BAD_REQUEST, "CATEGORY_07", "    삭제하려는 카테고리를 사용하는 상품이 존재합니다."),
+    CATEGORY_PARENT_UNDER_CHILD_EXISTS(HttpStatus.BAD_REQUEST, "CATEGORY_04",
+            "부모 카테고리에 이미 존재하는 자식 카테고리 입니다. parent's Title = %s, child's Title = %s"),
 
-    // 위시리스트
-    WISHLIST_PRODUCT_NOT_FOUND(HttpStatus.BAD_REQUEST, "WISHLIST_00", "상품이 존재하지 않습니다."),
-    WISHLIST_NOT_FOUND(HttpStatus.NOT_FOUND, "WISHLIST_01", "wishlist 가 존재하지 않습니다.")
+    CATEGORY_HAS_CHILDREN(HttpStatus.BAD_REQUEST, "CATEGORY_05",
+            "삭제하려는 카테고리에게 자식 카테고리가 존재합니다. categoryId = %s"),
+
+    CATEGORY_IN_USE_BY_PRODUCT(HttpStatus.BAD_REQUEST, "CATEGORY_06",
+            "삭제하려는 카테고리를 사용하는 상품이 존재합니다. categoryId = %s"),
+
+    // product
+    PRODUCT_NOT_FOUND(HttpStatus.BAD_REQUEST, "PRODUCT_00",
+            "요청된 상품이 존재하지 않습니다. productId = %s"),
+
+    PRODUCT_TITLE_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "PRODUCT_01",
+            "이미 존재하는 상품 title 입니다. title = %s"),
+
+    PRODUCT_LOCK_FAILED(HttpStatus.CONFLICT, "HOTDEAL_PRODUCT_02",
+            "hotDealProduct = %s 에 대한 락 획득에 실패했습니다."),
+
+    PRODUCT_LOCK_INTERRUPTED(HttpStatus.SERVICE_UNAVAILABLE, "HOTDEAL_PRODUCT_03",
+            "hotDealProduct = %s 에 대한 락 획득중 입터럽트가 발생했습니다."),
+
+    // wishlist
+    WISHLIST_NOT_FOUND(HttpStatus.BAD_REQUEST, "WISHLIST_00",
+            "위시리스트가 존재하지 않습니다. userId = %s"),
+
+
+    // email
+    EMAIL_SENDER_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "EMAIL_00",
+            "이메일 인증 코드 전송을 실패했습니다. errorMessage = %s"),
+
+    // SIGNUP
+    EMAIL_EMPTY_CODE(HttpStatus.BAD_REQUEST, "SIGNUP_00",
+            "요청에 이메일 인증 코드가 존재하지 않습니다. email = %s"),
+
+    EMAIL_VERIFICATION_STATUS_NOT_FOUND(HttpStatus.BAD_REQUEST, "SIGNUP_01",
+            "이메일 인증 상태가 존재하지 않습니다. email = %s"),
+
+    EMAIL_VERIFICATION_NOT_VERIFIED(HttpStatus.BAD_REQUEST, "SIGNUP_02",
+            "이메일 인증을 받지 않았습니다. email = %s"),
+
+    EMAIL_VERIFICATION_STATUS_ALREADY_VERIFIED(HttpStatus.BAD_REQUEST, "SIGNUP_03",
+            "이미 이메일 인증을 완료 했습니다. email = %s"),
+
+    EMAIL_VERIFICATION_CODE_MISMATCH(HttpStatus.BAD_REQUEST, "SIGNUP_04",
+            "이메일 인증 코드가 다릅니다. email = %s"),
+    // user
+    USER_USERNAME_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "USER_00",
+            "이미 존재하는 username 입니다. username = %s"),
+
+    USER_EMAIL_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "USER_01",
+            "이미 존재하는 email 입니다. email = %s"),
+
+    // Token
+    REFRESH_TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "TOKEN_00",
+            "만료된 RefreshToken 입니다."),
+
+    REFRESH_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "TOKEN_01",
+            "잘못된 RefreshToken 입니다."),
+
+    REFRESH_TOKEN_NULL(HttpStatus.BAD_REQUEST, "TOKEN_02",
+            "RefreshToken 이 존재 하지 않습니다."),
+
+    // 암호, 복호화 오류
+    CRYPTO_ENCRYPT_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "CRYPTO_00",
+            "암호화 처리중 오류가 발생했습니다."),
+
+    CRYPTO_DECRYPT_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "CRYPTO_01",
+            "복호화 처리중 오류가 발생했습니다.")
 
     ;
     private final HttpStatus status;

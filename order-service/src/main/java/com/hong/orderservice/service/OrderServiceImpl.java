@@ -107,8 +107,9 @@ public class OrderServiceImpl implements OrderService {
         // normalProduct 재고 감소 호출(product 검증, 요청 검사, 재고 감소)
         List<ProductCommonDto> productResponseDtos = resilience4JProductServiceClient.fetchAndDecreaseStock(productCommonDtos);
         if(productResponseDtos.isEmpty()){
-            log.error("product 재고 감소 실패");
-            throw new OrderException(ErrorCode.ORDER_PRODUCT_FETCH_FAILED);
+            log.debug("상품 재고 감소 호출을 실패했습니다. products = {}", productCommonDtos);
+
+            throw new OrderException(ErrorCode.ORDER_DECREASE_PRODUCT_FAILED, productCommonDtos);
         }
         return productResponseDtos;
     }
@@ -120,8 +121,8 @@ public class OrderServiceImpl implements OrderService {
         // hotDealProducts 재고 감소 호출(hotDeal 검증, 요청 검사, 재고 감소)
         List<HotDealProductCommonDto> hotDealProductResponseDtos = resilience4JHotDealServiceClient.fetchAndDecreaseStock(hotDealProductCommonDtos);
         if(hotDealProductResponseDtos.isEmpty()){
-            log.error("hotDealProduct 재고 감소 실패");
-            throw new OrderException(ErrorCode.HOTDEAL_PRODUCT_FETCH_FAILED);
+            log.debug("핫딜 상품 재고 감소 호출을 실패했습니다. = hotDealProducts = {}", hotDealProductCommonDtos);
+            throw new OrderException(ErrorCode.ORDER_DECREASE_HOTDEAL_PRODUCT_FAILED, hotDealProductCommonDtos);
         }
         return hotDealProductResponseDtos;
     }
