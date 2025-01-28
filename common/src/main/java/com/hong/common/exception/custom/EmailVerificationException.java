@@ -4,7 +4,7 @@ import com.hong.common.exception.ErrorCode;
 
 public class EmailVerificationException extends BusinessException {
 
-    public EmailVerificationException(ErrorCode errorCode) {
-        super(errorCode);
+    public EmailVerificationException(ErrorCode errorCode, Object... args) {
+        super(errorCode, args);
     }
 }

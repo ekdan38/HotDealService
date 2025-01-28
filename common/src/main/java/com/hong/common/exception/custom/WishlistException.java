@@ -4,7 +4,7 @@ import com.hong.common.exception.ErrorCode;
 
 public class WishlistException extends BusinessException{
 
-    public WishlistException(ErrorCode errorCode) {
-        super(errorCode);
+    public WishlistException(ErrorCode errorCode, Object...args) {
+        super(errorCode, args);
     }
 }

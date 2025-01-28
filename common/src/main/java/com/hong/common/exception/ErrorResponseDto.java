@@ -1,5 +1,6 @@
 package com.hong.common.exception;
 
+import com.hong.common.exception.custom.BusinessException;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -7,10 +8,10 @@ import lombok.Data;
 @AllArgsConstructor
 public class ErrorResponseDto {
 
-    private String errorMessage;
     private String errorCode;
+    private String errorMessage;
 
-    public static ErrorResponseDto of(ErrorCode code){
-        return new ErrorResponseDto(code.getErrorMessage(), code.getErrorCode());
+    public static ErrorResponseDto of(BusinessException e){
+        return new ErrorResponseDto(e.getMessage(), e.getErrorCode().getErrorCode());
     }
 }

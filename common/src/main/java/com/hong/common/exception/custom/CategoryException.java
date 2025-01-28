@@ -4,7 +4,7 @@ import com.hong.common.exception.ErrorCode;
 
 public class CategoryException extends BusinessException{
 
-    public CategoryException(ErrorCode errorCode) {
-        super(errorCode);
+    public CategoryException(ErrorCode errorCode, Object... args) {
+        super(errorCode, args);
     }
 }
