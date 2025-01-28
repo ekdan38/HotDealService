@@ -12,6 +12,6 @@ public class ErrorResponseDto {
     private String errorMessage;
 
     public static ErrorResponseDto of(BusinessException e){
-        return new ErrorResponseDto(e.getMessage(), e.getErrorCode().getErrorCode());
+        return new ErrorResponseDto(e.getErrorCode().getErrorCode(), e.getMessage());
     }
 }

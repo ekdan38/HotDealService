@@ -7,7 +7,7 @@ import org.springframework.http.HttpStatus;
 public enum ErrorCode {
 
     // hotDealProduct
-    HOTDEAL_PRODUCT_NOT_FOUND(HttpStatus.BAD_REQUEST, "HOTDEAL_PRODUCT_00",
+    HOTDEAL_PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "HOTDEAL_PRODUCT_00",
             "요청된 핫딜 상품이 존재하지 않습니다. hotDealProductId = %s"),
 
     HOTDEAL_PRODUCT_INSUFFICIENT_STOCK(HttpStatus.BAD_REQUEST, "HOTDEAL_PRODUCT_01",
@@ -23,7 +23,7 @@ public enum ErrorCode {
             "hotDealProduct = %s 에 대한 락 획득중 입터럽트가 발생했습니다."),
 
     // hotDeal
-    HOTDEAL_NOT_FOUND(HttpStatus.BAD_REQUEST, "HOTDEAL_00",
+    HOTDEAL_NOT_FOUND(HttpStatus.NOT_FOUND, "HOTDEAL_00",
             "요청된 핫딜이 존재하지 않습니다. hotDealId = %s"),
 
     HOTDEAL_TITLE_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "HOTDEAL_01",
@@ -43,8 +43,19 @@ public enum ErrorCode {
     ORDER_DECREASE_PRODUCT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_01",
             "상품 재고 감소 호출을 실패했습니다. products = %s"),
 
+    ORDER_PRODUCT_PARSE_RESPONSE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_02",
+            "feign Client 에러 응답 파싱 실패했습니다."),
+
+    ORDER_HOTDEAL_PRODUCT_SERVICE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_03",
+            "%s"),
+
+    ORDER_PRODUCT_SERVICE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_04",
+            "%s"),
+
+
+
     // category
-    CATEGORY_NOT_FOUND(HttpStatus.BAD_REQUEST, "CATEGORY_00",
+    CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "CATEGORY_00",
             "요청된 카테고리가 존재하지 않습니다. categoryId = %s"),
 
     CATEGORY_ROOT_EXISTS(HttpStatus.BAD_REQUEST, "CATEGORY_01",
@@ -66,20 +77,23 @@ public enum ErrorCode {
             "삭제하려는 카테고리를 사용하는 상품이 존재합니다. categoryId = %s"),
 
     // product
-    PRODUCT_NOT_FOUND(HttpStatus.BAD_REQUEST, "PRODUCT_00",
+    PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "PRODUCT_00",
             "요청된 상품이 존재하지 않습니다. productId = %s"),
 
     PRODUCT_TITLE_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "PRODUCT_01",
             "이미 존재하는 상품 title 입니다. title = %s"),
 
-    PRODUCT_LOCK_FAILED(HttpStatus.CONFLICT, "HOTDEAL_PRODUCT_02",
+    PRODUCT_LOCK_FAILED(HttpStatus.CONFLICT, "PRODUCT_02",
             "hotDealProduct = %s 에 대한 락 획득에 실패했습니다."),
 
-    PRODUCT_LOCK_INTERRUPTED(HttpStatus.SERVICE_UNAVAILABLE, "HOTDEAL_PRODUCT_03",
+    PRODUCT_LOCK_INTERRUPTED(HttpStatus.SERVICE_UNAVAILABLE, "PRODUCT_03",
             "hotDealProduct = %s 에 대한 락 획득중 입터럽트가 발생했습니다."),
 
+    PRODUCT_INSUFFICIENT_STOCK(HttpStatus.BAD_REQUEST, "PRODUCT_03",
+            "요청 수량보다 재고가 부족합니다. productId = %s, 요청 수량 = %s, 재고 수량 = %s"),
+
     // wishlist
-    WISHLIST_NOT_FOUND(HttpStatus.BAD_REQUEST, "WISHLIST_00",
+    WISHLIST_NOT_FOUND(HttpStatus.NOT_FOUND, "WISHLIST_00",
             "위시리스트가 존재하지 않습니다. userId = %s"),
 
 
