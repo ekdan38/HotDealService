@@ -37,19 +37,34 @@ public enum ErrorCode {
             "활성화 된 핫딜이 아닙니다. hotDealId = %s"),
 
     // order
-    ORDER_DECREASE_HOTDEAL_PRODUCT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_00",
-            "핫딜 상품 재고 감소 호출을 실패했습니다. hotDealProducts = %s"),
+    ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "ORDER_00",
+            "요청된 주문이 존재하지 않습니다. userId = %s, orderId = %s"),
 
-    ORDER_DECREASE_PRODUCT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_01",
-            "상품 재고 감소 호출을 실패했습니다. products = %s"),
+    ORDER_CANCEL_EXPIRED(HttpStatus.NOT_FOUND, "ORDER_01",
+            "주문 취소는 주문 후 하루 이내 가능합니다. userId = %s, orderId = %s"),
 
-    ORDER_PRODUCT_PARSE_RESPONSE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_02",
+    ORDER_RETURN_EXPIRED(HttpStatus.NOT_FOUND, "ORDER_02",
+            "환불은 배송 완료 후 하루 이내 가능합니다. userId = %s, orderId = %s"),
+
+    ORDER_DECREASE_HOTDEAL_PRODUCT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_03",
+            "핫딜 상품 재고 감소 호출을 실패했습니다. userId = %s, hotDealProducts = %s"),
+
+    ORDER_INCREASE_HOTDEAL_PRODUCT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_04",
+            "핫딜 상품 재고 증가 호출을 실패했습니다. userId = %s, hotDealProducts = %s"),
+
+    ORDER_DECREASE_PRODUCT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_05",
+            "상품 재고 감소 호출을 실패했습니다. userId = %s, products = %s"),
+
+    ORDER_INCREASE_PRODUCT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_06",
+            "상품 재고 증가 호출을 실패했습니다. userId = %s, products = %s"),
+
+    ORDER_PRODUCT_PARSE_RESPONSE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_07",
             "feign Client 에러 응답 파싱 실패했습니다."),
 
-    ORDER_HOTDEAL_PRODUCT_SERVICE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_03",
+    ORDER_HOTDEAL_PRODUCT_SERVICE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_08",
             "%s"),
 
-    ORDER_PRODUCT_SERVICE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_04",
+    ORDER_PRODUCT_SERVICE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_08",
             "%s"),
 
 
