@@ -21,7 +21,8 @@ public class HotDealProductCommonDto {
         this.quantity = quantity;
     }
 
-    public HotDealProductCommonDto(Long hotDealProductId, Long productId, String productTitle, Integer quantity, Integer hotDealPrice) {
+    public HotDealProductCommonDto(Long hotDealId, Long hotDealProductId, Long productId, String productTitle, Integer quantity, Integer hotDealPrice) {
+        this.hotDealId = hotDealId;
         this.hotDealProductId = hotDealProductId;
         this.productId = productId;
         this.productTitle = productTitle;
