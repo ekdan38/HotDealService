@@ -31,39 +31,19 @@ public class FeignErrorDecoder implements ErrorDecoder {
 
         } catch (IOException e) {
             log.debug("feign Client 에러 응답 파싱 실패 했습니다. errorMessage = {}", e.getMessage());
-            return new OrderException(ErrorCode.ORDER_PRODUCT_PARSE_RESPONSE_FAILED);
+            throw new OrderException(ErrorCode.ORDER_PRODUCT_PARSE_RESPONSE_FAILED);
         }
 
-        switch (response.status()) {
-            case 400:
-                if (methodKey.contains("HotDealServiceClient#fetchAndDecreaseStock")) {
-                    return new OrderException(ErrorCode.ORDER_HOTDEAL_PRODUCT_SERVICE_FAILED, errorMessage);
-                } else if (methodKey.contains("ProductServiceClient#fetchAndDecreaseStock")) {
-                    return new OrderException(ErrorCode.ORDER_PRODUCT_SERVICE_FAILED, errorMessage);
-                }
-                return FeignException.errorStatus(methodKey, response, null, null);
-
-            case 404:
-                if (methodKey.contains("HotDealServiceClient#fetchAndDecreaseStock")) {
-                    return new OrderException(ErrorCode.ORDER_HOTDEAL_PRODUCT_SERVICE_FAILED, errorMessage);
-                }else if (methodKey.contains("ProductServiceClient#fetchAndDecreaseStock")) {
-                    return new OrderException(ErrorCode.ORDER_PRODUCT_SERVICE_FAILED, errorMessage);
-                }
-                return FeignException.errorStatus(methodKey, response, null, null);
-            case 409:
-                if (methodKey.contains("HotDealServiceClient#fetchAndDecreaseStock")) {
-                    throw new OrderException(ErrorCode.ORDER_HOTDEAL_PRODUCT_SERVICE_FAILED, errorMessage);
-                }else if (methodKey.contains("ProductServiceClient#fetchAndDecreaseStock")) {
-                    return new OrderException(ErrorCode.ORDER_PRODUCT_SERVICE_FAILED, errorMessage);
-                }
-                return FeignException.errorStatus(methodKey, response, null, null);
-            case 503:
-                if (methodKey.contains("HotDealServiceClient#fetchAndDecreaseStock")) {
-                    throw new OrderException(ErrorCode.ORDER_HOTDEAL_PRODUCT_SERVICE_FAILED, errorMessage);
-                }
-                return FeignException.errorStatus(methodKey, response, null, null);
-            default:
-                return FeignException.errorStatus(methodKey, response, null, null);
+        if (methodKey.contains("HotDealServiceClient#fetchAndDecreaseStock") ||
+                methodKey.contains("HotDealServiceClient#fetchAndIncreaseStock")){
+            throw new OrderException(ErrorCode.ORDER_HOTDEAL_PRODUCT_SERVICE_FAILED, errorMessage);
+        }
+        else if (methodKey.contains("ProductServiceClient#fetchAndDecreaseStock") ||
+                methodKey.contains("ProductServiceClient#fetchAndIncreaseStock")) {
+            throw new OrderException(ErrorCode.ORDER_PRODUCT_SERVICE_FAILED, errorMessage);
+        }
+        else{
+            return FeignException.errorStatus(methodKey, response, null, null);
         }
     }
 }

@@ -2,6 +2,7 @@ package com.hong.orderservice.config;
 
 import com.hong.common.exception.custom.HotDealException;
 import com.hong.common.exception.custom.HotDealProductException;
+import com.hong.common.exception.custom.OrderException;
 import feign.FeignException;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
@@ -57,7 +58,7 @@ public class Resilience4JConfig {
                 // 느린 호출이 50% 이상이면 실패로 간주
                 .slowCallRateThreshold(50)
                 // 제외할 예외(errorDecoder 처리)
-                .ignoreExceptions(HotDealProductException.class, HotDealException.class)
+                .ignoreExceptions(OrderException.class)
                 .build();
         return CircuitBreakerRegistry.of(circuitBreakerConfig);
 
@@ -69,7 +70,9 @@ public class Resilience4JConfig {
         RetryConfig retryConfig = RetryConfig.custom()
                 .maxAttempts(3) // 최대 3번 재시도
                 .waitDuration(Duration.ofMillis(500)) // 각 재시도 간격
-                .retryExceptions(IOException.class, TimeoutException.class, FeignException.class) // 재시도 대상 예외
+                .retryExceptions(IOException.class, TimeoutException.class, FeignException.class)
+                // 재시도 대상 예외
+                .ignoreExceptions(OrderException.class)
                 .build();
 
         // RetryRegistry 생성

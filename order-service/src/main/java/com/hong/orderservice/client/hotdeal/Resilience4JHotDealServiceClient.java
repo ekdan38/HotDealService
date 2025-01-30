@@ -1,6 +1,7 @@
 package com.hong.orderservice.client.hotdeal;
 
 import com.hong.common.dto.HotDealProductCommonDto;
+import com.hong.common.exception.custom.OrderException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
@@ -37,24 +38,32 @@ public class Resilience4JHotDealServiceClient {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // HotDealProduct 재고 감소 CircuitBreaker Fallback
     private List<HotDealProductCommonDto> fallBackForCircuitBreakerDecreaseHotDealProducts(List<HotDealProductCommonDto> hotDealProductCommonDtos, Throwable throwable) {
+        // OrderException 이면 그대로 다시 예외 던진다. (globalExceptionHandler 에서 처리)
+        if(throwable instanceof OrderException) throw (OrderException) throwable;
         log.error("fetchAndDecreaseStock 호출 실패 hotDealProductIds = {}, Error = {}", extractHotDealProductIds(hotDealProductCommonDtos), throwable.getMessage());
         return new ArrayList<>();
     }
 
     // HotDealProduct 재고 감소 Retry Fallback
     public List<HotDealProductCommonDto> fallbackForRetryDecreaseHotDealProducts(List<HotDealProductCommonDto> hotDealProductCommonDtos, Throwable throwable) {
+        // OrderException 이면 그대로 다시 예외 던진다. (globalExceptionHandler 에서 처리)
+        if(throwable instanceof OrderException) throw (OrderException) throwable;
         log.error("fetchAndDecreaseStock 최종 실패: hotDealProducts = {}, Error = {}", extractHotDealProductIds(hotDealProductCommonDtos), throwable.getMessage());
         throw new RuntimeException("Retry 최종 실패");
     }
 
     // HotDealProduct 재고 증가 CircuitBreaker Fallback
     private List<HotDealProductCommonDto> fallBackForCircuitBreakerIncreaseHotDealProducts(List<HotDealProductCommonDto> hotDealProductCommonDtos, Throwable throwable) {
+        // OrderException 이면 그대로 다시 예외 던진다. (globalExceptionHandler 에서 처리)
+        if(throwable instanceof OrderException) throw (OrderException) throwable;
         log.error("fetchAndDecreaseStock 호출 실패 hotDealProductIds = {}, Error = {}", extractHotDealProductIds(hotDealProductCommonDtos), throwable.getMessage());
         return new ArrayList<>();
     }
 
     // HotDealProduct 재고 증가 Retry Fallback
     public List<HotDealProductCommonDto> fallbackForRetryIncreaseHotDealProducts(List<HotDealProductCommonDto> hotDealProductCommonDtos, Throwable throwable) {
+        // OrderException 이면 그대로 다시 예외 던진다. (globalExceptionHandler 에서 처리)
+        if(throwable instanceof OrderException) throw (OrderException) throwable;
         log.error("fetchAndDecreaseStock 최종 실패: hotDealProducts = {}, Error = {}", extractHotDealProductIds(hotDealProductCommonDtos), throwable.getMessage());
         throw new RuntimeException("Retry 최종 실패");
     }
