@@ -3,11 +3,13 @@ package com.hong.orderservice.web.dto;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 public class OrderRequestDto {
 
     @NotEmpty(message = "products 는 최소 1개 이상 이어야 합니다.")
@@ -27,6 +29,7 @@ public class OrderRequestDto {
 
     @Data
     @AllArgsConstructor
+    @NoArgsConstructor
     public static class OrderProductRequest{
         // hotDeal 상품이면 hotDealId, productId 는 hotDealProductId
         // 일반 상품이면 productId 는 productId
@@ -37,5 +40,10 @@ public class OrderRequestDto {
         @NotNull(message = "quantity 는 필수입니다.")
         @Positive(message = "quantity 는 양수여야 합니다.")
         private Integer quantity;
+
+        public OrderProductRequest(Long productId, Integer quantity) {
+            this.productId = productId;
+            this.quantity = quantity;
+        }
     }
 }

@@ -1,8 +1,6 @@
 package com.hong.orderservice.domain;
 
 import com.hong.common.entity.TimeEntity;
-import com.hong.common.exception.ErrorCode;
-import com.hong.common.exception.custom.OrderException;
 import com.hong.orderservice.domain.status.DeliveryStatus;
 import com.hong.orderservice.domain.status.OrderStatus;
 import jakarta.persistence.*;
@@ -75,13 +73,13 @@ public class Order extends TimeEntity {
     }
 
     // == 주문 취소 메서드 ==
-    public void cancel() {
+    public void updateStatusToCancel() {
         this.status = OrderStatus.CANCEL;
         this.delivery.updateStatus(DeliveryStatus.CANCEL);
     }
 
     // == 반품 메서드 ==
-    public void returnOrder(){
+    public void updateStatusReturnRequested(){
         this.status = OrderStatus.RETURN_REQUESTED;
         this.delivery.updateStatus(DeliveryStatus.RETURN_REQUESTED);
     }

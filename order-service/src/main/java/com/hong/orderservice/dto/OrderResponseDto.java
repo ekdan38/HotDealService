@@ -28,13 +28,15 @@ public class OrderResponseDto {
     @JsonPropertyOrder({"productId", "productTitle", "quantity", "price"})
     public static class OrderProductDto {
         private Long productId;
+        private Long hotDealId;
         private Long hotDealProductId;
         private String productTitle;
         private Integer quantity;
         private Integer price;
 
-        public OrderProductDto(Long productId, String productTitle, Integer quantity, Integer price) {
+        public OrderProductDto(Long productId, Long hotDealId, String productTitle, Integer quantity, Integer price) {
             this.productId = productId;
+            this.hotDealId = hotDealId;
             this.productTitle = productTitle;
             this.quantity = quantity;
             this.price = price;

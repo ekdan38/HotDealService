@@ -18,21 +18,27 @@ public class DeliveryScheduler {
     private final DeliveryRepository deliveryRepository;
 
     // 4 시간 마다 실행
-    @Scheduled(fixedRate = 14400000 )
+    @Scheduled(fixedRate = 14400000)
     @Transactional
     public void updateDeliveryStatus(){
-        // 시간 저장
         LocalDateTime now = LocalDateTime.now();
 
-        LocalDateTime oneDayAgo = now.minusDays(1);
-        LocalDateTime twoDaysAgo = now.minusDays(2);
+        // 주문 후 1일 경과한 배송 DELIVERING 로 상태 변경
+        deliveryRepository.updatePendingDeliveriesToDelivering(
+                now.minusDays(1),
+                DeliveryStatus.DELIVERING,
+                LocalDateTime.now(),
+                DeliveryStatus.PENDING
+        );
+        log.info("Scheduler DELIVERING 로 상태 변경");
 
-        // D+1 배송 상태 변경
-        deliveryRepository.updateOrderStatus(oneDayAgo, DeliveryStatus.DELIVERING, DeliveryStatus.PENDING);
-        log.info("D+1 배송 상태 변경");
-
-        // D+2 배송 상태 변경
-        deliveryRepository.updateOrderStatus(twoDaysAgo, DeliveryStatus.DELIVERED, DeliveryStatus.DELIVERING);
-        log.info("D+2 배송 상태 변경");
+        // 주문 후 2일 경과한 배송 DELIVERED 로 상태 변경
+        deliveryRepository.updatePendingDeliveriesToDelivering(
+                now.minusDays(2),
+                DeliveryStatus.DELIVERING,
+                LocalDateTime.now(),
+                DeliveryStatus.DELIVERED
+        );
+        log.info("Scheduler DELIVERED 로 상태 변경");
     }
 }
