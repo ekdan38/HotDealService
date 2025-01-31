@@ -22,6 +22,9 @@ public enum ErrorCode {
     HOTDEAL_PRODUCT_LOCK_INTERRUPTED(HttpStatus.SERVICE_UNAVAILABLE, "HOTDEAL_PRODUCT_04",
             "hotDealProduct = %s 에 대한 락 획득중 입터럽트가 발생했습니다."),
 
+    HOTDEAL_PRODUCT_PARSE_RESPONSE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "HOTDEAL_PRODUCT_05",
+            "feign Client 에러 응답 파싱 실패했습니다."),
+
     // hotDeal
     HOTDEAL_NOT_FOUND(HttpStatus.NOT_FOUND, "HOTDEAL_00",
             "요청된 핫딜이 존재하지 않습니다. hotDealId = %s"),

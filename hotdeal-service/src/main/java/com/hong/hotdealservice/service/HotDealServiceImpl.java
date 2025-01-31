@@ -270,8 +270,8 @@ public class HotDealServiceImpl implements HotDealService {
             Integer productStock = productMap.get(productId).getStock();
             if(productStock < quantity){
                 log.debug("요청 수량보다 재고가 부족합니다. hotDealProductId = {}, 요청 수량 = {}, 재고 수량 = {}",
-                        productId, productStock, quantity);
-                throw new HotDealException(ErrorCode.HOTDEAL_PRODUCT_INSUFFICIENT_STOCK, productId, productStock, quantity);
+                        productId, quantity, productStock);
+                throw new HotDealException(ErrorCode.HOTDEAL_PRODUCT_INSUFFICIENT_STOCK, productId, quantity, productStock);
             }
         }
         // ProductId를 기준으로 Map 변환
