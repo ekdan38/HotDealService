@@ -13,7 +13,7 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
 
     // 주문 후 1일 경과한 배송 상태 변경 (DELIVERING)
     // 벌크 업데이트
-    @Modifying
+    @Modifying(clearAutomatically=true, flushAutomatically=true)
     @Query("UPDATE Delivery d SET d.status = :newStatus, " +
             "d.startedAt = :startedAt " +
             "WHERE d.status = :oldStatus AND d.createdAt <= :dayAgo")
@@ -24,7 +24,7 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
 
     // 주문 후 1일 경과한 배송 상태 변경 (DELIVERING)
     // 벌크 업데이트
-    @Modifying
+    @Modifying(clearAutomatically=true, flushAutomatically=true)
     @Query("UPDATE Delivery d SET d.status = :newStatus, " +
             "d.createdAt = :completedAt " +
             "WHERE d.status = :oldStatus AND d.createdAt <= :dayAgo")
