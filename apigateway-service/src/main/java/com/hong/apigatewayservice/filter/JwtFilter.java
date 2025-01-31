@@ -91,7 +91,8 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
 
                                     // 유효한 User라면 요청 헤더에 정보 추가
                                     ServerHttpRequest modifiedRequest = request.mutate()
-                                            .header("X-User-Id", String.valueOf(userId))
+                                            .header("X-User-Id", String.valueOf(userId))                                            .header("X-User-Role", getRole(accessToken))
+                                            .header("X-User-Role", getRole(accessToken))
                                             .build();
 
                                     return chain.filter(exchange.mutate().request(modifiedRequest).build());
