@@ -66,8 +66,12 @@ public class HotDealServiceImpl implements HotDealService {
 
     // HotDeal 페이징 조회
     // 간단하게 HotDeal 내역 조회
+    @Transactional
     @Override
     public HotDealPagingResponseDto getHotDeals(String search, Long cursor, int size) {
+        // 사용자 조회 시점에 hotDeal status 업데이트
+        updateHotdealStatus();
+
         // cursor 가 null 이면 가장 최근 데이터 조회 처리
         if (cursor == null) cursor = Long.MAX_VALUE;
 
@@ -87,9 +91,13 @@ public class HotDealServiceImpl implements HotDealService {
         return new HotDealPagingResponseDto(nextCursor, hotDealResponseDtos);
     }
 
+
     // HotDeal 단건 조회
     @Override
     public HotDealResponseDto getHotDeal(Long hotDealId) {
+        // 사용자 조회 시점에 hotDeal status 업데이트
+        updateHotdealStatus();
+
         // hotDealProducts Fetch Join 조회, 검증
         HotDeal hotDeal = findByIdWithHotDealProductsAndValidate(hotDealId);
 
@@ -138,8 +146,6 @@ public class HotDealServiceImpl implements HotDealService {
         return convertHotDealResponseDto(savedHotDeal);
     }
 
-
-
     // Admin
     @Transactional
     @Override
@@ -155,6 +161,10 @@ public class HotDealServiceImpl implements HotDealService {
         return convertHotDealResponseDto(hotDeal);
     }
 
+    // HotDeal Status 사용자 조회 시점에서 update
+    private void updateHotDealStatus(){
+        // 스케쥴링과 별개로 사용자의 관점에서 hotDeal 상태가 변경 되야 한다.
+    }
 
     // 같은 title 로 HotDeal 이 존재 하는지 검증
     private void existsByTitleAndValidate(HotDealRequestDto requestDto) {
@@ -312,6 +322,12 @@ public class HotDealServiceImpl implements HotDealService {
         return hotDealRepository.save(hotDeal);
     }
 
+    // 사용자 조회 시점에 hotDeal status 업데이트
+    private void updateHotdealStatus() {
+        LocalDateTime now = LocalDateTime.now();
+        hotDealRepository.updateScheduledToActive(now);
+        hotDealRepository.updateScheduledToExpired(now);
+    }
     // 응답 Dto 변환
     private HotDealResponseDto convertHotDealResponseDto(HotDeal hotDeal) {
         List<HotDealResponseDto.HotDealProductDto> hotDealProductDtos = convertHotDealProductDto(hotDeal);

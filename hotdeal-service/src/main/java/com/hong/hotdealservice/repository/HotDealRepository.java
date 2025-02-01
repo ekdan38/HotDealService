@@ -1,11 +1,14 @@
 package com.hong.hotdealservice.repository;
 
 import com.hong.hotdealservice.domain.HotDeal;
+import com.hong.hotdealservice.domain.status.HotDealStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface HotDealRepository extends JpaRepository<HotDeal, Long> {
@@ -36,5 +39,23 @@ public interface HotDealRepository extends JpaRepository<HotDeal, Long> {
             "JOIN FETCH h.hotDealProducts hp " +
             "WHERE h.id IN :hotDealIds")
     List<HotDeal> findByIdsWithHotDealProducts(@Param("hotDealIds") List<Long> hotDealIds);
+
+    // hotDeal status 변경 (ACTIVE)
+    // 벌크 업데이트
+    @Modifying(clearAutomatically=true, flushAutomatically=true)
+    @Query("UPDATE HotDeal h SET h.status = 'ACTIVE' " +
+            "WHERE h.status = 'SCHEDULED' " +
+            "AND h.startTime <= :currentTime " +
+            "AND h.endTime > :currentTime")
+    void updateScheduledToActive(@Param("currentTime") LocalDateTime currentTime);
+
+    // hotDeal status 변경 (EXPIRED)
+    // 벌크 업데이트
+    @Modifying(clearAutomatically=true, flushAutomatically=true)
+    @Query("UPDATE HotDeal h SET h.status = 'EXPIRED' " +
+            "WHERE h.status = 'ACTIVE' " +
+            "AND h.endTime <= :currentTime")
+    void updateScheduledToExpired(@Param("currentTime") LocalDateTime currentTime);
+
 
 }
