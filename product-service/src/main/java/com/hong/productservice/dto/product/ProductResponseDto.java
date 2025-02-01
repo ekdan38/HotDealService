@@ -28,4 +28,8 @@ public class ProductResponseDto {
         this.price = price;
         this.stock = stock;
     }
+
+    public ProductResponseDto(Integer stock) {
+        this.stock = stock;
+    }
 }

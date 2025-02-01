@@ -15,6 +15,9 @@ public interface ProductService {
     // product 단건 조회
     ProductResponseDto getProduct(Long productId);
 
+    // product 재고만 단건 조회
+    ProductResponseDto getProductStock(Long productId);
+
     // product 수정
     ProductResponseDto updateProduct(Long productId, ProductDto requestDto);
 

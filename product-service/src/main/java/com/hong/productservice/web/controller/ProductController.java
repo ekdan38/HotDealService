@@ -74,6 +74,16 @@ public class ProductController {
         return ResponseEntity.ok().body(responseDto);
     }
 
+    // product 재고만 단건 조회
+    @GetMapping("/stock/{productId}")
+    public ResponseEntity<?> getProductStock(@PathVariable("productId") Long productId){
+
+        ProductResponseDto resultDto = productService.getProductStock(productId);
+        // 응답 설정
+        ResponseDto<ProductResponseDto> responseDto = new ResponseDto<>("상품 재고 조회 완료", resultDto);
+        return ResponseEntity.ok().body(responseDto);
+    }
+
     // product 수정
     @PutMapping("/{productId}")
     public ResponseEntity<?> updateProduct(@PathVariable("productId") Long productId,
