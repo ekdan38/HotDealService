@@ -1,0 +1,171 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_DATABASE: hotdeal
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - hotdeal-network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hotdeal-network
+
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: [ "CMD-SHELL", "rabbitmqctl status" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hotdeal-network
+
+  config-service:
+    build:
+      context: .
+      dockerfile: config-service/Dockerfile
+    container_name: config-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SERVER_PORT=8888
+    ports:
+      - "8888:8888"
+    depends_on:
+      - mysql
+      - redis
+      - rabbitmq
+    networks:
+      - hotdeal-network
+
+  eureka-server:
+    build:
+      context: .
+      dockerfile: eureka-server/Dockerfile
+    container_name: eureka-server
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SERVER_PORT=8761
+    ports:
+      - "8761:8761"
+    depends_on:
+      - config-service
+    networks:
+      - hotdeal-network
+
+  apigateway-service:
+    build:
+      context: .
+      dockerfile: apigateway-service/Dockerfile
+    container_name: apigateway-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SERVER_PORT=8080
+      # 필요 시, config-service URI를 설정 (예: spring.cloud.config.uri=http://config-service:8888)
+    ports:
+      - "8080:8080"
+    depends_on:
+      - eureka-server
+      - config-service
+    networks:
+      - hotdeal-network
+
+  hotdeal-service:
+    build:
+      context: .
+      dockerfile: hotdeal-service/Dockerfile
+    container_name: hotdeal-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SERVER_PORT=0
+      # Eureka, Config Server 등 외부 서비스 주소는 config-service, eureka-server 컨테이너 이름을 사용
+      - SPRING_CLOUD_CONFIG_URI=http://config-service:8888
+    depends_on:
+      - eureka-server
+      - config-service
+      - mysql
+    networks:
+      - hotdeal-network
+
+
+  order-service:
+    build:
+      context: .
+      dockerfile: order-service/Dockerfile
+    container_name: order-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SERVER_PORT=0    # 랜덤 포트 사용
+      - SPRING_CLOUD_CONFIG_URI=http://config-service:8888
+    depends_on:
+      - eureka-server
+      - config-service
+      - mysql
+      - redis
+    networks:
+      - hotdeal-network
+
+  product-service:
+    build:
+      context: .
+      dockerfile: product-service/Dockerfile
+    container_name: product-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SERVER_PORT=0    # 랜덤 포트 사용
+      - SPRING_CLOUD_CONFIG_URI=http://config-service:8888
+    depends_on:
+      - eureka-server
+      - config-service
+      - mysql
+    networks:
+      - hotdeal-network
+
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    container_name: user-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SERVER_PORT=0    # 랜덤 포트 사용
+      - SPRING_CLOUD_CONFIG_URI=http://config-service:8888
+    depends_on:
+      - eureka-server
+      - config-service
+      - mysql
+    networks:
+      - hotdeal-network
+
+volumes:
+  mysql-data:
+networks:
+  hotdeal-network:
