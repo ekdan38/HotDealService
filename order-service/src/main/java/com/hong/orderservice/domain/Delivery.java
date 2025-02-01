@@ -37,16 +37,16 @@ public class Delivery {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(updatable = false)
+    @Column(nullable = true)
     private LocalDateTime startedAt;
 
-    @Column(updatable = false)
+    @Column(nullable = true)
     private LocalDateTime completedAt;
 
-    @Column(updatable = false)
+    @Column(nullable = true)
     private LocalDateTime returnStartedAt;
 
-    @Column(updatable = false)
+    @Column(nullable = true)
     private LocalDateTime returnCompletedAt;
 
     private Delivery(Address address) {
@@ -64,7 +64,12 @@ public class Delivery {
     }
 
     // == 배송 상태 update 메서드 ==
-    protected void updateStatus(DeliveryStatus status){
+    public void updateStatus(DeliveryStatus status){
         this.status = status;
+    }
+
+    // == 배송 시작 날짜 update 메서드 ==
+    public void updateStartedAt(LocalDateTime startedAt){
+        this.startedAt = startedAt;
     }
 }
