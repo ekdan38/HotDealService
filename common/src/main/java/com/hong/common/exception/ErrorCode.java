@@ -35,9 +35,11 @@ public enum ErrorCode {
     HOTDEAL_INVALID_TIME(HttpStatus.BAD_REQUEST, "HOTDEAL_02",
             "시작 시간이 종료 시간보다 이후일 수 없습니다. startTime = %s, endTime = %s"),
 
-
     HOTDEAL_NON_ACTIVE(HttpStatus.BAD_REQUEST, "HOTDEAL_03",
             "활성화 된 핫딜이 아닙니다. hotDealId = %s"),
+
+    HOTDEAL_LOCK_INTERRUPTED(HttpStatus.SERVICE_UNAVAILABLE, "HOTDEAL_04",
+            "hotDeal_status 에 대한 락 획득 중 입터럽트가 발생했습니다."),
 
     // order
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "ORDER_00",
@@ -70,6 +72,9 @@ public enum ErrorCode {
     ORDER_PRODUCT_SERVICE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_08",
             "%s"),
 
+    // Delivery
+    DELIVERY_LOCK_INTERRUPTED(HttpStatus.SERVICE_UNAVAILABLE, "DELIVERY_00",
+            "delivery_status 에 대한 락 획득 중 입터럽트가 발생했습니다."),
 
 
     // category
