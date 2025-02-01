@@ -1,7 +1,5 @@
 package com.hong.orderservice.config;
 
-import com.hong.common.exception.custom.HotDealException;
-import com.hong.common.exception.custom.HotDealProductException;
 import com.hong.common.exception.custom.OrderException;
 import feign.FeignException;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
