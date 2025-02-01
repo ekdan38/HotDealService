@@ -17,11 +17,12 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             "JOIN FETCH o.orderProducts op " +
             "JOIN FETCH o.delivery " +
             "WHERE o.id < :cursor " +
-            "AND o.userId = :userId " +
+            "AND (:userId IS NULL OR o.userId = :userId) " +
             "ORDER BY o.id DESC")
     List<Order> findOrdersByCursorAndUserIdAndSize(@Param("cursor") Long cursor,
                                                    @Param("userId") Long userId,
                                                    Pageable pageable);
+
 
     // Fetch Join 으로 orderProducts, delivery 조회
     @Query("SELECT o " +
@@ -33,5 +34,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Order findOrderByOrderIdAndUserIdWithOpAndD(@Param("orderId") Long orderId,
                                                 @Param("userId") Long userId);
 
+    @Query("SELECT o.id " +
+            "FROM Order o " +
+            "WHERE o.userId = :userId")
+    List<Long> findOrdersByUserId(@Param("userId") Long userId);
 
 }
