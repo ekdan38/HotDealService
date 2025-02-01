@@ -58,6 +58,7 @@ public class OrderServiceImpl implements OrderService {
     // 주문 내역 페이징
     @Override
     public OrderPagingResponseDto getOrders(Long userId, Long cursor, int size) {
+        updateDeliveryStatusForUser(userId);
         // cursor 가 null 이면 가장 최근 데이터 조회 처리
         if (cursor == null) cursor = Long.MAX_VALUE;
 
@@ -80,6 +81,7 @@ public class OrderServiceImpl implements OrderService {
     // 주문 단건 조회
     @Override
     public OrderResponseDto getOrder(Long userId, Long orderId) {
+        updateDeliveryStatusForUser(userId);
         // Order 조회
         Order order = getOrderWithOrderProductsAndDelivery(userId, orderId);
         // 응답 Dto 변환
@@ -153,26 +155,24 @@ public class OrderServiceImpl implements OrderService {
 
 
     // Delivery Status 사용자 조회 시점에서 update
-    private void updateDeliveryStatus() {
+    private void updateDeliveryStatusForUser(Long userId) {
+        List<Long> orderIds = orderRepository.findOrdersByUserId(userId);
+
         // 스케쥴링과 별개로 사용자의 관점에서 배송 상태가 변경 되야 한다.
         LocalDateTime now = LocalDateTime.now();
         // 주문 후 1일 경과한 배송 DELIVERING 로 상태 변경
-        deliveryRepository.updatePendingDeliveriesToDelivering(
+        deliveryRepository.bulkUpdatePendingDeliveriesToDeliveringByOrderIds(
+                orderIds,
                 now.minusDays(1),
-                DeliveryStatus.DELIVERING,
-                LocalDateTime.now(),
-                DeliveryStatus.PENDING
+                now
         );
-        log.info("Scheduler DELIVERING 로 상태 변경");
 
-        // 주문 후 2일 경과한 배송 DELIVERED 로 상태 변경
-        deliveryRepository.updatePendingDeliveriesToDelivering(
-                now.minusDays(2),
-                DeliveryStatus.DELIVERING,
-                LocalDateTime.now(),
-                DeliveryStatus.DELIVERED
+        // 배송 시작 후 1일 경과한 배송 DELIVERED 로 상태 변경
+        deliveryRepository.bulkUpdateDeliveringDeliveriesToDeliveredByOrderIds(
+                orderIds,
+                now.minusDays(1),
+                now
         );
-        log.info("Scheduler DELIVERED 로 상태 변경");
     }
 
     // Fetch Join 으로 order, orderProducts, delivery 조회
