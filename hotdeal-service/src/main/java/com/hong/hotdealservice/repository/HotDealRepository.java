@@ -1,7 +1,6 @@
 package com.hong.hotdealservice.repository;
 
 import com.hong.hotdealservice.domain.HotDeal;
-import com.hong.hotdealservice.domain.status.HotDealStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -19,7 +18,8 @@ public interface HotDealRepository extends JpaRepository<HotDeal, Long> {
     // jpql은 limit 미지원 => pageable 사용 해서 size 적용
     @Query("SELECT h " +
             "FROM HotDeal h " +
-            "WHERE h.id < :cursor " +
+            "WHERE h.deleted = false " +
+            "AND h.id < :cursor " +
             "AND (:search IS NULL OR h.title LIKE %:search%) " +
             "ORDER BY h.id DESC")
     List<HotDeal> findByCursorAndSearchAndSize(@Param("cursor") Long cursor,
@@ -30,21 +30,24 @@ public interface HotDealRepository extends JpaRepository<HotDeal, Long> {
     @Query("SELECT h " +
             "FROM HotDeal h " +
             "JOIN FETCH h.hotDealProducts hp " +
-            "WHERE h.id = :hotDealId")
+            "WHERE h.deleted = false " +
+            "AND h.id = :hotDealId")
     HotDeal findByIdWithHotDealProducts(@Param("hotDealId") Long hotDealId);
 
 
     @Query("SELECT h " +
             "FROM HotDeal h " +
             "JOIN FETCH h.hotDealProducts hp " +
-            "WHERE h.id IN :hotDealIds")
+            "WHERE h.deleted = false " +
+            "AND h.id IN :hotDealIds")
     List<HotDeal> findByIdsWithHotDealProducts(@Param("hotDealIds") List<Long> hotDealIds);
 
     // hotDeal status 변경 (ACTIVE)
     // 벌크 업데이트
     @Modifying(clearAutomatically=true, flushAutomatically=true)
     @Query("UPDATE HotDeal h SET h.status = 'ACTIVE' " +
-            "WHERE h.status = 'SCHEDULED' " +
+            "WHERE h.deleted = false " +
+            "AND h.status = 'SCHEDULED' " +
             "AND h.startTime <= :currentTime " +
             "AND h.endTime > :currentTime")
     void updateScheduledToActive(@Param("currentTime") LocalDateTime currentTime);
@@ -53,9 +56,8 @@ public interface HotDealRepository extends JpaRepository<HotDeal, Long> {
     // 벌크 업데이트
     @Modifying(clearAutomatically=true, flushAutomatically=true)
     @Query("UPDATE HotDeal h SET h.status = 'EXPIRED' " +
-            "WHERE h.status = 'ACTIVE' " +
+            "WHERE h.deleted = false " +
+            "AND h.status = 'ACTIVE' " +
             "AND h.endTime <= :currentTime")
     void updateScheduledToExpired(@Param("currentTime") LocalDateTime currentTime);
-
-
 }

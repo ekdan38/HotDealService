@@ -6,12 +6,14 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Where;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
+@Where(clause = "deleted = false")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 public class HotDeal extends TimeEntity {
@@ -19,6 +21,9 @@ public class HotDeal extends TimeEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "hotdeal_id")
     private Long id;
+
+    @Column(nullable = false)
+    private Boolean deleted;
 
     @Column(name = "admin_id", nullable = false)
     private Long userId;
@@ -44,6 +49,7 @@ public class HotDeal extends TimeEntity {
 
     private HotDeal(Long adminId, String title, String description, LocalDateTime startTime, LocalDateTime endTime) {
         this.userId = adminId;
+        this.deleted = false;
         this.title = title;
         this.description = description;
         this.status = HotDealStatus.SCHEDULED;
@@ -68,20 +74,33 @@ public class HotDeal extends TimeEntity {
         hotDealProduct.setHotDeal(this);
     }
 
-    // == HotDealProducts remove 메서드 --
-    public void removeHotDealProducts(List<HotDealProduct> hotDealProducts) {
-        this.getHotDealProducts().removeAll(hotDealProducts);
-    }
-
-    // == Status 변경 메서드 ==
-    public void updateStatus(HotDealStatus status){
-        this.status = status;
+    // == HotDeal softDelete 처리
+    public void softDelete(){
+        this.deleted = true;
     }
 
     //== HotDeal 활성화 여부 확인 메서드 ==
     public boolean isActive(){
         LocalDateTime now = LocalDateTime.now();
         return status == HotDealStatus.ACTIVE && now.isAfter(startTime) && now.isBefore(endTime);
+    }
+
+    // == HotDealProducts remove 메서드 ==
+    public void removeHotDealProducts(List<HotDealProduct> hotDealProducts) {
+        this.hotDealProducts.removeAll(hotDealProducts);
+    }
+
+    //== HotDealProducts stock, quantity update 메서드 ==
+    public void updateHotDealProducts(Long hotDealProductId, Integer requestedQuantity, Double discountRate){
+        this.hotDealProducts.stream()
+                .filter(hp -> hp.getProductId().equals(hotDealProductId))
+                .findFirst()
+                .ifPresent(hp -> hp.updateQuantityAndDiscountRate(requestedQuantity, discountRate));
+    }
+
+    // == Status 변경 메서드 ==
+    public void updateStatus(HotDealStatus status){
+        this.status = status;
     }
 
     // == HotDeal Fiends update 메서드 ==
@@ -92,6 +111,4 @@ public class HotDeal extends TimeEntity {
         this.endTime = endTime;
         updateStatus(status);
     }
-
-
 }

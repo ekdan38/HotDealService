@@ -9,9 +9,4 @@ import java.util.List;
 
 public interface HotDealProductRepository extends JpaRepository<HotDealProduct, Long> {
 
-
-    @Query("SELECT hp " +
-            "FROM HotDealProduct hp " +
-            "WHERE hp.id in :productIds")
-    List<HotDealProduct> findAllByProductIds(@Param("productIds") List<Long> productIds);
 }
