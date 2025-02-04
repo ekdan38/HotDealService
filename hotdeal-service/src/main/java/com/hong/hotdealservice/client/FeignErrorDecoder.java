@@ -32,7 +32,8 @@ public class FeignErrorDecoder implements ErrorDecoder {
             throw new HotDealProductException(ErrorCode.HOTDEAL_PRODUCT_PARSE_RESPONSE_FAILED);
         }
 
-        if (methodKey.contains("ProductServiceClient#getProductsById")){
+        if (methodKey.contains("ProductServiceClient#decreaseStock")
+                || methodKey.contains("ProductServiceClient#increaseStock")){
             throw new HotDealProductException(ErrorCode.ORDER_HOTDEAL_PRODUCT_SERVICE_FAILED, errorMessage);
         }
         else{
