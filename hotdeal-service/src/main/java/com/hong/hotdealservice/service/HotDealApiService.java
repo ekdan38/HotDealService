@@ -31,23 +31,34 @@ public class HotDealApiService {
     private final HotDealRepository hotDealRepository;
     private final RedissonClient redissonClient;
 
+    // 핫딜 상품 조회
+    public List<HotDealProductCommonDto> fetchProducts(List<HotDealProductCommonDto> requestDtos) {
+        //hotDealId, hotDealProductId, quantity
+        // hotDealIds 추출
+        List<Long> hotDealIds = extractHotDealIds(requestDtos);
+        // hotDeal 조회, 검증
+        List<HotDeal> hotDeals = fetchHotDealWithProductsAndValidateForDecrease(hotDealIds);
+        // <hotDealId, <HotDealProductDto> 형태 Map 변환
+        Map<Long, List<HotDealProductCommonDto>> hotDealProductMap = buildHotDealProductMap(requestDtos);
+        // hotDealProducts 요청 검증 Dto 변환
+        return validateRequestedHotDealProductsAndConvertDto(hotDeals, hotDealProductMap);
+    }
+
+
     // 핫딜 상품 재고 감소
     @Transactional
-    public List<HotDealProductCommonDto> fetchAndDecreaseStock(List<HotDealProductCommonDto> hotDealProductCommonDtos) {
-        // response List
-        List<HotDealProductCommonDto> responseDtos;
+    public Boolean decreaseStock(List<HotDealProductCommonDto> requestDtos) {
         // hotDealProductIds 추출
-        List<Long> hotDealProductIds = extractHotDealProductIds(hotDealProductCommonDtos);
+        List<Long> hotDealProductIds = extractHotDealProductIds(requestDtos);
         // 락 획득
         List<RLock> locks = acquireLocks(hotDealProductIds);
-        List<Long> hotDealIds = extractHotDealIds(hotDealProductCommonDtos);
+        List<Long> hotDealIds = extractHotDealIds(requestDtos);
         // hotDeal 조회, 검증
-        List<HotDeal> hotDeals = fetchHotDealWithProductsAndValidate(hotDealIds);
+        List<HotDeal> hotDeals = fetchHotDealWithProductsAndValidateForDecrease(hotDealIds);
         // <hotDealId, <HotDealProductDto> 형태 Map 변환
-        Map<Long, List<HotDealProductCommonDto>> hotDealProductMap = buildHotDealProductMap(hotDealProductCommonDtos);
-        // hotDealIds 추출
+        Map<Long, List<HotDealProductCommonDto>> hotDealProductMap = buildHotDealProductMap(requestDtos);
         // hotDealProducts 요청 검증, 재고 감소
-        responseDtos = dereaseStockAndValidateRequestedHotDealProducts(hotDeals, hotDealProductMap);
+        decreaseStockAndValidateRequestedHotDealProducts(hotDeals, hotDealProductMap);
         // 락 해제
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
@@ -55,26 +66,24 @@ public class HotDealApiService {
                 releaseLocks(locks);
             }
         });
-        return responseDtos;
+        return true;
     }
 
     // 핫딜 상품 재고 증가
     @Transactional
-    public List<HotDealProductCommonDto> fetchAndIncreaseStock(List<HotDealProductCommonDto> hotDealProductCommonDtos) {
-        // response List
-        List<HotDealProductCommonDto> responseDtos;
+    public Boolean increaseStock(List<HotDealProductCommonDto> requestDtos) {
         // hotDealProductIds 추출
-        List<Long> hotDealProductIds = extractHotDealProductIds(hotDealProductCommonDtos);
+        List<Long> hotDealProductIds = extractHotDealProductIds(requestDtos);
         // 락 획득
         List<RLock> locks = acquireLocks(hotDealProductIds);
         // <hotDealId, <HotDealProductDto> 형태 Map 변환
-        Map<Long, List<HotDealProductCommonDto>> hotDealProductMap = buildHotDealProductMap(hotDealProductCommonDtos);
+        Map<Long, List<HotDealProductCommonDto>> hotDealProductMap = buildHotDealProductMap(requestDtos);
         // hotDealIds 추출
-        List<Long> hotDealIds = extractHotDealIds(hotDealProductCommonDtos);
+        List<Long> hotDealIds = extractHotDealIds(requestDtos);
         // hotDeal 조회, 검증
-        List<HotDeal> hotDeals = fetchHotDealWithProductsAndValidate(hotDealIds);
+        List<HotDeal> hotDeals = fetchHotDealWithProductsAndValidateForIncrease(hotDealIds);
         // hotDealProducts 요청 검증, 재고 증가
-        responseDtos = increaseStockAndValidateRequestedHotDealProducts(hotDeals, hotDealProductMap);
+        increaseStockAndValidateRequestedHotDealProducts(hotDeals, hotDealProductMap);
         // 락 해제
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
@@ -82,8 +91,7 @@ public class HotDealApiService {
                 releaseLocks(locks);
             }
         });
-
-        return responseDtos;
+        return true;
     }
 
 
@@ -91,6 +99,7 @@ public class HotDealApiService {
     private List<Long> extractHotDealProductIds(List<HotDealProductCommonDto> hotDealProductCommonDtos) {
         List<Long> hotDealProductIds = hotDealProductCommonDtos.stream()
                 .map(HotDealProductCommonDto::getHotDealProductId)
+                .distinct()
                 .sorted()
                 .collect(Collectors.toList());
         return hotDealProductIds;
@@ -133,8 +142,57 @@ public class HotDealApiService {
         }
     }
 
+    // hotDealProducts 요청 검증 Dto 변환
+    private List<HotDealProductCommonDto> validateRequestedHotDealProductsAndConvertDto(List<HotDeal> hotDeals,
+                                                                                        Map<Long, List<HotDealProductCommonDto>> hotDealProductMap) {
+        List<HotDealProductCommonDto> hotDealProductCommonDtos = new ArrayList<>();
+        for (HotDeal hotDeal : hotDeals) {
+            // hotDealId로 map에서 추출
+            // hotDealPorudctId 랑 dto의 productId랑 일치 하는 hotDelProduct 추출
+            List<HotDealProductCommonDto> dtos = hotDealProductMap.get(hotDeal.getId());
+            List<HotDealProduct> hotDealProducts = hotDeal.getHotDealProducts().stream()
+                    .filter(hp -> dtos.stream()
+                            .anyMatch(dto -> dto.getHotDealProductId().equals(hp.getId())))
+                    .collect(Collectors.toList());
+
+            // hotDealPorudctId 랑 dto의 productId랑 일치 하지 않는 hotDelProduct 추출 => 디버깅, 에러 처리 용도
+            List<Long> noneMathHotDealProductIds = hotDeal.getHotDealProducts().stream()
+                    .filter(hp -> dtos.stream()
+                            .noneMatch(dto -> dto.getHotDealProductId().equals(hp.getId())))
+                    .map(HotDealProduct::getId)
+                    .collect(Collectors.toList());
+
+            if (hotDealProducts.size() != dtos.size()) {
+                log.debug("요청된 핫딜 상품이 존재하지 않습니다. = {}", noneMathHotDealProductIds);
+                throw new HotDealProductException(ErrorCode.HOTDEAL_PRODUCT_NOT_FOUND, noneMathHotDealProductIds);
+            }
+
+            for (HotDealProduct hotDealProduct : hotDealProducts) {
+                Integer quantity = dtos.stream()
+                        .filter(dto -> dto.getHotDealProductId().equals(hotDealProduct.getId()))
+                        .findFirst()
+                        .map(HotDealProductCommonDto::getQuantity)
+                        .orElseThrow(() -> {
+                            log.debug("요청된 핫딜 상품에 대한 수량이 누락 되었습니다. hotDealProductId = {}", hotDealProduct.getId());
+                            return new HotDealProductException(ErrorCode.HOTDEAL_PRODUCT_INVALID_FOUND, hotDealProduct.getProductId());
+                        });
+
+                // hotDealProduct List 반환
+                hotDealProductCommonDtos.add(new HotDealProductCommonDto(
+                        hotDeal.getId(),
+                        hotDealProduct.getId(),
+                        hotDealProduct.getProductId(),
+                        hotDealProduct.getProductTitle(),
+                        quantity, hotDealProduct.getHotDealPrice()));
+            }
+        }
+        return hotDealProductCommonDtos;
+    }
+
+
     // hotDeal 재고 감소, hotDealProducts 요청 검증
-    private List<HotDealProductCommonDto> dereaseStockAndValidateRequestedHotDealProducts(List<HotDeal> hotDeals, Map<Long, List<HotDealProductCommonDto>> hotDealProductMap) {
+    private List<HotDealProductCommonDto> decreaseStockAndValidateRequestedHotDealProducts(List<HotDeal> hotDeals,
+                                                                                           Map<Long, List<HotDealProductCommonDto>> hotDealProductMap) {
         List<HotDealProductCommonDto> hotDealProductCommonDtos = new ArrayList<>();
         for (HotDeal hotDeal : hotDeals) {
             // hotDealId로 map에서 추출
@@ -235,11 +293,12 @@ public class HotDealApiService {
         return hotDealProductCommonDtos.stream()
                 .map(HotDealProductCommonDto::getHotDealId)
                 .distinct()
+                .sorted()
                 .collect(Collectors.toList());
     }
 
     // hotDeal 조회, 검증
-    private List<HotDeal> fetchHotDealWithProductsAndValidate(List<Long> hotDealIds) {
+    private List<HotDeal> fetchHotDealWithProductsAndValidateForDecrease(List<Long> hotDealIds) {
         List<HotDeal> hotDeals = hotDealRepository.findByIdsWithHotDealProducts(hotDealIds);
 
         List<Long> nonMatchHotDealIds = hotDealIds.stream()
@@ -252,6 +311,34 @@ public class HotDealApiService {
             log.debug("요청된 핫딜이 존재하지 않습니다. hotDealProductId = {}", nonMatchHotDealIds);
             throw new HotDealException(ErrorCode.HOTDEAL_NOT_FOUND, nonMatchHotDealIds);
         }
+
+        // hotDeal 활성화 여부 확인
+        List<Long> noneActiveHotDealIds = new ArrayList<>();
+        for (HotDeal hotDeal : hotDeals) {
+            if(!hotDeal.isActive()) noneActiveHotDealIds.add(hotDeal.getId());
+        }
+        if(!noneActiveHotDealIds.isEmpty()){
+            log.debug("활성화 된 핫딜이 아닙니다. hotDealId = {}", noneActiveHotDealIds);
+            throw new HotDealException(ErrorCode.HOTDEAL_NON_ACTIVE, noneActiveHotDealIds);
+        }
+        return hotDeals;
+    }
+
+    // hotDeal 조회, 검증
+    private List<HotDeal> fetchHotDealWithProductsAndValidateForIncrease(List<Long> hotDealIds) {
+        List<HotDeal> hotDeals = hotDealRepository.findByIdsWithHotDealProducts(hotDealIds);
+
+        List<Long> nonMatchHotDealIds = hotDealIds.stream()
+                .filter(id -> hotDeals.stream()
+                        .noneMatch(hotDeal -> hotDeal.getId().equals(id)))
+                .collect(Collectors.toList());
+
+        // 조회된 값 여부 확인
+        if (hotDeals.size() != hotDealIds.size()) {
+            log.debug("요청된 핫딜이 존재하지 않습니다. hotDealProductId = {}", nonMatchHotDealIds);
+            throw new HotDealException(ErrorCode.HOTDEAL_NOT_FOUND, nonMatchHotDealIds);
+        }
+
         return hotDeals;
     }
 

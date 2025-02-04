@@ -9,6 +9,7 @@ import com.hong.hotdealservice.web.dto.HotDealRequestDto;
 import com.hong.hotdealservice.web.dto.HotDealUpdateRequestDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
@@ -39,7 +40,7 @@ public class HotDealController {
 
         // 응답 설정
         ResponseDto<HotDealResponseDto> responseDto = new ResponseDto<>("HotDeal 생성 성공", resultDto);
-        return ResponseEntity.ok().body(responseDto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
     }
 
     // HotDeal 페이징 조회
@@ -69,7 +70,6 @@ public class HotDealController {
 
     // HotDeal 수정
     // Admin
-
     @PutMapping("/{hotDealId}")
     public ResponseEntity<?> updateHotDeal(@PathVariable("hotDealId") Long hotDealId,
                                            @RequestBody @Validated HotDealUpdateRequestDto requestDto,

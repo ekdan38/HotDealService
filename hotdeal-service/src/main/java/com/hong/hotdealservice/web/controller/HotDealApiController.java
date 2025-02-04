@@ -18,16 +18,23 @@ public class HotDealApiController {
     private final HotDealApiService hotDealApiService;
 
     @PostMapping("/decrease-stock")
-    public ResponseEntity<List<HotDealProductCommonDto>> fetchAndDecreaseStock(@RequestBody List<HotDealProductCommonDto> hotDealProductCommonDtos) {
-        List<HotDealProductCommonDto> responseDtos = hotDealApiService.fetchAndDecreaseStock(hotDealProductCommonDtos);
-        return ResponseEntity.ok(responseDtos);
+    public ResponseEntity<Boolean> decreaseStock(@RequestBody List<HotDealProductCommonDto> requestDtos) {
+        Boolean result = hotDealApiService.decreaseStock(requestDtos);
+        return ResponseEntity.ok(result);
     }
 
     @PostMapping("/increase-stock")
-    public ResponseEntity<List<HotDealProductCommonDto>> fetchAndIncreaseStock(@RequestBody List<HotDealProductCommonDto> hotDealProductCommonDtos) {
-        List<HotDealProductCommonDto> responseDtos = hotDealApiService.fetchAndIncreaseStock(hotDealProductCommonDtos);
+    public ResponseEntity<Boolean> fetchAndIncreaseStock(@RequestBody List<HotDealProductCommonDto> requestDtos) {
+        Boolean result = hotDealApiService.increaseStock(requestDtos);
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/products")
+    public ResponseEntity<List<HotDealProductCommonDto>> fetchProducts(@RequestBody List<HotDealProductCommonDto> requestDtos) {
+        List<HotDealProductCommonDto> responseDtos = hotDealApiService.fetchProducts(requestDtos);
         return ResponseEntity.ok(responseDtos);
     }
+
 }
 
 

@@ -29,7 +29,20 @@ public class HotDealResponseDto {
 
     private String status;
 
+    private Boolean deleted;
+
     private List<HotDealProductDto> productInfos;
+
+    public HotDealResponseDto(Long hotDealId, Long adminId, String title, String description, LocalDateTime startTime, LocalDateTime endTime, String status, Boolean deleted) {
+        this.hotDealId = hotDealId;
+        this.adminId = adminId;
+        this.title = title;
+        this.description = description;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.status = status;
+        this.deleted = deleted;
+    }
 
     public HotDealResponseDto(Long hotDealId, Long adminId, String title, String description, LocalDateTime startTime, LocalDateTime endTime, String status) {
         this.hotDealId = hotDealId;

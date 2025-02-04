@@ -88,6 +88,7 @@ public class HotDealProduct {
     // == quantity, discountRate update 메서드 ==
     public void updateQuantityAndDiscountRate(int quantity, double discountRate){
         this.stock = quantity;
+        this.discountRate = discountRate;
         setHotDealPrice(discountRate);
     }
 
