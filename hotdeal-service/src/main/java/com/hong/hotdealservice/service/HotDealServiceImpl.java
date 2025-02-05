@@ -145,7 +145,7 @@ public class HotDealServiceImpl implements HotDealService {
             increaseOriginalProductStockAndValidate(decreaseProductStockRequestDtos);
             throw e;
         }
-        // Dto 변환
+        // 응답 Dto 변환
         return convertHotDealResponseDto(hotDeal);
     }
 
@@ -156,7 +156,15 @@ public class HotDealServiceImpl implements HotDealService {
         // hotDealProducts Fetch Join 조회, 검증
         HotDeal hotDeal = findByIdWithHotDealProductsAndValidate(hotDealId);
 
-        // HotDeal 삭제
+        // HotDeal 삭제 (softDelete)
+        // 1. 핫딜 상품 남은 재고 원본 상품에 반영
+        // hotDealProducts 재고 감소 요청 Dto 변환
+        List<ProductStockUpdateRequestDto> increaseProductStockRequestDtos = hotDeal.getHotDealProducts().stream()
+                .map(hp -> new ProductStockUpdateRequestDto(hp.getProductId(), hp.getStock()))
+                .collect(Collectors.toList());
+        // 2. 핫딜 상품 남은 재고 원본 상품에 재고 감소 요청
+        increaseOriginalProductStockAndValidate(increaseProductStockRequestDtos);
+
         hotDeal.softDelete();
 
         // 응답 Dto 변환
