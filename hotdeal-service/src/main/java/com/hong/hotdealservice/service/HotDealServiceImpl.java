@@ -67,8 +67,6 @@ public class HotDealServiceImpl implements HotDealService {
     @Transactional
     @Override
     public HotDealPagingResponseDto getHotDeals(String search, Long cursor, int size) {
-        // 사용자 조회 시점에 hotDeal status 업데이트
-        updateHotdealStatus();
 
         // cursor 가 null 이면 가장 최근 데이터 조회 처리
         if (cursor == null) cursor = Long.MAX_VALUE;
@@ -94,8 +92,6 @@ public class HotDealServiceImpl implements HotDealService {
     @Transactional
     @Override
     public HotDealResponseDto getHotDeal(Long hotDealId) {
-        // 사용자 조회 시점에 hotDeal status 업데이트
-        updateHotdealStatus();
 
         // hotDealProducts Fetch Join 조회, 검증
         HotDeal hotDeal = findByIdWithHotDealProductsAndValidate(hotDealId);
@@ -370,12 +366,6 @@ public class HotDealServiceImpl implements HotDealService {
         return responseDtos;
     }
 
-    // 사용자 조회 시점에 hotDeal status 업데이트
-    private void updateHotdealStatus() {
-        LocalDateTime now = LocalDateTime.now();
-        hotDealRepository.updateScheduledToActive(now);
-        hotDealRepository.updateScheduledToExpired(now);
-    }
 
     // 응답 Dto 변환
     private HotDealResponseDto convertHotDealResponseDto(HotDeal hotDeal) {

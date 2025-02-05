@@ -44,6 +44,9 @@ public class HotDeal extends TimeEntity {
     @Enumerated(EnumType.STRING)
     private HotDealStatus status;
 
+    @Column(nullable = true)
+    private LocalDateTime expiredAt;
+
     @OneToMany(mappedBy = "hotDeal", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<HotDealProduct> hotDealProducts = new ArrayList<>();
 
