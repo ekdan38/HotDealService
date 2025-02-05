@@ -55,9 +55,19 @@ public interface HotDealRepository extends JpaRepository<HotDeal, Long> {
     // hotDeal status 변경 (EXPIRED)
     // 벌크 업데이트
     @Modifying(clearAutomatically=true, flushAutomatically=true)
-    @Query("UPDATE HotDeal h SET h.status = 'EXPIRED' " +
+    @Query("UPDATE HotDeal h SET h.status = 'EXPIRED', h.expiredAt =:currentTime " +
             "WHERE h.deleted = false " +
             "AND h.status = 'ACTIVE' " +
             "AND h.endTime <= :currentTime")
     void updateScheduledToExpired(@Param("currentTime") LocalDateTime currentTime);
+
+    // hotDeal status 변경 (EXPIRED) 하고 나서 변경된 hotDeal 조회
+    @Query("SELECT h " +
+            "FROM HotDeal h " +
+            "JOIN FETCH h.hotDealProducts hp " +
+            "WHERE h.deleted = false " +
+            "AND h.status = 'EXPIRED' " +
+            "AND h.expiredAt = :now")
+    List<HotDeal> findHotDealsByExpiredAtNow(@Param("now") LocalDateTime now);
+
 }

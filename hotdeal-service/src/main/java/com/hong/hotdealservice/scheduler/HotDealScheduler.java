@@ -1,7 +1,12 @@
 package com.hong.hotdealservice.scheduler;
 
+import com.hong.common.dto.ProductStockUpdateRequestDto;
+import com.hong.common.dto.ProductStockUpdateResponseDto;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.BusinessException;
+import com.hong.common.exception.custom.HotDealProductException;
+import com.hong.hotdealservice.client.Resilience4JProductServiceClient;
+import com.hong.hotdealservice.domain.HotDeal;
 import com.hong.hotdealservice.repository.HotDealRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,7 +20,9 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -24,6 +31,7 @@ public class HotDealScheduler {
 
     private final HotDealRepository hotDealRepository;
     private final RedissonClient redissonClient;
+    private final Resilience4JProductServiceClient resilience4JProductServiceClient;
     private final Environment env;
 
     // 5 분 마다 실행
@@ -52,6 +60,16 @@ public class HotDealScheduler {
 
             // hotDeal status 변경 (EXPIRED)
             hotDealRepository.updateScheduledToExpired(now);
+
+            // hotDeal status EXPIRED 로 변경된 핫딜 조회, 원본 상품에 재고 반영
+            List<HotDeal> expiredHotDeals = hotDealRepository.findHotDealsByExpiredAtNow(now);
+            expiredHotDeals.forEach(hotDeal -> {
+                List<ProductStockUpdateRequestDto> increaseProductStockRequestDtos = hotDeal.getHotDealProducts().stream()
+                        .map(hp -> new ProductStockUpdateRequestDto(hp.getProductId(), hp.getStock()))
+                        .collect(Collectors.toList());
+                // 재고 증가 요청
+                increaseOriginalProductStockAndValidate(increaseProductStockRequestDtos);
+            });
             log.info("Scheduler EXPIRED 로 상태 변경");
 
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -67,5 +85,18 @@ public class HotDealScheduler {
             log.debug("hotDeal_status 에 대한 락 획득 중 입터럽트가 발생했습니다.");
             throw new BusinessException(ErrorCode.HOTDEAL_LOCK_INTERRUPTED);
         }
+    }
+
+    // feignClient 로 Product 재고 증가 feignClient 호출, 검증
+    private List<ProductStockUpdateResponseDto> increaseOriginalProductStockAndValidate(List<ProductStockUpdateRequestDto> productStockUpdateRequestDtos) {
+        // feignClient 로 Product 재고 감소 feignClient 호출
+        List<ProductStockUpdateResponseDto> responseDtos = resilience4JProductServiceClient.increaseStock(productStockUpdateRequestDtos);
+
+        // circuitBreaker OPEN
+        if (responseDtos.isEmpty()) {
+            log.debug("원본 상품 재고 증가 호출을 실패했습니다. request = {}", productStockUpdateRequestDtos);
+            throw new HotDealProductException(ErrorCode.HOTDEAL_PRODUCT_ORIGINAL_STOCK_INCREASE_FAILED, productStockUpdateRequestDtos);
+        }
+        return responseDtos;
     }
 }
