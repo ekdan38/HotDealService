@@ -6,7 +6,6 @@ import com.hong.common.exception.custom.HotDealException;
 import com.hong.common.exception.custom.HotDealProductException;
 import com.hong.hotdealservice.domain.HotDeal;
 import com.hong.hotdealservice.domain.HotDealProduct;
-import com.hong.hotdealservice.repository.HotDealProductRepository;
 import com.hong.hotdealservice.repository.HotDealRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -410,9 +409,9 @@ public class HotDealApiService {
     }
 
     // <hotDealId, <HotDealProductDto> 형태 Map 변환
-    private Map<Long, List<HotDealProductCommonDto>> buildHotDealProductMap(List<HotDealProductCommonDto> hotDealProductCommonDtos) {
+    private Map<Long, List<orderHotDealProductDto>> buildHotDealProductMap(List<orderHotDealProductDto> hotDealProductCommonDtos) {
         return hotDealProductCommonDtos.stream()
-                .collect(Collectors.groupingBy(HotDealProductCommonDto::getHotDealId));
+                .collect(Collectors.groupingBy(orderHotDealProductDto::getHotDealId));
     }
 
 }
