@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
@@ -26,7 +27,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
                                                    @Param("userId") Long userId,
                                                    Pageable pageable);
 
-
     // 결제 까지 완료한 주문 조회 (Fetch Join 으로 orderProducts, delivery 조회)
     @Query("SELECT o " +
             "FROM Order o " +
@@ -35,9 +35,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             "WHERE o.id = :orderId " +
             "AND o.userId = :userId " +
             "AND o.status = 'PAID'")
-    Order findPaidOrderByOrderIdAndUserIdWithOpAndD(@Param("orderId") Long orderId,
+    Optional<Order> findPaidOrderByOrderIdAndUserIdWithOpAndD(@Param("orderId") Long orderId,
                                                     @Param("userId") Long userId);
-
 
     // 주문 환불 처리 update 쿼리
     @Modifying(clearAutomatically = true, flushAutomatically = true)
@@ -71,6 +70,14 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             "FROM Order o " +
             "WHERE o.userId = :userId")
     List<Long> findOrdersByUserId(@Param("userId") Long userId);
+
+    @Query("SELECT o " +
+            "FROM Order o " +
+            "JOIN FETCH o.orderProducts " +
+            "WHERE o.userId = :userId " +
+            "AND o.id = :orderId")
+    Optional<Order> findOrderWithOrderProductsByUserIdAndOrderId(@Param("userId") Long userId,
+                                                                 @Param("orderId") Long orderId);
 
 
 }
