@@ -2,7 +2,9 @@ package com.hong.orderservice.scheduler;
 
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.BusinessException;
+import com.hong.orderservice.domain.status.DeliveryStatus;
 import com.hong.orderservice.repository.DeliveryRepository;
+import com.hong.orderservice.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -22,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j(topic = "[DeliveryScheduler]")
 public class DeliveryScheduler {
 
+    private final OrderRepository orderRepository;
     private final DeliveryRepository deliveryRepository;
     private final RedissonClient redissonClient;
     private final Environment env;
@@ -46,19 +49,35 @@ public class DeliveryScheduler {
 
             LocalDateTime now = LocalDateTime.now();
 
-            // 주문 후 1일 경과한 배송 DELIVERING 로 상태 변경
+            // 결제 완료, 주문 후 1일 경과한 배송 DELIVERING 로 상태 변경
             deliveryRepository.bulkUpdatePendingDeliveriesToDelivering(
                     now.minusDays(1),
-                    LocalDateTime.now()
+                    LocalDateTime.now(),
+                    DeliveryStatus.DELIVERABLE,
+                    DeliveryStatus.DELIVERING
             );
             log.info("Scheduler DELIVERING 로 상태 변경");
 
-            // 배송 시작 후 1일 경과한 배송 DELIVERED 로 상태 변경
+            // 결제 완료, 배송 시작 후 1일 경과한 배송 DELIVERED 로 상태 변경
             deliveryRepository.bulkUpdateDeliveringDeliveriesToDelivered(
                     now.minusDays(1),
-                    LocalDateTime.now()
+                    LocalDateTime.now(),
+                    DeliveryStatus.DELIVERING,
+                    DeliveryStatus.DELIVERED
             );
             log.info("Scheduler DELIVERED 로 상태 변경");
+
+            // 배송 상태 반품 처리
+            deliveryRepository.bulkUpdateDeliveryStatusReturned(
+                    now,
+                    now.minusDays(1));
+            log.info("Scheduler 배송 반품 처리");
+
+            // 주문 상태 반품 처리
+            orderRepository.bulkUpdateOrderStatusToReturned(
+                    now.minusDays(1)
+            );
+            log.info("Scheduler 주문 반품 처리");
 
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
