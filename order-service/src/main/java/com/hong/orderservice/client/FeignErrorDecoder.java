@@ -34,12 +34,14 @@ public class FeignErrorDecoder implements ErrorDecoder {
             throw new OrderException(ErrorCode.ORDER_PRODUCT_PARSE_RESPONSE_FAILED);
         }
 
-        if (methodKey.contains("HotDealServiceClient#fetchAndDecreaseStock") ||
-                methodKey.contains("HotDealServiceClient#fetchAndIncreaseStock")){
+        if (methodKey.contains("HotDealServiceClient#fetchProducts")
+                || methodKey.contains("HotDealServiceClient#decreaseStock")
+                || methodKey.contains("HotDealServiceClient#increaseStock")){
             throw new OrderException(ErrorCode.ORDER_HOTDEAL_PRODUCT_SERVICE_FAILED, errorMessage);
         }
-        else if (methodKey.contains("ProductServiceClient#fetchAndDecreaseStock") ||
-                methodKey.contains("ProductServiceClient#fetchAndIncreaseStock")) {
+        else if (methodKey.contains("ProductServiceClient#fetchProducts")
+                || methodKey.contains("ProductServiceClient#decreaseStock")
+                || methodKey.contains("ProductServiceClient#increaseStock")) {
             throw new OrderException(ErrorCode.ORDER_PRODUCT_SERVICE_FAILED, errorMessage);
         }
         else{
