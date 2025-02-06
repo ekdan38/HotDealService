@@ -37,7 +37,6 @@ public class HotDealServiceImpl implements HotDealService {
     private final HotDealRepository hotDealRepository;
     private final Resilience4JProductServiceClient resilience4JProductServiceClient;
 
-
     // HotDeal 생성
     @Override
     @Transactional
@@ -340,7 +339,7 @@ public class HotDealServiceImpl implements HotDealService {
                 .collect(Collectors.toList()));
     }
 
-    // feignClient 로 Product 재고 감소 feignClient 호출, 검증
+    // Product 재고 감소 feignClient 호출, 검증
     private List<ProductStockUpdateResponseDto> decreaseOriginalProductStockAndValidate(List<ProductStockUpdateRequestDto> productStockUpdateRequestDtos) {
         // Product 재고 감소 feignClient 호출
         List<ProductStockUpdateResponseDto> responseDtos = resilience4JProductServiceClient.decreaseStock(productStockUpdateRequestDtos);
@@ -355,7 +354,11 @@ public class HotDealServiceImpl implements HotDealService {
 
     // Product 재고 증가 feignClient 호출, 검증
     private List<ProductStockUpdateResponseDto> increaseOriginalProductStockAndValidate(List<ProductStockUpdateRequestDto> productStockUpdateRequestDtos) {
-        // feignClient 로 Product 재고 감소 feignClient 호출
+
+        // product 없으면 empty List 반환 => productService 로 요청 보낼 필요 없음
+        if (productStockUpdateRequestDtos.isEmpty()) return new ArrayList<>();
+
+        // Product 재고 증가 feignClient 호출
         List<ProductStockUpdateResponseDto> responseDtos = resilience4JProductServiceClient.increaseStock(productStockUpdateRequestDtos);
 
         // circuitBreaker OPEN
