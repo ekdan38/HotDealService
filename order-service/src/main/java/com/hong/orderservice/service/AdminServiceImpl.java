@@ -143,12 +143,9 @@ public class AdminServiceImpl implements AdminOrderService {
     // Fetch Join 으로 order, orderProducts, delivery 조회
     private Order getOrderWithOrderProductsAndDelivery(Long userId, Long orderId) {
         // Fetch Join 으로 orderProducts, delivery 조회
-        Order order = orderRepository.findPaidOrderByOrderIdAndUserIdWithOpAndD(orderId, userId);
-        // 주문이 존재 하지 않으면
-        if (order == null) {
+        return orderRepository.findPaidOrderByOrderIdAndUserIdWithOpAndD(orderId, userId).orElseThrow(() -> {
             log.debug("요청된 주문이 존재하지 않습니다. userId = {}, orderId = {}", userId, orderId);
-            throw new OrderException(ErrorCode.ORDER_NOT_FOUND, userId, orderId);
-        }
-        return order;
+            return new OrderException(ErrorCode.ORDER_NOT_FOUND, userId, orderId);
+        });
     }
 }
