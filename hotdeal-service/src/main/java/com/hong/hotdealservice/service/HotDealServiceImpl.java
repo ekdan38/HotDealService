@@ -342,7 +342,7 @@ public class HotDealServiceImpl implements HotDealService {
 
     // feignClient 로 Product 재고 감소 feignClient 호출, 검증
     private List<ProductStockUpdateResponseDto> decreaseOriginalProductStockAndValidate(List<ProductStockUpdateRequestDto> productStockUpdateRequestDtos) {
-        // feignClient 로 Product 재고 감소 feignClient 호출
+        // Product 재고 감소 feignClient 호출
         List<ProductStockUpdateResponseDto> responseDtos = resilience4JProductServiceClient.decreaseStock(productStockUpdateRequestDtos);
 
         // circuitBreaker OPEN 
@@ -353,7 +353,7 @@ public class HotDealServiceImpl implements HotDealService {
         return responseDtos;
     }
 
-    // feignClient 로 Product 재고 증가 feignClient 호출, 검증
+    // Product 재고 증가 feignClient 호출, 검증
     private List<ProductStockUpdateResponseDto> increaseOriginalProductStockAndValidate(List<ProductStockUpdateRequestDto> productStockUpdateRequestDtos) {
         // feignClient 로 Product 재고 감소 feignClient 호출
         List<ProductStockUpdateResponseDto> responseDtos = resilience4JProductServiceClient.increaseStock(productStockUpdateRequestDtos);
