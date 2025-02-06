@@ -82,10 +82,11 @@ public class HotDeal extends TimeEntity {
         this.deleted = true;
     }
 
-    //== HotDeal 활성화 여부 확인 메서드 ==
-    public boolean isActive(){
+    //== HotDeal 이 현재 시각 기준으로 주문 처리가 가능한지 판단 ==
+    public boolean canOrder(){
+        if(this.deleted) return false;
         LocalDateTime now = LocalDateTime.now();
-        return status == HotDealStatus.ACTIVE && now.isAfter(startTime) && now.isBefore(endTime);
+        return now.isAfter(startTime) && now.isBefore(endTime);
     }
 
     // == HotDealProducts remove 메서드 ==

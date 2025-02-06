@@ -1,11 +1,14 @@
 package com.hong.hotdealservice.web.controller;
 
-import com.hong.common.dto.HotDealProductCommonDto;
+import com.hong.common.dto.*;
 import com.hong.hotdealservice.service.HotDealApiService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -17,23 +20,24 @@ public class HotDealApiController {
 
     private final HotDealApiService hotDealApiService;
 
+    @PostMapping("/products")
+    public ResponseEntity<List<HotDealProductStockCheckResponseDto>> fetchProducts(@RequestBody List<HotDealProductStockCheckRequestDto> requestDtos) {
+        List<HotDealProductStockCheckResponseDto> responseDtos = hotDealApiService.fetchProductAndValidateStock(requestDtos);
+        return ResponseEntity.ok(responseDtos);
+    }
     @PostMapping("/decrease-stock")
-    public ResponseEntity<Boolean> decreaseStock(@RequestBody List<HotDealProductCommonDto> requestDtos) {
-        Boolean result = hotDealApiService.decreaseStock(requestDtos);
-        return ResponseEntity.ok(result);
+    public ResponseEntity<List<HotDealProductStockUpdateResponseDto>> decreaseStock(@RequestBody List<HotDealProductStockUpdateRequestDto> requestDtos) {
+       List<HotDealProductStockUpdateResponseDto> responseDtos = hotDealApiService.decreaseStock(requestDtos);
+        return ResponseEntity.ok(responseDtos);
     }
 
     @PostMapping("/increase-stock")
-    public ResponseEntity<Boolean> fetchAndIncreaseStock(@RequestBody List<HotDealProductCommonDto> requestDtos) {
-        Boolean result = hotDealApiService.increaseStock(requestDtos);
-        return ResponseEntity.ok(result);
-    }
-
-    @PostMapping("/products")
-    public ResponseEntity<List<HotDealProductCommonDto>> fetchProducts(@RequestBody List<HotDealProductCommonDto> requestDtos) {
-        List<HotDealProductCommonDto> responseDtos = hotDealApiService.fetchProducts(requestDtos);
+    public ResponseEntity<List<HotDealProductStockUpdateResponseDto>> increaseStock(@RequestBody List<HotDealProductStockUpdateRequestDto> requestDtos) {
+        List<HotDealProductStockUpdateResponseDto> responseDtos = hotDealApiService.increaseStock(requestDtos);
         return ResponseEntity.ok(responseDtos);
     }
+
+
 
 }
 

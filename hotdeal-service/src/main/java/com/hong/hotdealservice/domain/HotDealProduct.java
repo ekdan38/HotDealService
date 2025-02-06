@@ -72,7 +72,7 @@ public class HotDealProduct {
     public void decreaseStock(Integer quantity){
         if(this.stock - quantity < 0){
             log.debug("요청 수량보다 재고가 부족합니다. hotDealProductId = {}, 요청 수량 = {}, 재고 수량 = {}", this.id, quantity, this.stock);
-            throw new HotDealException(ErrorCode.HOTDEAL_PRODUCT_INSUFFICIENT_STOCK, quantity, this.stock);
+            throw new HotDealException(ErrorCode.HOTDEAL_PRODUCT_INSUFFICIENT_STOCK, this.id, quantity, this.stock);
         }
         this.stock -= quantity;
         log.info("재고 감소 성공 hotDealProductId = {}, 차감 수량 = {}, 재고 수량 = {}", this.id, quantity, this.stock);
