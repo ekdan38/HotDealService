@@ -8,6 +8,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,9 +36,12 @@ public class Order extends TimeEntity {
     @Column(nullable = false)
     private OrderStatus status;
 
+    @Column(nullable = false)
+    private LocalDateTime paidAt;
+
     private Order(Long userId) {
         this.userId = userId;
-        this.status = OrderStatus.PENDING;
+        this.status = OrderStatus.PENDING_PAYMENT;
     }
 
     // == 생성 메서드 ==
@@ -52,6 +56,7 @@ public class Order extends TimeEntity {
     public void addOrderProducts(List<OrderProduct> orderProducts) {
         orderProducts.forEach(this::addOrderProduct);
     }
+
     private void addOrderProduct(OrderProduct orderProduct){
         this.orderProducts.add(orderProduct);
         orderProduct.setOrder(this);
@@ -82,5 +87,11 @@ public class Order extends TimeEntity {
     public void updateStatusReturnRequested(){
         this.status = OrderStatus.RETURN_REQUESTED;
         this.delivery.updateStatus(DeliveryStatus.RETURN_REQUESTED);
+        this.delivery.updateReturnStartedAt(LocalDateTime.now());
+    }
+
+    // == 주문 상태 PAID 변견 메서드 (테스트용) ==
+    public void updateStatusPaid(){
+        this.status = OrderStatus.PAID;
     }
 }

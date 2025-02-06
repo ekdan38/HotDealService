@@ -31,7 +31,7 @@ public class Delivery {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private DeliveryStatus status;
+    private DeliveryStatus deliveryStatus;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
@@ -51,7 +51,7 @@ public class Delivery {
 
     private Delivery(Address address) {
         this.address = address;
-        this.status = DeliveryStatus.PENDING;
+        this.deliveryStatus = DeliveryStatus.PENDING;
     }
     // == 생성 메서드 ==
     public static Delivery create(Address address){
@@ -65,11 +65,16 @@ public class Delivery {
 
     // == 배송 상태 update 메서드 ==
     public void updateStatus(DeliveryStatus status){
-        this.status = status;
+        this.deliveryStatus = status;
     }
 
     // == 배송 시작 날짜 update 메서드 ==
     public void updateStartedAt(LocalDateTime startedAt){
         this.startedAt = startedAt;
+    }
+
+    // == returnStartedAt update 메서드 ==
+    public void updateReturnStartedAt(LocalDateTime returnStartedAt){
+        this.returnStartedAt = returnStartedAt;
     }
 }

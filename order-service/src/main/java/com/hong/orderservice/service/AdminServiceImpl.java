@@ -3,6 +3,7 @@ package com.hong.orderservice.service;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.OrderException;
 import com.hong.orderservice.domain.Order;
+import com.hong.orderservice.domain.status.DeliveryStatus;
 import com.hong.orderservice.dto.OrderPagingResponseDto;
 import com.hong.orderservice.dto.OrderResponseDto;
 import com.hong.orderservice.repository.DeliveryRepository;
@@ -30,7 +31,7 @@ public class AdminServiceImpl implements AdminOrderService {
     @Override
     public OrderPagingResponseDto getOrders(Long targetUserId, Long cursor, int size) {
         // Delivery Status ADMIN 조회 시점에서 update
-        updateDeliveryStatusForAdmin(targetUserId);
+        updateDeliveryAndOrderStatusForAdmin(targetUserId);
 
         // cursor 가 null 이면 가장 최근 데이터 조회 처리
         if (cursor == null) cursor = Long.MAX_VALUE;
@@ -56,7 +57,7 @@ public class AdminServiceImpl implements AdminOrderService {
     @Override
     public OrderResponseDto getOrder(Long targetUserId, Long orderId) {
         // Delivery Status ADMIN 조회 시점에서 update
-        updateDeliveryStatusForAdmin(targetUserId);
+        updateDeliveryAndOrderStatusForAdmin(targetUserId);
 
         // order 조회
         Order order = getOrderWithOrderProductsAndDelivery(targetUserId, orderId);
@@ -70,8 +71,9 @@ public class AdminServiceImpl implements AdminOrderService {
                 order.getUserId(),
                 order.getTotalPrice(),
                 order.getStatus(),
-                order.getDelivery().getStatus(),
+                order.getDelivery().getDeliveryStatus(),
                 order.getCreatedAt(),
+                order.getPaidAt(),
                 order.getOrderProducts().stream().map(op -> new OrderResponseDto.OrderProductDto(
                         op.getHotDealId(),
                         op.getProductId(),
@@ -84,31 +86,56 @@ public class AdminServiceImpl implements AdminOrderService {
     }
 
     // Delivery Status ADMIN 조회 시점에서 update
-    private void updateDeliveryStatusForAdmin(Long targetUserId) {
-        // targetUser == null 이면 전체 주문 벌크 업데이트 처리
+    private void updateDeliveryAndOrderStatusForAdmin(Long targetUserId) {
+        // targetUser == null 이면 전체 주문, 주문 벌크 업데이트 처리
         LocalDateTime now = LocalDateTime.now();
+        LocalDateTime oneDayAgo = now.minusDays(1);
         if(targetUserId == null) {
             deliveryRepository.bulkUpdatePendingDeliveriesToDelivering(
-                    now.minusDays(1),
-                    now
+                    oneDayAgo,
+                    now,
+                    DeliveryStatus.PENDING,
+                    DeliveryStatus.DELIVERING
             );
             deliveryRepository.bulkUpdateDeliveringDeliveriesToDelivered(
-                    now.minusDays(1),
-                    now
+                    oneDayAgo,
+                    now,
+                    DeliveryStatus.DELIVERING,
+                    DeliveryStatus.DELIVERED
             );
+            deliveryRepository.bulkUpdateDeliveryStatusReturned(
+                    now,
+                    oneDayAgo
+            );
+            orderRepository.bulkUpdateOrderStatusToReturned(
+                    oneDayAgo
+            );
+
         }
         // targetUser != null 이면 해당 유저의 주문 벌크 업데이트 처리
         else{
-            List<Long> orderIds = orderRepository.findOrdersByUserId(targetUserId);
-            deliveryRepository.bulkUpdatePendingDeliveriesToDeliveringByOrderIds(
-                    orderIds,
-                    now.minusDays(1),
-                    now
+            deliveryRepository.bulkUpdatePendingDeliveriesToDeliveringByUserId(
+                    targetUserId,
+                    oneDayAgo,
+                    now,
+                    DeliveryStatus.PENDING,
+                    DeliveryStatus.DELIVERING
             );
-            deliveryRepository.bulkUpdateDeliveringDeliveriesToDeliveredByOrderIds(
-                    orderIds,
-                    now.minusDays(1),
-                    now
+            deliveryRepository.bulkUpdateDeliveringDeliveriesToDeliveredByUserId(
+                    targetUserId,
+                    oneDayAgo,
+                    now,
+                    DeliveryStatus.DELIVERING,
+                    DeliveryStatus.DELIVERED
+            );
+            deliveryRepository.bulkUpdateDeliveryStatusReturnedByUserId(
+                    targetUserId,
+                    now,
+                    oneDayAgo
+            );
+            orderRepository.bulkUpdateOrderStatusToReturnedByUserId(
+                    targetUserId,
+                    oneDayAgo
             );
         }
     }
@@ -116,7 +143,7 @@ public class AdminServiceImpl implements AdminOrderService {
     // Fetch Join 으로 order, orderProducts, delivery 조회
     private Order getOrderWithOrderProductsAndDelivery(Long userId, Long orderId) {
         // Fetch Join 으로 orderProducts, delivery 조회
-        Order order = orderRepository.findOrderByOrderIdAndUserIdWithOpAndD(orderId, userId);
+        Order order = orderRepository.findPaidOrderByOrderIdAndUserIdWithOpAndD(orderId, userId);
         // 주문이 존재 하지 않으면
         if (order == null) {
             log.debug("요청된 주문이 존재하지 않습니다. userId = {}, orderId = {}", userId, orderId);

@@ -1,5 +1,5 @@
 package com.hong.orderservice.domain.status;
 
 public enum OrderStatus {
-    PENDING, COMPLETED, CANCEL, RETURN_REQUESTED, RETURNED;
+    PENDING_PAYMENT, PAID, PAYMENT_FAILED, CANCEL, RETURN_REQUESTED, RETURNED;
 }

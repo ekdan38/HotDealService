@@ -16,10 +16,11 @@ import java.util.List;
 public class OrderResponseDto {
     private Long orderId;
     private Long userId;
-    private int totalPrice;
+    private Integer totalPrice;
     private OrderStatus orderStatus;
     private DeliveryStatus deliveryStatus;
     private LocalDateTime orderDate;
+    private LocalDateTime paidAt;
     private List<OrderProductDto> products;
 
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
