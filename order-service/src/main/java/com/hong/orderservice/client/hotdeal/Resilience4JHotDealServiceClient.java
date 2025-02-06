@@ -1,12 +1,14 @@
 package com.hong.orderservice.client.hotdeal;
 
-import com.hong.common.dto.HotDealProductCommonDto;
+import com.hong.common.dto.*;
 import com.hong.common.exception.custom.OrderException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,56 +21,74 @@ public class Resilience4JHotDealServiceClient {
 
     private final HotDealServiceClient hotDealServiceClient;
 
+    // HotDealProduct 조회
+    @CircuitBreaker(name = "default", fallbackMethod = "fallBackForCircuitBreakerFetchProducts")
+    @Retry(name = "default", fallbackMethod = "fallbackForRetryFetchProducts")
+    public List<HotDealProductStockCheckResponseDto> fetchProducts(List<HotDealProductStockCheckRequestDto> requestDtos) {
+        return hotDealServiceClient.fetchProducts(requestDtos);
+    }
 
     // HotDealProduct 재고 감소
-    @CircuitBreaker(name = "default", fallbackMethod = "fallBackForCircuitBreakerDecreaseHotDealProducts")
-    @Retry(name = "default", fallbackMethod = "fallbackForRetryDecreaseHotDealProducts")
-    public List<HotDealProductCommonDto> fetchAndDecreaseStock(List<HotDealProductCommonDto> hotDealProductCommonDtos) {
-        return hotDealServiceClient.fetchAndDecreaseStock(hotDealProductCommonDtos);
+    @CircuitBreaker(name = "default", fallbackMethod = "fallBackForCircuitBreakerDecreaseStock")
+    @Retry(name = "default", fallbackMethod = "fallbackForRetryDecreaseStock")
+    public List<HotDealProductStockUpdateResponseDto> decreaseStock(@RequestBody List<HotDealProductStockUpdateRequestDto> requestDtos){
+        return hotDealServiceClient.decreaseStock(requestDtos);
     }
 
     // HotDealProduct 재고 증가
-    @CircuitBreaker(name = "default", fallbackMethod = "fallBackForCircuitBreakerIncreaseHotDealProducts")
-    @Retry(name = "default", fallbackMethod = "fallbackForRetryIncreaseHotDealProducts")
-    public List<HotDealProductCommonDto> fetchAndIncreaseStock(List<HotDealProductCommonDto> hotDealProductCommonDtos) {
-        return hotDealServiceClient.fetchAndIncreaseStock(hotDealProductCommonDtos);
+    @CircuitBreaker(name = "default", fallbackMethod = "fallBackForCircuitBreakerIncreaseStock")
+    @Retry(name = "default", fallbackMethod = "fallbackForRetryIncreaseStock")
+    public List<HotDealProductStockUpdateResponseDto> increaseStock(@RequestBody List<HotDealProductStockUpdateRequestDto> requestDtos){
+        return hotDealServiceClient.increaseStock(requestDtos);
     }
 
 
-    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // HotDealProduct 재고 감소 CircuitBreaker Fallback
-    private List<HotDealProductCommonDto> fallBackForCircuitBreakerDecreaseHotDealProducts(List<HotDealProductCommonDto> hotDealProductCommonDtos, Throwable throwable) {
+    // HotDealProduct 상품, 재고 조회 CircuitBreaker Fallback Method
+    private List<HotDealProductStockCheckResponseDto> fallBackForCircuitBreakerFetchProducts(List<HotDealProductStockCheckRequestDto> requestDtos, Throwable throwable) {
         // OrderException 이면 그대로 다시 예외 던진다. (globalExceptionHandler 에서 처리)
         if(throwable instanceof OrderException) throw (OrderException) throwable;
-        log.error("fetchAndDecreaseStock 호출 실패 hotDealProductIds = {}, Error = {}", extractHotDealProductIds(hotDealProductCommonDtos), throwable.getMessage());
+        log.error("hotDeal-service fetchProducts 호출 실패 requestDtos = {}, Error = {}", requestDtos, throwable.getMessage());
         return new ArrayList<>();
     }
 
-    // HotDealProduct 재고 감소 Retry Fallback
-    public List<HotDealProductCommonDto> fallbackForRetryDecreaseHotDealProducts(List<HotDealProductCommonDto> hotDealProductCommonDtos, Throwable throwable) {
+    // HotDealProduct 상품, 재고 조회 Retry Fallback Method
+    private List<HotDealProductStockCheckResponseDto> fallbackForRetryFetchProducts(List<HotDealProductStockUpdateRequestDto> requestDtos, Throwable throwable) {
         // OrderException 이면 그대로 다시 예외 던진다. (globalExceptionHandler 에서 처리)
         if(throwable instanceof OrderException) throw (OrderException) throwable;
-        log.error("fetchAndDecreaseStock 최종 실패: hotDealProducts = {}, Error = {}", extractHotDealProductIds(hotDealProductCommonDtos), throwable.getMessage());
+        log.error("hotDeal-service fetchProducts 최종 실패: requestDtos = {}, Error = {}", requestDtos, throwable.getMessage());
         throw new RuntimeException("Retry 최종 실패");
     }
 
-    // HotDealProduct 재고 증가 CircuitBreaker Fallback
-    private List<HotDealProductCommonDto> fallBackForCircuitBreakerIncreaseHotDealProducts(List<HotDealProductCommonDto> hotDealProductCommonDtos, Throwable throwable) {
+    // HotDealProduct 재고 감소 CircuitBreaker Fallback Method
+    private List<HotDealProductStockUpdateResponseDto> fallBackForCircuitBreakerDecreaseStock(List<HotDealProductStockUpdateRequestDto> requestDtos, Throwable throwable) {
         // OrderException 이면 그대로 다시 예외 던진다. (globalExceptionHandler 에서 처리)
         if(throwable instanceof OrderException) throw (OrderException) throwable;
-        log.error("fetchAndDecreaseStock 호출 실패 hotDealProductIds = {}, Error = {}", extractHotDealProductIds(hotDealProductCommonDtos), throwable.getMessage());
+        log.error("hotDeal-service decreaseStock 호출 실패 requestDtos = {}, Error = {}", requestDtos, throwable.getMessage());
         return new ArrayList<>();
     }
 
-    // HotDealProduct 재고 증가 Retry Fallback
-    public List<HotDealProductCommonDto> fallbackForRetryIncreaseHotDealProducts(List<HotDealProductCommonDto> hotDealProductCommonDtos, Throwable throwable) {
+    // HotDealProduct 재고 감소  Retry Fallback Method
+    private List<HotDealProductStockUpdateResponseDto> fallbackForRetryDecreaseStock(List<HotDealProductStockUpdateRequestDto> requestDtos, Throwable throwable) {
         // OrderException 이면 그대로 다시 예외 던진다. (globalExceptionHandler 에서 처리)
         if(throwable instanceof OrderException) throw (OrderException) throwable;
-        log.error("fetchAndDecreaseStock 최종 실패: hotDealProducts = {}, Error = {}", extractHotDealProductIds(hotDealProductCommonDtos), throwable.getMessage());
+        log.error("hotDeal-service decreaseStock 최종 실패: requestDtos = {}, Error = {}", requestDtos, throwable.getMessage());
         throw new RuntimeException("Retry 최종 실패");
     }
 
-    private List<Long> extractHotDealProductIds(List<HotDealProductCommonDto> hotDealProductCommonDtos){
-        return hotDealProductCommonDtos.stream().map(HotDealProductCommonDto::getHotDealProductId).collect(Collectors.toList());
+    // HotDealProduct 상품, 증가 조회 CircuitBreaker Fallback Method
+    private List<HotDealProductStockUpdateResponseDto> fallBackForCircuitBreakerIncreaseStock(List<HotDealProductStockUpdateRequestDto> requestDtos, Throwable throwable) {
+        // OrderException 이면 그대로 다시 예외 던진다. (globalExceptionHandler 에서 처리)
+        if(throwable instanceof OrderException) throw (OrderException) throwable;
+        log.error("hotDeal-service increaseStock 호출 실패 requestDtos = {}, Error = {}", requestDtos, throwable.getMessage());
+        return new ArrayList<>();
     }
+
+    // HotDealProduct 상품, 증가 조회 Retry Fallback Method
+    private List<HotDealProductStockUpdateResponseDto> fallbackForRetryIncreaseStock(List<HotDealProductStockCheckRequestDto> requestDtos, Throwable throwable) {
+        // OrderException 이면 그대로 다시 예외 던진다. (globalExceptionHandler 에서 처리)
+        if(throwable instanceof OrderException) throw (OrderException) throwable;
+        log.error("hotDeal-service increase 최종 실패: requestDtos = {}, Error = {}", requestDtos, throwable.getMessage());
+        throw new RuntimeException("Retry 최종 실패");
+    }
+
 }
