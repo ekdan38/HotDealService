@@ -9,5 +9,5 @@ public interface PaymentService {
     PaymentEntryResponseDto paymentEntry(Long userId, Long orderId);
 
     // 결제 수행
-    PaymentProcessResponseDto paymentProcess(Long userId, Long paymentId);
+    PaymentProcessResponseDto paymentProcess(Long userId, Long paymentId, Integer userPaymentAmount);
 }

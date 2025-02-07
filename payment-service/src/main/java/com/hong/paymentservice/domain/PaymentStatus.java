@@ -1,5 +1,5 @@
 package com.hong.paymentservice.domain;
 
 public enum PaymentStatus {
-    PENDING, COMPLETED, FAILED
+    PENDING, COMPLETED, FAILED, EXPIRED
 }
