@@ -1,9 +1,6 @@
 package com.hong.orderservice.service;
 
-import com.hong.common.dto.OrderFetchRequestDto;
-import com.hong.common.dto.OrderFetchResponseDto;
-import com.hong.common.dto.orderHotDealProductDto;
-import com.hong.common.dto.OrderProductDto;
+import com.hong.common.dto.*;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.OrderException;
 import com.hong.orderservice.domain.Order;
@@ -26,6 +23,7 @@ public class OrderApiService {
 
     private final OrderRepository orderRepository;
 
+    // Order 조회
     public OrderFetchResponseDto fetchOrder(OrderFetchRequestDto requestDto) {
         Long orderId = requestDto.getOrderId();
         Long userId = requestDto.getUserId();
@@ -41,6 +39,26 @@ public class OrderApiService {
         int amount = getAmount(order);
 
         return new OrderFetchResponseDto(userId, orderId, amount, order.getStatus().name(), hotDealProducts, products);
+    }
+
+    // payment 처리 기반 order, delivery update 처리
+    @Transactional
+    public Boolean updateOrderAndDelivery(OrderUpdateRequestDto requestDto){
+        Long orderId = requestDto.getOrderId();
+        Long userId = requestDto.getUserId();
+
+        // order 조회 (fetch Join 으로 delivery 포함)
+        Order order = orderRepository.findByIdAndUserIdWithDelivery(orderId, userId).orElseThrow(() -> {
+            log.debug("요청된 주문이 존재하지 않습니다. userId = {}, orderId = {}", userId, orderId);
+            return new OrderException(ErrorCode.ORDER_NOT_FOUND, userId, orderId);
+        });
+
+        // 결제 성공 처리
+        if(requestDto.getIsSuccess()) order.paymentSuccess();
+        // 결제 실패 처리
+        else order.paymentFailed();
+
+        return true;
     }
 
     // hotDealProducts 추출

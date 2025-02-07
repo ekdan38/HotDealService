@@ -71,6 +71,14 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             "WHERE o.userId = :userId")
     List<Long> findOrdersByUserId(@Param("userId") Long userId);
 
+    // userId, orderId 로 order 조회 (Fetch Join Delivery)
+    @Query("SELECT o " +
+            "FROM Order o " +
+            "JOIN FETCH o.delivery d " +
+            "WHERE o.id = :orderId AND o.userId = :userId")
+    Optional<Order> findByIdAndUserIdWithDelivery(@Param("orderId") Long orderId,
+                                                  @Param("userId") Long userId);
+
     @Query("SELECT o " +
             "FROM Order o " +
             "JOIN FETCH o.orderProducts " +

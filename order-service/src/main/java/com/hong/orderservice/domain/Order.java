@@ -90,8 +90,14 @@ public class Order extends TimeEntity {
         this.delivery.updateReturnStartedAt(LocalDateTime.now());
     }
 
-    // == 주문 상태 PAID 변견 메서드 (테스트용) ==
-    public void updateStatusPaid(){
+    // == 결제 성공 적용 메서드 ==
+    public void paymentSuccess(){
         this.status = OrderStatus.PAID;
+        this.paidAt = LocalDateTime.now();
+        this.delivery.updateStatus(DeliveryStatus.DELIVERABLE);
+    }
+    // == 결제 실패 적용 메서드 ==
+    public void paymentFailed(){
+        this.status = OrderStatus.PAYMENT_FAILED;
     }
 }
