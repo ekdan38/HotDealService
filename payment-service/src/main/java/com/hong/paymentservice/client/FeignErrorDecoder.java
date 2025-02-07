@@ -43,7 +43,8 @@ public class FeignErrorDecoder implements ErrorDecoder {
                 methodKey.contains("ProductServiceClient#increaseStock")) {
             throw new PaymentException(ErrorCode.PAYMENT_ORDER_SERVICE_FAILED, errorMessage);
         }
-        else if (methodKey.contains("OrderServiceClient#fetchOrder")) {
+        else if (methodKey.contains("OrderServiceClient#fetchOrder") ||
+                methodKey.contains("OrderServiceClient#updateOrderStatus")) {
             throw new PaymentException(ErrorCode.PAYMENT_ORDER_SERVICE_FAILED, errorMessage);
         }
         else{
