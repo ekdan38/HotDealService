@@ -13,16 +13,25 @@ public enum ErrorCode {
     HOTDEAL_PRODUCT_INSUFFICIENT_STOCK(HttpStatus.BAD_REQUEST, "HOTDEAL_PRODUCT_01",
             "요청 수량보다 재고가 부족합니다. hotDealProductId = %s, 요청 수량 = %s, 재고 수량 = %s"),
 
-    HOTDEAL_PRODUCT_INVALID_FOUND(HttpStatus.BAD_REQUEST, "HOTDEAL_PRODUCT_02",
+    HOTDEAL_PRODUCT_STOCK_NOT_ENOUGH(HttpStatus.BAD_REQUEST, "HOTDEAL_PRODUCT_02",
+            "요청 수량보다 재고가 부족합니다. hotDealProductId = %s"),
+
+    HOTDEAL_PRODUCT_INVALID_FOUND(HttpStatus.BAD_REQUEST, "HOTDEAL_PRODUCT_03",
             "요청된 핫딜 상품에 대한 수량이 누락 되었습니다. hotDealProductId = %s"),
 
-    HOTDEAL_PRODUCT_LOCK_FAILED(HttpStatus.CONFLICT, "HOTDEAL_PRODUCT_03",
+    HOTDEAL_PRODUCT_ORIGINAL_STOCK_DECREASE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "HOTDEAL_PRODUCT_04",
+            "원본 상품 재고 감소 호출을 실패했습니다. request = %s"),
+
+    HOTDEAL_PRODUCT_ORIGINAL_STOCK_INCREASE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "HOTDEAL_PRODUCT_05",
+            "원본 상품 재고 증가 호출을 실패했습니다. request = %s"),
+
+    HOTDEAL_PRODUCT_LOCK_FAILED(HttpStatus.CONFLICT, "HOTDEAL_PRODUCT_06",
             "hotDealProduct = %s 에 대한 락 획득에 실패했습니다."),
 
-    HOTDEAL_PRODUCT_LOCK_INTERRUPTED(HttpStatus.SERVICE_UNAVAILABLE, "HOTDEAL_PRODUCT_04",
+    HOTDEAL_PRODUCT_LOCK_INTERRUPTED(HttpStatus.SERVICE_UNAVAILABLE, "HOTDEAL_PRODUCT_07",
             "hotDealProduct = %s 에 대한 락 획득중 입터럽트가 발생했습니다."),
 
-    HOTDEAL_PRODUCT_PARSE_RESPONSE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "HOTDEAL_PRODUCT_05",
+    HOTDEAL_PRODUCT_PARSE_RESPONSE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "HOTDEAL_PRODUCT_08",
             "feign Client 에러 응답 파싱 실패했습니다."),
 
     // hotDeal
@@ -51,26 +60,77 @@ public enum ErrorCode {
     ORDER_RETURN_EXPIRED(HttpStatus.NOT_FOUND, "ORDER_02",
             "환불은 배송 완료 후 하루 이내 가능합니다. userId = %s, orderId = %s"),
 
-    ORDER_DECREASE_HOTDEAL_PRODUCT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_03",
-            "핫딜 상품 재고 감소 호출을 실패했습니다. userId = %s, hotDealProducts = %s"),
+    ORDER_FETCH_HOTDEAL_PRODUCT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_03",
+            "핫딜 상품 조회 호출을 실패했습니다. userId = %s, hotDealProducts = %s"),
 
     ORDER_INCREASE_HOTDEAL_PRODUCT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_04",
-            "핫딜 상품 재고 증가 호출을 실패했습니다. userId = %s, hotDealProducts = %s"),
+            "핫딜 상품 재고 증가 호출을 실패했습니다. userId = %s, orderId = %s, hotDealProducts = %s"),
 
-    ORDER_DECREASE_PRODUCT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_05",
-            "상품 재고 감소 호출을 실패했습니다. userId = %s, products = %s"),
+    ORDER_DECREASE_HOTDEAL_PRODUCT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_04",
+            "핫딜 상품 재고 감소 호출을 실패했습니다. userId = %s, orderId = %s, hotDealProducts = %s"),
+
+    ORDER_FETCH_PRODUCT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_05",
+            "상품 조회 호출을 실패했습니다. userId = %s, products = %s"),
 
     ORDER_INCREASE_PRODUCT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_06",
-            "상품 재고 증가 호출을 실패했습니다. userId = %s, products = %s"),
+            "상품 재고 증가 호출을 실패했습니다. userId = %s, orderId = %s, products = %s"),
 
-    ORDER_PRODUCT_PARSE_RESPONSE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_07",
+    ORDER_DECREASE_PRODUCT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_07",
+            "상품 재고 감소 호출을 실패했습니다. userId = %s, orderId = %s, products = %s"),
+
+    ORDER_PRODUCT_PARSE_RESPONSE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_08",
             "feign Client 에러 응답 파싱 실패했습니다."),
 
-    ORDER_HOTDEAL_PRODUCT_SERVICE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_08",
+    ORDER_HOTDEAL_PRODUCT_SERVICE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_09",
             "%s"),
 
-    ORDER_PRODUCT_SERVICE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_08",
+    ORDER_PRODUCT_SERVICE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_10",
             "%s"),
+
+    ORDER_NOT_PENDING_PAYMENT(HttpStatus.BAD_REQUEST, "ORDER_11",
+            "주문이 결제 대기 상태가 아닙니다. userId = %s, orderId = %s"),
+
+    // Payment
+    PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "PAYMENT_00",
+            "존재 하지 않는 결제입니다. userId = %s, paymentId = %s"),
+
+    PAYMENT_EXPIRED(HttpStatus.BAD_REQUEST, "PAYMENT_01",
+            "만료된 결제입니다. userId = %s, paymentId = %s"),
+
+    PAYMENT_COMPLETED(HttpStatus.BAD_REQUEST, "PAYMENT_02",
+            "이미 완료된 결제입니다. userId = %s, paymentId = %s"),
+
+    PAYMENT_PG_FAILED(HttpStatus.BAD_REQUEST, "PAYMENT_03",
+            "결제 잔액이 부족합니다. userId = %s, paymentId = %s"),
+
+    PAYMENT_PARSE_RESPONSE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_04",
+            "feign Client 에러 응답 파싱 실패했습니다."),
+
+    PAYMENT_ORDER_SERVICE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_05",
+            "%s"),
+
+    PAYMENT_FETCH_ORDER_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_06",
+            "주문 조회 호출을 실패했습니다. userId = %s, orderId = %s"),
+
+    PAYMENT_UPDATE_ORDER_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_07",
+            "주문 상태 업데이트 호출을 실패했습니다. userId = %s, orderId = %s"),
+
+    PAYMENT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_08",
+            "결제를 실패했습니다. userId = %s, paymentId = %s"),
+
+    PAYMENT_DECREASE_HOTDEAL_PRODUCT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_09",
+            "핫딜 상품 재고 감소 호출을 실패했습니다. userId = %s, orderId = %s, hotDealProducts = %s"),
+
+    PAYMENT_INCREASE_HOTDEAL_PRODUCT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_10",
+            "핫딜 상품 재고 증가 호출을 실패했습니다. userId = %s, orderId = %s, hotDealProducts = %s"),
+
+    PAYMENT_DECREASE__PRODUCT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_11",
+            "상품 재고 감소 호출을 실패했습니다. userId = %s, orderId = %s, products = %s"),
+
+    PAYMENT_INCREASE_PRODUCT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_12",
+            "상품 재고 증가 호출을 실패했습니다. userId = %s, orderId = %s, products = %s"),
+
+
 
     // Delivery
     DELIVERY_LOCK_INTERRUPTED(HttpStatus.SERVICE_UNAVAILABLE, "DELIVERY_00",
@@ -115,6 +175,10 @@ public enum ErrorCode {
     PRODUCT_INSUFFICIENT_STOCK(HttpStatus.BAD_REQUEST, "PRODUCT_03",
             "요청 수량보다 재고가 부족합니다. productId = %s, 요청 수량 = %s, 재고 수량 = %s"),
 
+    PRODUCT_STOCK_NOT_ENOUGH(HttpStatus.BAD_REQUEST, "PRODUCT_04",
+            "요청 수량보다 재고가 부족합니다. productId = %s"),
+
+
     // wishlist
     WISHLIST_NOT_FOUND(HttpStatus.NOT_FOUND, "WISHLIST_00",
             "위시리스트가 존재하지 않습니다. userId = %s"),
@@ -126,7 +190,7 @@ public enum ErrorCode {
 
     // SIGNUP
     EMAIL_EMPTY_CODE(HttpStatus.BAD_REQUEST, "SIGNUP_00",
-            "요청에 이메일 인증 코드가 존재하지 않습니다. email = %s"),
+            "해당 이메일로 생성 된 인증 코드가 없습니다. email = %s"),
 
     EMAIL_VERIFICATION_STATUS_NOT_FOUND(HttpStatus.BAD_REQUEST, "SIGNUP_01",
             "이메일 인증 상태가 존재하지 않습니다. email = %s"),
