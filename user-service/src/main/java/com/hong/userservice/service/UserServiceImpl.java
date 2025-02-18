@@ -174,7 +174,7 @@ public class UserServiceImpl implements UserService{
     // 이메일 인증 코드 검증
     private void validateEmailCode(String email, String requestCode, String code, String status) {
         if (code == null) {
-            log.debug("요청에 이메일 인증 코드가 존재하지 않습니다. email = {}", email);
+            log.debug("해당 이메일로 생성 된 인증 코드가 없습니다. email = {}", email);
             throw new UserException(ErrorCode.EMAIL_EMPTY_CODE, email);
         }
         // 인증 상태가 null 이거나 true 이면
@@ -214,6 +214,7 @@ public class UserServiceImpl implements UserService{
             }
         }
         catch (Exception e){
+            if(e instanceof UserException) throw (UserException) e;
             log.debug("암호화 처리중 오류가 발생했습니다. 대상 = {}, 암호화 오류 = {}",username, e.getMessage());
             throw new UserException(ErrorCode.CRYPTO_ENCRYPT_ERROR);
         }
@@ -226,6 +227,7 @@ public class UserServiceImpl implements UserService{
             }
         }
         catch (Exception e){
+            if(e instanceof UserException) throw (UserException) e;
             log.debug("암호화 처리중 오류가 발생했습니다. 대상 = {}, 암호화 오류 = {}",email, e.getMessage());
             throw new UserException(ErrorCode.CRYPTO_ENCRYPT_ERROR);
         }

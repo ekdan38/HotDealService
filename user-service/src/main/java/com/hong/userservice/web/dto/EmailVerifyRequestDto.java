@@ -2,7 +2,6 @@ package com.hong.userservice.web.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.validator.constraints.Length;
@@ -15,7 +14,7 @@ public class EmailVerifyRequestDto {
     @Email(message = "email은 이메일 형식을 따라야합니다.")
     private String email;
 
-    @NotNull(message = "code는 필수입니다.")
+    @NotBlank(message = "code는 필수입니다.")
     @Length(min = 6, max = 6, message = "코드는 6자리입니다.")
     private String code;
 }

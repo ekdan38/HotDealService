@@ -1,6 +1,5 @@
 package com.hong.userservice;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 
@@ -20,9 +19,6 @@ public class AESUtil {
         String secretKey = env.getProperty("aes.secret-key");
         this.keySpec = new SecretKeySpec(secretKey.getBytes(), ALGORITHM);
     }
-//    public AESUtil(@Value("${aes.secret-key}") String secretKey) {
-//        this.keySpec = new SecretKeySpec(secretKey.getBytes(), ALGORITHM);
-//    }
 
     public String encrypt(String plainText) throws Exception {
         Cipher cipher = Cipher.getInstance(ALGORITHM);

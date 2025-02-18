@@ -23,7 +23,7 @@ public class SignupRequestDto {
     @Pattern(regexp = "^[a-zA-Z]+$", message = "password 는 영어 대소문자만 허용됩니다.")
     private String password;
 
-    @NotBlank(message = "nam e은 필수입니다.")
+    @NotBlank(message = "name은 필수입니다.")
     @Size(min = 2, max = 10, message = "name 은 2글자 이상 10글자 이하입니다.")
     @Pattern(regexp = "^[가-힣]+$", message = "이름은 한글만 가능합니다.")
     private String name;
