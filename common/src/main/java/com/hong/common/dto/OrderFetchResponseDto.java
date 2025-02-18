@@ -20,6 +20,6 @@ public class OrderFetchResponseDto {
 
     public boolean isEmpty(){
         return (userId == null && orderId == null && amount == null
-                && status == null && hotDealProducts.isEmpty() && products.isEmpty());
+                && status == null);
     }
 }

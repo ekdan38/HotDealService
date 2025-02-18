@@ -4,14 +4,12 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.stream.Collectors;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class OrderProductDto {
+public class OrderUpdateRequestDto {
 
-    private Long productId;
-    private Integer quantity;
-
+    private Long userId;
+    private Long orderId;
+    private Boolean isSuccess;
 }
