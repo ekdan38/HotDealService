@@ -224,7 +224,7 @@ public class OrderServiceImpl implements OrderService {
                         product.getHotDealId(),
                         product.getHotDealProductId(),
                         product.getProductTitle(),
-                        product.getQuantity(),
+                        product.getRequestQuantity(),
                         product.getHotDealPrice()))
                 .collect(Collectors.toList()));
 

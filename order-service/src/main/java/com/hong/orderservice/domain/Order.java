@@ -36,7 +36,7 @@ public class Order extends TimeEntity {
     @Column(nullable = false)
     private OrderStatus status;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private LocalDateTime paidAt;
 
     private Order(Long userId) {

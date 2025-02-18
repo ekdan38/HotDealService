@@ -93,7 +93,7 @@ public class OrderApiService {
 
     // order 조회, 검증
     private Order fetchOrderAndValidate(Long orderId, Long userId) {
-        Order order = orderRepository.findOrderWithOrderProductsByUserIdAndOrderId(orderId, userId).orElseThrow(() -> {
+        Order order = orderRepository.findOrderWithOrderProductsByUserIdAndOrderId(userId, orderId).orElseThrow(() -> {
             log.debug("요청된 주문이 존재하지 않습니다. userId = {}, orderId = {}", userId, orderId);
             return new OrderException(ErrorCode.ORDER_NOT_FOUND, userId, orderId);
         });
