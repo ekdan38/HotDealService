@@ -9,8 +9,9 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class HotDealPagingResponseDto {
+public class HotDealProductPagingResponseDto {
 
-    private Long newCursor;
-    private List<HotDealResponseDto> hotDeals;
+    private Long cursor;
+    private Long hotDealId;
+    private List<HotDealProductResponseDto> hotDealProducts;
 }

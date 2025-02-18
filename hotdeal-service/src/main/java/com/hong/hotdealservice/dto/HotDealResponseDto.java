@@ -1,7 +1,6 @@
 package com.hong.hotdealservice.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.hong.hotdealservice.domain.status.HotDealStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -31,7 +30,7 @@ public class HotDealResponseDto {
 
     private Boolean deleted;
 
-    private List<HotDealProductDto> productInfos;
+    private List<HotDealProductResponseDto> hotDealProducts;
 
     public HotDealResponseDto(Long hotDealId, Long adminId, String title, String description, LocalDateTime startTime, LocalDateTime endTime, String status, Boolean deleted) {
         this.hotDealId = hotDealId;
@@ -44,25 +43,4 @@ public class HotDealResponseDto {
         this.deleted = deleted;
     }
 
-    public HotDealResponseDto(Long hotDealId, Long adminId, String title, String description, LocalDateTime startTime, LocalDateTime endTime, String status) {
-        this.hotDealId = hotDealId;
-        this.adminId = adminId;
-        this.title = title;
-        this.description = description;
-        this.startTime = startTime;
-        this.endTime = endTime;
-        this.status = status;
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class HotDealProductDto{
-        private Long productId;
-        private String productTitle;
-        private Integer originalPrice;
-        private Integer hotDealPrice;
-        private Double discountRate;
-        private Integer quantity;
-    }
 }

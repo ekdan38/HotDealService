@@ -1,4 +1,4 @@
-package com.hong.hotdealservice.dto;
+package com.hong.hotdealservice.web.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -9,8 +9,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class HotDealPagingResponseDto {
+public class HotDealProductStockRequestDto {
 
-    private Long newCursor;
-    private List<HotDealResponseDto> hotDeals;
+    private List<Long> hotDealProductIds;
 }

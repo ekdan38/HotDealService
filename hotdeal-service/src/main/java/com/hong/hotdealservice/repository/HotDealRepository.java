@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface HotDealRepository extends JpaRepository<HotDeal, Long> {
 
@@ -22,9 +23,9 @@ public interface HotDealRepository extends JpaRepository<HotDeal, Long> {
             "AND h.id < :cursor " +
             "AND (:search IS NULL OR h.title LIKE %:search%) " +
             "ORDER BY h.id DESC")
-    List<HotDeal> findByCursorAndSearchAndSize(@Param("cursor") Long cursor,
-                                               @Param("search") String search,
-                                               Pageable pageable);
+    List<HotDeal> findByCursorAndSearchAndSizeHotDeals(@Param("cursor") Long cursor,
+                                                       @Param("search") String search,
+                                                       Pageable pageable);
 
     // hotDealProducts Fetch Join 조회
     @Query("SELECT h " +
@@ -32,7 +33,7 @@ public interface HotDealRepository extends JpaRepository<HotDeal, Long> {
             "JOIN FETCH h.hotDealProducts hp " +
             "WHERE h.deleted = false " +
             "AND h.id = :hotDealId")
-    HotDeal findByIdWithHotDealProducts(@Param("hotDealId") Long hotDealId);
+    Optional<HotDeal> findByIdWithHotDealProducts(@Param("hotDealId") Long hotDealId);
 
 
     @Query("SELECT h " +
@@ -41,6 +42,12 @@ public interface HotDealRepository extends JpaRepository<HotDeal, Long> {
             "WHERE h.deleted = false " +
             "AND h.id IN :hotDealIds")
     List<HotDeal> findByIdsWithHotDealProducts(@Param("hotDealIds") List<Long> hotDealIds);
+
+    @Query("SELECT h " +
+            "FROM HotDeal h " +
+            "WHERE h.deleted = false " +
+            "AND h.id IN :hotDealIds")
+    List<HotDeal> findByIds(@Param("hotDealIds") List<Long> hotDealIds);
 
     // hotDeal status 변경 (ACTIVE)
     // 벌크 업데이트
