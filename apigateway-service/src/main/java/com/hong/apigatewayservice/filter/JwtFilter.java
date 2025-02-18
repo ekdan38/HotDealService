@@ -3,7 +3,10 @@ package com.hong.apigatewayservice.filter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hong.apigatewayservice.client.UserServiceClient;
 import com.hong.common.dto.ResponseDto;
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.SecurityException;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +33,6 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
     private final ObjectMapper objectMapper;
     private final UserServiceClient userServiceClient;
     private SecretKey secretKey;
-    private String accessToken;
 
     @Data
     public static class Config {
@@ -46,40 +48,52 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
 
     @Override
     public GatewayFilter apply(Config config) {
-        secretKey = new SecretKeySpec(env.getProperty("jwt.secret.key")
-                .getBytes(StandardCharsets.UTF_8),
-                Jwts.SIG.HS256.key().build()
-                        .getAlgorithm());
 
-        return ((exchange, chain) -> {
+        secretKey = new SecretKeySpec(
+                env.getProperty("jwt.secret.key").getBytes(StandardCharsets.UTF_8),
+                Jwts.SIG.HS256.key().build().getAlgorithm()
+        );
+
+        return (exchange, chain) -> {
             ServerHttpRequest request = exchange.getRequest();
             ServerHttpResponse response = exchange.getResponse();
 
-            // Header에 Authorization 헤더가 없으면
+            // Authorization 헤더 체크
             if (!request.getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
                 log.error("Authorization 헤더가 없습니다.");
-                // 응답 설정
                 return setResponse(response, "Authorization 헤더가 없습니다.", null, HttpStatus.UNAUTHORIZED);
             }
 
-            // accessToken 검증
-            return validateAccessToken(request, response)
+            // 로컬 변수로 토큰 추출
+            String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                log.error("잘못된 형식의 AccessToken 입니다. = {}", authHeader);
+                return setResponse(response, "잘못된 형식의 AccessToken 입니다.", authHeader, HttpStatus.UNAUTHORIZED);
+            }
+            // "Bearer " 제거 후 토큰만 추출
+            String token = authHeader.split(" ")[1];
+            log.info("Extracted token: {}", token);
+
+            // 토큰 검증 (토큰을 로컬 변수 token로 처리)
+            return validateAccessToken(token, response)
                     .flatMap(isValid -> {
                         if (!isValid) {
                             return response.setComplete();
                         }
 
-                        // role 검증
-                        String role = getRole(accessToken);
+                        // token을 이용해 필요한 정보를 추출
+                        String role = getRole(token);
+                        log.info("Token role: {}", role);
                         if (!hasRequiredRole(config.requiredRole, role)) {
                             log.error("접근 권한이 없습니다. 필요 권한: {}, 사용자 권한: {}", config.requiredRole, role);
-                            // 응답 설정
                             return setResponse(response, "접근 권한이 없습니다.",
-                                    "필요 권한 : " + config.getRequiredRole() + "사용자 권한 : " + role,
+                                    "필요 권한 : " + config.getRequiredRole() + " 사용자 권한 : " + role,
                                     HttpStatus.FORBIDDEN);
                         }
-                        String username = getUsername(accessToken);
-                        String userId = String.valueOf(getUserId(accessToken));
+                        String username = getUsername(token);
+                        String userId = String.valueOf(getUserId(token));
+
+                        log.info("Token details - userId: {}, username: {}, role: {}", userId, username, role);
 
                         // 비동기로 유저 검증
                         return userServiceClient.validateUser(username)
@@ -89,93 +103,78 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
                                         return setResponse(response, "username과 일치하는 User가 없습니다.", username, HttpStatus.UNAUTHORIZED);
                                     }
 
-                                    // 유효한 User라면 요청 헤더에 정보 추가
+                                    // 유효한 사용자라면, 추가 헤더(X-User-Id, X-User-Role)를 추가하여 체인으로 전달
                                     ServerHttpRequest modifiedRequest = request.mutate()
-                                            .header("X-User-Id", String.valueOf(userId))                                            .header("X-User-Role", getRole(accessToken))
-                                            .header("X-User-Role", getRole(accessToken))
+                                            .header("X-User-Id", userId)
+                                            .header("X-User-Role", role)
                                             .build();
+
+                                    // 로그로 현재 사용중인 토큰도 출력
+                                    log.info("Sending request with token: {}", token);
 
                                     return chain.filter(exchange.mutate().request(modifiedRequest).build());
                                 });
                     });
-        });
+        };
     }
 
-    // AccessToken 검증
-    private Mono<Boolean> validateAccessToken(ServerHttpRequest request, ServerHttpResponse response) {
-        accessToken = request.getHeaders().getFirst(org.springframework.http.HttpHeaders.AUTHORIZATION);
-
-        if (!accessToken.startsWith("Bearer ")) {
-            log.error("잘못된 형식의 AccessToken 입니다. = {}", accessToken);
-            // 응답 설정
-            return setResponse(response, "잘못된 형식의 AccessToken 입니다.", accessToken, HttpStatus.UNAUTHORIZED)
-                    .thenReturn(false);
-        }
-
-        String[] split = accessToken.split(" ");
-        if (split.length < 2) {
-            log.error("잘못된 형식의 AccessToken 입니다. = {}", accessToken);
-            // 응답 설정
-            return setResponse(response, "잘못된 형식의 AccessToken 입니다.", accessToken, HttpStatus.UNAUTHORIZED)
-                    .thenReturn(false);
-        }
-        accessToken = split[1];
-
+    // accessToken 검증을 위한 메서드 (로컬 변수 token을 사용)
+    private Mono<Boolean> validateAccessToken(String token, ServerHttpResponse response) {
         try {
-            Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(accessToken);
+            Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token);
         } catch (MalformedJwtException | SecurityException e) {
-            log.error("유효하지 않는 JWT 서명 입니다. = {}", accessToken);
-            return setResponse(response, "유효하지 않는 JWT 서명 입니다.", accessToken, HttpStatus.UNAUTHORIZED)
+            log.error("유효하지 않는 JWT 서명 입니다. = {}", token);
+            return setResponse(response, "유효하지 않는 JWT 서명 입니다.", token, HttpStatus.UNAUTHORIZED)
                     .thenReturn(false);
         } catch (ExpiredJwtException e) {
-            log.error("만료된 JWT token 입니다. = {}", accessToken);
-            return setResponse(response, "만료된 AccessToken 입니다.", accessToken, HttpStatus.UNAUTHORIZED)
+            log.error("만료된 JWT token 입니다. = {}", token);
+            return setResponse(response, "만료된 AccessToken 입니다.", token, HttpStatus.UNAUTHORIZED)
                     .thenReturn(false);
         } catch (UnsupportedJwtException e) {
-            log.error("지원되지 않는 JWT 토큰 입니다. = {}", accessToken);
-            return setResponse(response, "지원되지 않는 JWT 토큰 입니다. ", accessToken, HttpStatus.UNAUTHORIZED)
+            log.error("지원되지 않는 JWT 토큰 입니다. = {}", token);
+            return setResponse(response, "지원되지 않는 JWT 토큰 입니다.", token, HttpStatus.UNAUTHORIZED)
                     .thenReturn(false);
         }
 
-        // 토큰이 access인지 확인 (발급시 페이로드에 명시)
-        String category = getCategory(accessToken);
-
+        // 토큰의 category 검증 (발급 시 payload에 명시되어 있어야 함)
+        String category = getCategory(token);
         if (!"access".equals(category)) {
-            log.error("AccessToken 이 아닙니다. = {}", accessToken);
-            // 응답 설정
-            return setResponse(response, "AccessToken 이 아닙니다.", accessToken, HttpStatus.UNAUTHORIZED)
+            log.error("AccessToken 이 아닙니다. = {}", token);
+            return setResponse(response, "AccessToken 이 아닙니다.", token, HttpStatus.UNAUTHORIZED)
                     .thenReturn(false);
         }
-        // 단일 ture를 포함하는 Mono 생성
         return Mono.just(true);
     }
 
     private Long getUserId(String token) {
-        return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().get("userId", Long.class);
+        return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token)
+                .getPayload().get("userId", Long.class);
     }
 
     private String getUsername(String token) {
-        return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().get("username", String.class);
+        return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token)
+                .getPayload().get("username", String.class);
     }
 
     private String getCategory(String token) {
-        return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().get("category", String.class);
+        return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token)
+                .getPayload().get("category", String.class);
     }
 
     private String getRole(String token) {
-        return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().get("role", String.class);
+        return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token)
+                .getPayload().get("role", String.class);
     }
 
-    // 유저 권한 검증
+    // 유저 권한 검증: requiredRole와 userRole이 일치하는지
     private boolean hasRequiredRole(String requiredRole, String userRole) {
-        if (requiredRole.equals("USER")) {
-            if (userRole.equals("ADMIN")) {
-                return true;
-            }
+        if ("USER".equals(requiredRole) && "ADMIN".equals(userRole)) {
+            return true;
         }
         return requiredRole.equals(userRole);
     }
 
+    // 응답 설정 메서드: ResponseDto를 JSON으로 직렬화하여 반환
     private Mono<Void> setResponse(ServerHttpResponse response, String message, String data, HttpStatusCode httpStatusCode) {
         response.setStatusCode(httpStatusCode);
         response.getHeaders().add("Content-Type", MediaType.APPLICATION_JSON_VALUE);
