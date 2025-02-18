@@ -5,6 +5,7 @@ import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.HotDealProductException;
 import com.hong.common.exception.custom.ProductException;
 import com.hong.productservice.domain.Product;
+import com.hong.productservice.dto.product.ProductStockDto;
 import com.hong.productservice.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,20 +40,29 @@ public class ProductApiService {
                 });
     }
 
-    //  products 조회
-    public List<ProductDto> getProductsByIds(List<Long> productIds) {
-        List<Product> products = productRepository.findAllByProductIds(productIds);
-        if (productIds.size() != products.size()) {
-            throw new ProductException(ErrorCode.PRODUCT_NOT_FOUND);
+    // products 조회, 검증
+    private List<Product> fetchProductsAndValidate(List<Long> productIds) {
+        // product 조회
+        List<Product> products = productRepository.findByIds(productIds);
+
+        // 요청과, 조회된 product 와 다른 productIds 추출(디버깅, 예외 처리용)
+        List<Long> noneMathProductIds = productIds.stream()
+                .filter(id -> products.stream()
+                        .noneMatch(product -> product.getId().equals(id)))
+                .collect(Collectors.toList());
+
+        if (!noneMathProductIds.isEmpty()) {
+            log.debug("요청된 상품이 존재하지 않습니다. productId = {}", noneMathProductIds);
+            throw new ProductException(ErrorCode.PRODUCT_NOT_FOUND, noneMathProductIds);
         }
-        return products.stream()
-                .map(product -> new ProductDto(
-                        product.getId(),
-                        product.getTitle(),
-                        product.getPrice(),
-                        product.getStock()))
-                .collect(Collectors.toList()
-                );
+        return products;
+    }
+
+    //  products 재고 조회
+    public List<ProductStockDto> getProductStocks(List<Long> productIds){
+        // 추후 캐싱
+        List<Product> foundProducts = fetchProductsAndValidate(productIds);
+        return convertToProductStockDto(foundProducts);
     }
 
     // products 조회, 재고 확인
@@ -60,9 +70,9 @@ public class ProductApiService {
         // productId 추출
         List<Long> productIds = extractProductIdsFromCheckDto(requestDtos);
         // product 조회, 검증
-        List<Product> products = fetchAndValidate(productIds);
+        List<ProductStockDto> productStocks = getProductStocks(productIds);
         // dto 변환
-        return validateRequestAndConvertDto(requestDtos, products);
+        return validateRequestAndConvertDto(requestDtos, productStocks);
     }
 
     // product 재고 감소
@@ -73,7 +83,7 @@ public class ProductApiService {
         // 락 획득
         List<RLock> locks = acquireLocks(productIds);
         // proudcts 조회, 검증
-        List<Product> products = fetchAndValidate(productIds);
+        List<Product> products = fetchProductsAndValidate(productIds);
         // 재고 감소
         List<ProductStockUpdateResponseDto> responseDtos = decreaseStockAndConvertResponseDtos(requestDtos, products);
         // 트랜잭션 commit 후 락 해제
@@ -94,7 +104,7 @@ public class ProductApiService {
         // 락 획득
         List<RLock> locks = acquireLocks(productIds);
         // proudcts 조회, 검증
-        List<Product> products = fetchAndValidate(productIds);
+        List<Product> products = fetchProductsAndValidate(productIds);
         // 재고 감소
         List<ProductStockUpdateResponseDto> responseDtos = increaseStockAndConvertDtos(requestDtos, products);
         // 트랜잭션 commit 후 락 해제
@@ -110,31 +120,31 @@ public class ProductApiService {
 
     // products 요청 검증 Dto 변환
     private List<ProductStockCheckResponseDto> validateRequestAndConvertDto(List<ProductStockCheckRequestDto> requestDtos,
-                                                                            List<Product> products) {
+                                                                            List<ProductStockDto> productStockDtos) {
         List<ProductStockCheckResponseDto> productStockCheckResponseDto = new ArrayList<>();
         // 재고 부족한 productId를 모아둘 리스트
         List<Long> insufficientStockProductIds = new ArrayList<>();
 
         // products Map 변환
-        Map<Long, Product> productMap = products.stream()
-                .collect(Collectors.toMap(Product::getId, product -> product));
+        Map<Long, ProductStockDto> productMap = productStockDtos.stream()
+                .collect(Collectors.toMap(ProductStockDto::getProductId, product -> product));
 
         // 상품과 요청된 정보 매핑해서 해당 상품이 재고가 충분한지 체크
         for (ProductStockCheckRequestDto dto : requestDtos) {
-            Product product = productMap.get(dto.getProductId());
+            ProductStockDto productStockDto = productMap.get(dto.getProductId());
 
             // 재고 부족 체크
-            if(dto.getQuantity() > product.getStock()) {
+            if(dto.getQuantity() > productStockDto.getStock()) {
                 log.debug("요청 수량보다 재고가 부족합니다. productId = {}, stock = {}, requestQuantity = {}"
-                        , product.getId(), product.getStock(), dto.getQuantity());
-                insufficientStockProductIds.add(product.getId());
+                        , productStockDto.getProductId(), productStockDto.getStock(), dto.getQuantity());
+                insufficientStockProductIds.add(productStockDto.getProductId());
             }
 
             productStockCheckResponseDto.add(new ProductStockCheckResponseDto(
-                    product.getId(),
-                    product.getTitle(),
+                    productStockDto.getProductId(),
+                    productStockDto.getTitle(),
                     dto.getQuantity(),
-                    product.getPrice()
+                    productStockDto.getPrice()
             ));
         }
         if(!insufficientStockProductIds.isEmpty()){
@@ -211,23 +221,7 @@ public class ProductApiService {
         return responseDtos;
     }
 
-    // proudcts 조회, 검증
-    private List<Product> fetchAndValidate(List<Long> productIds) {
-        // product 조회
-        List<Product> products = productRepository.findAllByProductIds(productIds);
 
-        // 요청과, 조회된 product 와 다른 productIds 추출(디버깅, 예외 처리용)
-        List<Long> noneMathProductIds = productIds.stream()
-                .filter(id -> products.stream()
-                        .noneMatch(product -> product.getId().equals(id)))
-                .collect(Collectors.toList());
-
-        if (products.size() != productIds.size()) {
-            log.debug("요청된 상품이 존재하지 않습니다. productId = {}", noneMathProductIds);
-            throw new ProductException(ErrorCode.PRODUCT_NOT_FOUND, noneMathProductIds);
-        }
-        return products;
-    }
 
     // ProductStockCheckRequestDto 에서 productId 추출
     private List<Long> extractProductIdsFromCheckDto(List<ProductStockCheckRequestDto> requestDtos) {
@@ -277,5 +271,11 @@ public class ProductApiService {
                 log.info("락 해제 key = {}", lockKey);
             }
         }
+    }
+
+    private List<ProductStockDto> convertToProductStockDto(List<Product> foundProducts){
+        return foundProducts.stream()
+                .map(p -> new ProductStockDto(p.getId(), p.getTitle(), p.getPrice(), p.getStock()))
+                .collect(Collectors.toList());
     }
 }

@@ -2,9 +2,8 @@ package com.hong.productservice.web.controller;
 
 import com.hong.common.dto.ResponseDto;
 import com.hong.productservice.dto.category.CategoryDto;
-import com.hong.productservice.dto.product.ProductDto;
-import com.hong.productservice.dto.product.ProductPagingResponseDto;
-import com.hong.productservice.dto.product.ProductResponseDto;
+import com.hong.productservice.dto.product.*;
+import com.hong.productservice.service.product.ProductApiService;
 import com.hong.productservice.service.product.ProductService;
 import com.hong.productservice.web.dto.product.ProductRequestDto;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +24,7 @@ import java.util.stream.Collectors;
 public class ProductController {
 
     private final ProductService productService;
+    private final ProductApiService productApiService;
 
     // product 생성
     @PostMapping
@@ -74,13 +74,13 @@ public class ProductController {
         return ResponseEntity.ok().body(responseDto);
     }
 
-    // product 재고만 단건 조회
-    @GetMapping("/stock/{productId}")
-    public ResponseEntity<?> getProductStock(@PathVariable("productId") Long productId){
+    // product 재고 조회
+    @GetMapping("/stock")
+    public ResponseEntity<ResponseDto<List<ProductStockDto>>> getProductStock(@RequestParam List<Long> productIds){
 
-        ProductResponseDto resultDto = productService.getProductStock(productId);
+        List<ProductStockDto> resultDto = productApiService.getProductStocks(productIds);
         // 응답 설정
-        ResponseDto<ProductResponseDto> responseDto = new ResponseDto<>("상품 재고 조회 완료", resultDto);
+        ResponseDto<List<ProductStockDto>> responseDto = new ResponseDto<>("상품 재고 조회 완료", resultDto);
         return ResponseEntity.ok().body(responseDto);
     }
 

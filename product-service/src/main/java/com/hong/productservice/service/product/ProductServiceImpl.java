@@ -18,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -84,23 +83,12 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public ProductResponseDto getProduct(Long productId) {
         // fetch join 으로 product, categoryProduct, category 조회
-        Product product = productRepository.findProductByProductIdWithCategoryProducts(productId);
-
-        if (product == null) {
+        Product product = productRepository.findProductByProductIdWithCategoryProducts(productId).orElseThrow(() -> {
             log.error("요청된 상품이 존재하지 않습니다. productId = {}", productId);
-            throw new ProductException(ErrorCode.PRODUCT_NOT_FOUND, productId);
-        }
-        return convertProductResponseDto(product);
-    }
-
-    // product 재고만 단건 조회
-    @Override
-    public ProductResponseDto getProductStock(Long productId) {
-        Product product = productRepository.findById(productId).orElseThrow(() -> {
-            log.error("요청된 상품이 존재하지 않습니다. productId = {}", productId);
-            throw new ProductException(ErrorCode.PRODUCT_NOT_FOUND, productId);
+            return new ProductException(ErrorCode.PRODUCT_NOT_FOUND, productId);
         });
-        return new ProductResponseDto(product.getStock());
+
+        return convertProductResponseDto(product);
     }
 
     // product 수정
@@ -110,12 +98,10 @@ public class ProductServiceImpl implements ProductService {
 
         // product 가 존재하는지 검증
         // fetch join 으로 product, categoryProduct, category 조회
-        Product product = productRepository.findProductByProductIdWithCategoryProducts(productId);
-
-        if (product == null) {
-            log.debug("요청된 상품이 존재하지 않습니다. productId = {}", productId);
-            throw new ProductException(ErrorCode.PRODUCT_NOT_FOUND, productId);
-        }
+        Product product = productRepository.findProductByProductIdWithCategoryProducts(productId).orElseThrow(() -> {
+            log.error("요청된 상품이 존재하지 않습니다. productId = {}", productId);
+            return new ProductException(ErrorCode.PRODUCT_NOT_FOUND, productId);
+        });
 
         // title 수정 요청 시에 title 이 이미 존재 하는지 검증
         if (!product.getTitle().equals(requestDto.getTitle())) {
@@ -141,11 +127,10 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponseDto deleteProduct(Long productId) {
         // product 가 존재 하는지 검증
         // fetch join 으로 product, categoryProduct, category 조회
-        Product product = productRepository.findProductByProductIdWithCategoryProducts(productId);
-        if (product == null) {
-            log.debug("요청된 상품이 존재하지 않습니다. productId = {}", productId);
-            throw new ProductException(ErrorCode.PRODUCT_NOT_FOUND, productId);
-        }
+        Product product = productRepository.findProductByProductIdWithCategoryProducts(productId).orElseThrow(() -> {
+            log.error("요청된 상품이 존재하지 않습니다. productId = {}", productId);
+            return new ProductException(ErrorCode.PRODUCT_NOT_FOUND, productId);
+        });
 
         // 상품 삭제
         // cascade, orphanRemoval 로 categoryProducts 삭제

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
@@ -34,10 +35,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             "JOIN FETCH p.categoryProducts cp " +
             "JOIN FETCH cp.category c " +
             "WHERE p.id = :productId")
-    Product findProductByProductIdWithCategoryProducts(@Param("productId") Long productId);
+    Optional<Product> findProductByProductIdWithCategoryProducts(@Param("productId") Long productId);
 
     @Query("SELECT p " +
             "FROM Product p " +
             "WHERE p.id IN :productIds")
-    List<Product> findAllByProductIds(@Param("productIds") List<Long> productIds);
+    List<Product> findByIds(@Param("productIds") List<Long> productIds);
 }
