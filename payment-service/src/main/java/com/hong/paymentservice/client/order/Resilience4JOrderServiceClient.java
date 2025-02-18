@@ -9,8 +9,6 @@ import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 
 @Service
 @RequiredArgsConstructor
@@ -29,7 +27,6 @@ public class Resilience4JOrderServiceClient {
     // Order, Delivery update
     @CircuitBreaker(name = "default", fallbackMethod = "fallBackForCircuitBreakerUpdateOrderStatus")
     @Retry(name = "default", fallbackMethod = "fallbackForRetryUpdateOrderStatus")
-    @PostMapping("/order-service/update")
     public Boolean updateOrderStatus(OrderUpdateRequestDto requestDto) {
         return orderServiceClient.updateOrderStatus(requestDto);
     }

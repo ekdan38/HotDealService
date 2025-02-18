@@ -13,7 +13,7 @@ public interface OrderServiceClient {
     @PostMapping("/order-service/orders")
     OrderFetchResponseDto fetchOrder(@RequestBody OrderFetchRequestDto requestDto);
 
-    @PostMapping("/order-service/update")
+    @PostMapping("/order-service/orders/update")
     Boolean updateOrderStatus(@RequestBody OrderUpdateRequestDto requestDto);
 }
 

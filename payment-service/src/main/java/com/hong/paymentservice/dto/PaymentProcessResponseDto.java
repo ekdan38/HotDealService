@@ -10,5 +10,5 @@ import lombok.NoArgsConstructor;
 public class PaymentProcessResponseDto {
 
     private Long paymentId;
-    private Long status;
+    private String status;
 }

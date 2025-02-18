@@ -42,20 +42,20 @@ public class Resilience4JConfig {
     public CircuitBreakerRegistry circuitBreakerRegistry(){
         CircuitBreakerConfig circuitBreakerConfig = CircuitBreakerConfig.custom()
                 //  50% 실패 시 OPEN
-                .failureRateThreshold(10)
+                .failureRateThreshold(30)
                 // OPEN 상태에서 10초 후 HALF_OPEN 으로 전환
-                .waitDurationInOpenState(Duration.ofSeconds(10))
+                .waitDurationInOpenState(Duration.ofSeconds(5))
                 // 카운트 기반의 슬라이딩 윈도우, 20회 호출 기록으로 실패율 계산
                 .slidingWindowType(CircuitBreakerConfig.SlidingWindowType.COUNT_BASED)
                 .slidingWindowSize(10)
                 // 최소 10건의 호출이 쌓여야 실패율 계산
-                .minimumNumberOfCalls(10)
+                .minimumNumberOfCalls(20)
                 // HALF_OPEN 상태에서 3건 연속 성공이면 CLOSED 로 전환
                 .permittedNumberOfCallsInHalfOpenState(3)
-                // 2초 이상 걸린 호출을 느린 호출 로 간주
-                .slowCallDurationThreshold(Duration.ofSeconds(2))
+                // 3초 이상 걸린 호출을 느린 호출 로 간주
+                .slowCallDurationThreshold(Duration.ofSeconds(3))
                 // 느린 호출이 50% 이상이면 실패로 간주
-                .slowCallRateThreshold(50)
+                .slowCallRateThreshold(80)
                 // 제외할 예외(errorDecoder 처리)
                 .ignoreExceptions(PaymentException.class)
                 .build();
