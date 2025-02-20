@@ -1,4 +1,4 @@
-package com.hong.common.entity;
+package com.hong.orderservice.domain.base;
 
 import jakarta.persistence.Embeddable;
 import lombok.AccessLevel;

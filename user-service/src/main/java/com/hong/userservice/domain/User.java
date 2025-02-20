@@ -1,6 +1,6 @@
 package com.hong.userservice.domain;
 
-import com.hong.common.entity.Address;
+import com.hong.userservice.domain.base.Address;
 import com.hong.userservice.domain.base.TimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;

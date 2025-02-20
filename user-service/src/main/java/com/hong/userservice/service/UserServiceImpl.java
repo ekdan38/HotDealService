@@ -1,14 +1,14 @@
 package com.hong.userservice.service;
 
-import com.hong.common.entity.Address;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.UserException;
 import com.hong.userservice.AESUtil;
 import com.hong.userservice.domain.Role;
 import com.hong.userservice.domain.User;
+import com.hong.userservice.domain.base.Address;
+import com.hong.userservice.dto.SignupResponseDto;
 import com.hong.userservice.jwt.JwtUtil;
 import com.hong.userservice.repository.UserRepository;
-import com.hong.userservice.dto.SignupResponseDto;
 import com.hong.userservice.web.dto.SignupRequestDto;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.mail.MessagingException;
@@ -261,7 +261,7 @@ public class UserServiceImpl implements UserService{
     // 회원 가입 응답 Dto 변환
     private SignupResponseDto convertSignupResponseDto(User savedUser) {
         try {
-            Address addr = savedUser.getAddress();
+            Address address = savedUser.getAddress();
             return new SignupResponseDto(
                     savedUser.getId(),
                     aesUtil.decrypt(savedUser.getUsername()),
@@ -269,11 +269,10 @@ public class UserServiceImpl implements UserService{
                     aesUtil.decrypt(savedUser.getPhoneNumber()),
                     aesUtil.decrypt(savedUser.getEmail()),
                     Address.create(
-                            aesUtil.decrypt(addr.getCity()),
-                            aesUtil.decrypt(addr.getStreet()),
-                            aesUtil.decrypt(addr.getZipCode())
-                    )
-            );
+                            aesUtil.decrypt(address.getCity()),
+                            aesUtil.decrypt(address.getStreet()),
+                            aesUtil.decrypt(address.getZipCode())
+                    ));
         }
         catch (Exception e){
             log.debug("복호화 처리중 오류가 발생했습니다. 대상 = {}, 암호화 오류 = {}", savedUser, e.getMessage());

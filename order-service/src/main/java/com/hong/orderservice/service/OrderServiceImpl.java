@@ -1,7 +1,6 @@
 package com.hong.orderservice.service;
 
 import com.hong.common.dto.*;
-import com.hong.common.entity.Address;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.OrderException;
 import com.hong.orderservice.client.hotdeal.Resilience4JHotDealServiceClient;
@@ -9,6 +8,7 @@ import com.hong.orderservice.client.product.Resilience4JProductServiceClient;
 import com.hong.orderservice.domain.Delivery;
 import com.hong.orderservice.domain.Order;
 import com.hong.orderservice.domain.OrderProduct;
+import com.hong.orderservice.domain.base.Address;
 import com.hong.orderservice.domain.status.DeliveryStatus;
 import com.hong.orderservice.dto.OrderPagingResponseDto;
 import com.hong.orderservice.dto.OrderResponseDto;

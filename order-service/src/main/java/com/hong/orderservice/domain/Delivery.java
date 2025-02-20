@@ -1,6 +1,6 @@
 package com.hong.orderservice.domain;
 
-import com.hong.common.entity.Address;
+import com.hong.orderservice.domain.base.Address;
 import com.hong.orderservice.domain.status.DeliveryStatus;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
