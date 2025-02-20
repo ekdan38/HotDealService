@@ -1,6 +1,6 @@
 package com.hong.userservice.dto;
 
-import com.hong.common.entity.Address;
+import com.hong.userservice.domain.base.Address;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
