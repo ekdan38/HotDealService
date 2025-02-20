@@ -3,19 +3,15 @@ package com.hong.productservice.web.controller;
 import com.hong.common.dto.ResponseDto;
 import com.hong.productservice.dto.wishlist.WishlistPagingResponseDto;
 import com.hong.productservice.dto.wishlist.WishlistResponseDto;
-import com.hong.productservice.dto.wishlist.WishlistDto;
 import com.hong.productservice.service.wishlist.WishlistService;
 import com.hong.productservice.web.dto.wishlist.WishlistRequestDto;
 import com.hong.productservice.web.dto.wishlist.WishlistUpdateRequestDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.modelmapper.ModelMapper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.HashMap;
 
 @RestController
 @RequiredArgsConstructor
@@ -24,7 +20,6 @@ import java.util.HashMap;
 public class WishlistController {
 
     private final WishlistService wishlistService;
-    private final ModelMapper modelMapper;
 
     // wishlist 에 product 등록
     @PostMapping

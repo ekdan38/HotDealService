@@ -1,13 +1,11 @@
 package com.hong.productservice.web.controller;
 
 import com.hong.common.dto.ResponseDto;
-import com.hong.productservice.dto.category.CategoryDto;
 import com.hong.productservice.dto.category.CategoryResponseDto;
 import com.hong.productservice.service.category.CategoryService;
 import com.hong.productservice.web.dto.cateogry.CategoryRequestDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.modelmapper.ModelMapper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;

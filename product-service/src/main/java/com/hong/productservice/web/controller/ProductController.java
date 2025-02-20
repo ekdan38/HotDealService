@@ -8,7 +8,6 @@ import com.hong.productservice.service.product.ProductService;
 import com.hong.productservice.web.dto.product.ProductRequestDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.modelmapper.ModelMapper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
