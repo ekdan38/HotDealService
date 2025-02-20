@@ -23,6 +23,7 @@ ext {
 
 dependencies {
 
+    // 외부 config 사용
     // amqp
     implementation 'org.springframework.cloud:spring-cloud-starter-bus-amqp'
     // spring cloud config server
@@ -31,7 +32,6 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     // spring cloud bootstrap
     implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap'
-
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

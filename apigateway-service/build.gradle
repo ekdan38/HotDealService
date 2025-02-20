@@ -7,6 +7,10 @@ plugins {
 group = 'com.hong'
 version = '0.0.1-SNAPSHOT'
 
+bootJar {
+    mainClass.set("com.hong.apigatewayservice.ApigatewayServiceApplication")
+}
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
@@ -29,15 +33,12 @@ ext {
 
 dependencies {
     implementation(project(':common')) {
-        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-data-jpa'
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter-web'
     }
-
-    dependencies {
-        implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
-        implementation 'io.jsonwebtoken:jjwt-impl:0.12.3'
-        implementation 'io.jsonwebtoken:jjwt-jackson:0.12.3'
-    }
+    // jwt
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
+    implementation 'io.jsonwebtoken:jjwt-impl:0.12.3'
+    implementation 'io.jsonwebtoken:jjwt-jackson:0.12.3'
 
     // 외부 config 사용
     // amqp
@@ -51,12 +52,15 @@ dependencies {
 
     // webflux
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
-
-
+    // gateway
     implementation 'org.springframework.cloud:spring-cloud-starter-gateway'
+    // eureka-client
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
-    compileOnly 'org.projectlombok:lombok'
+
+    // lombok
     annotationProcessor 'org.projectlombok:lombok'
+    compileOnly 'org.projectlombok:lombok'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
