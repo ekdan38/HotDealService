@@ -5,6 +5,13 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
+# Spring Boot 환경설정 파일
+*/src/main/resources/bootstrap.yml
+*/src/main/resources/bootstrap.properties
+*/src/main/resources/application.yml
+*/src/main/resources/application.properties
+
+
 ### STS ###
 .apt_generated
 .classpath
