@@ -1,6 +1,6 @@
 package com.hong.paymentservice.domain;
 
-import com.hong.common.entity.TimeEntity;
+import com.hong.paymentservice.domain.base.TimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;

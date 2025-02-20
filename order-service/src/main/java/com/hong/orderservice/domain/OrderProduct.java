@@ -1,6 +1,6 @@
 package com.hong.orderservice.domain;
 
-import com.hong.common.entity.TimeEntity;
+import com.hong.orderservice.domain.base.TimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;

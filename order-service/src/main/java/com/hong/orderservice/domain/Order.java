@@ -1,6 +1,6 @@
 package com.hong.orderservice.domain;
 
-import com.hong.common.entity.TimeEntity;
+import com.hong.orderservice.domain.base.TimeEntity;
 import com.hong.orderservice.domain.status.DeliveryStatus;
 import com.hong.orderservice.domain.status.OrderStatus;
 import jakarta.persistence.*;

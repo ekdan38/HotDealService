@@ -1,8 +1,8 @@
 package com.hong.productservice.domain;
 
-import com.hong.common.entity.TimeEntity;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.ProductException;
+import com.hong.productservice.domain.base.TimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;

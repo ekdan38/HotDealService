@@ -1,5 +1,6 @@
 package com.hong.productservice.domain;
 
+import com.hong.productservice.domain.base.TimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -8,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-public class WishlistProduct {
+public class WishlistProduct extends TimeEntity {
 
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)

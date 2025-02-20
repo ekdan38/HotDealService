@@ -1,6 +1,6 @@
 package com.hong.hotdealservice.domain;
 
-import com.hong.common.entity.TimeEntity;
+import com.hong.hotdealservice.domain.base.TimeEntity;
 import com.hong.hotdealservice.domain.status.HotDealStatus;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
