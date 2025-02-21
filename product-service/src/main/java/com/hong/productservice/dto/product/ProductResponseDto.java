@@ -19,17 +19,18 @@ public class ProductResponseDto {
     private String title;
     private Integer price;
     private Integer stock;
-    @JsonProperty("categories")
-    private List<CategoryDto> categoryDtos;
+    private List<CategoryDto> categories;
 
-    public ProductResponseDto(Long id, String title, Integer price, Integer stock) {
+    public ProductResponseDto(Long id, String title, Integer price) {
         this.id = id;
         this.title = title;
         this.price = price;
-        this.stock = stock;
     }
 
-    public ProductResponseDto(Integer stock) {
-        this.stock = stock;
+    public ProductResponseDto(Long id, String title, Integer price, List<CategoryDto> categories) {
+        this.id = id;
+        this.title = title;
+        this.price = price;
+        this.categories = categories;
     }
 }

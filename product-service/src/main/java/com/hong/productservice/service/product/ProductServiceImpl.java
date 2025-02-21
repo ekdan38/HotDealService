@@ -13,6 +13,9 @@ import com.hong.productservice.repository.ProductRepository;
 import com.hong.productservice.service.category.CategoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +35,7 @@ public class ProductServiceImpl implements ProductService {
     // product 생성
     @Transactional
     @Override
+    @CacheEvict(cacheNames = "getProducts", allEntries = true)
     public ProductResponseDto createProduct(ProductDto requestDto) {
         String title = requestDto.getTitle();
         // product 가 존재 하는지 검증
@@ -53,11 +57,15 @@ public class ProductServiceImpl implements ProductService {
         Product product = Product.create(requestDto.getTitle(), requestDto.getPrice(), requestDto.getStock(), categoryProducts);
         Product savedProduct = productRepository.save(product);
 
-        return convertProductResponseDto(savedProduct);
+        return convertProductResponseDtoWithStock(savedProduct);
     }
 
     // product 커서 기반 페이징 조회
     @Override
+    //cache aside 동작 => redis 먼저 확인, 없으면 아래 로직 수행
+    @Cacheable(cacheNames = "getProducts"
+            , key = "'products:cursor:' + #cursor + ':size:' + #size + ':categoryId:' + (#categoryId != null ? #categoryId : '') + ':search:' + (#search != null ? #search : '')"
+            , cacheManager = "productCacheManager")
     public ProductPagingResponseDto getProducts(String search, Long cursor, int size, Long categoryId) {
         // cursor 가 null 이면 가장 최근 데이터 조회 처리
         if (cursor == null) cursor = Long.MAX_VALUE;
@@ -66,42 +74,32 @@ public class ProductServiceImpl implements ProductService {
         PageRequest pageRequest = PageRequest.of(0, size);
 
         // 페이징 조회
-        List<Product> page =
-                productRepository.findProductsByCursorAndCategoryIdAndSearchAndSize(cursor, categoryId, search, pageRequest);
-
-        // Dto로 변환
-        List<ProductResponseDto> productResponseDtos = page.stream()
-                .map(this::convertProductResponseDto)
-                .collect(Collectors.toList());
+        List<ProductResponseDto> page = productRepository.findProductsByCursorAndCategoryIdAndSearchAndSize(cursor, categoryId, search, pageRequest);
 
         // nextCursor 지정
-        Long nextCursor = productResponseDtos.isEmpty() ? 0 : productResponseDtos.get(productResponseDtos.size() - 1).getId();
-        return new ProductPagingResponseDto(nextCursor, productResponseDtos);
+        Long nextCursor = page.isEmpty() ? 0 : page.get(page.size() - 1).getId();
+        return new ProductPagingResponseDto(nextCursor, page);
     }
 
     // product 단건 조회
     @Override
+    @Cacheable(cacheNames = "getProduct", key = "'products:' + #productId", cacheManager = "productCacheManager")
     public ProductResponseDto getProduct(Long productId) {
         // fetch join 으로 product, categoryProduct, category 조회
-        Product product = productRepository.findProductByProductIdWithCategoryProducts(productId).orElseThrow(() -> {
-            log.error("요청된 상품이 존재하지 않습니다. productId = {}", productId);
-            return new ProductException(ErrorCode.PRODUCT_NOT_FOUND, productId);
-        });
-
-        return convertProductResponseDto(product);
+        Product product = fetchProductWithCategoryAndCategoryProductsAndValidate(productId);
+        return convertProductResponseDtoWithoutStock(product);
     }
 
     // product 수정
     @Transactional
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "getProducts", allEntries = true),
+            @CacheEvict(cacheNames = "getProduct", key = "#productId")
+    })
     public ProductResponseDto updateProduct(Long productId, ProductDto requestDto) {
-
-        // product 가 존재하는지 검증
         // fetch join 으로 product, categoryProduct, category 조회
-        Product product = productRepository.findProductByProductIdWithCategoryProducts(productId).orElseThrow(() -> {
-            log.error("요청된 상품이 존재하지 않습니다. productId = {}", productId);
-            return new ProductException(ErrorCode.PRODUCT_NOT_FOUND, productId);
-        });
+        Product product = fetchProductWithCategoryAndCategoryProductsAndValidate(productId);
 
         // title 수정 요청 시에 title 이 이미 존재 하는지 검증
         if (!product.getTitle().equals(requestDto.getTitle())) {
@@ -117,35 +115,56 @@ public class ProductServiceImpl implements ProductService {
         // product 명시적으로 저장
         Product updatedProduct = productRepository.save(product);
 
-        return convertProductResponseDto(updatedProduct);
+        return convertProductResponseDtoWithStock(updatedProduct);
     }
 
 
     // product 삭제
     @Transactional
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "getProducts", allEntries = true),
+            @CacheEvict(cacheNames = "getProduct", key = "#productId")
+    })
     public ProductResponseDto deleteProduct(Long productId) {
-        // product 가 존재 하는지 검증
         // fetch join 으로 product, categoryProduct, category 조회
-        Product product = productRepository.findProductByProductIdWithCategoryProducts(productId).orElseThrow(() -> {
-            log.error("요청된 상품이 존재하지 않습니다. productId = {}", productId);
-            return new ProductException(ErrorCode.PRODUCT_NOT_FOUND, productId);
-        });
+        Product product = fetchProductWithCategoryAndCategoryProductsAndValidate(productId);
 
         // 상품 삭제
         // cascade, orphanRemoval 로 categoryProducts 삭제
         productRepository.delete(product);
-
-        return convertProductResponseDto(product);
+        return convertProductResponseDtoWithStock(product);
     }
 
-    // ProductResponseDto 변환
-    private ProductResponseDto convertProductResponseDto(Product product) {
+    // fetch join 으로 product, categoryProduct, category 조회
+    private Product fetchProductWithCategoryAndCategoryProductsAndValidate(Long productId) {
+        return productRepository.findProductByProductIdWithCategoryProducts(productId).
+                orElseThrow(() -> {
+                    log.error("요청된 상품이 존재하지 않습니다. productId = {}", productId);
+                    return new ProductException(ErrorCode.PRODUCT_NOT_FOUND, productId);
+                });
+    }
+
+    // ProductResponseDto 변환 (stock 포함)
+    private ProductResponseDto convertProductResponseDtoWithStock(Product product) {
         return new ProductResponseDto(
                 product.getId(),
                 product.getTitle(),
                 product.getPrice(),
                 product.getStock(),
+                product.getCategoryProducts().stream()
+                        .map(cp -> new CategoryDto(
+                                cp.getCategory().getId(),
+                                cp.getCategory().getTitle()))
+                        .collect(Collectors.toList()));
+    }
+
+    // ProductResponseDto 변환 (stock 미 포함)
+    private ProductResponseDto convertProductResponseDtoWithoutStock(Product product) {
+        return new ProductResponseDto(
+                product.getId(),
+                product.getTitle(),
+                product.getPrice(),
                 product.getCategoryProducts().stream()
                         .map(cp -> new CategoryDto(
                                 cp.getCategory().getId(),
