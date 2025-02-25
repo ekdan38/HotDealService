@@ -13,4 +13,10 @@ public class ProductStockDto {
     private String title;
     private Integer price;
     private Integer stock;
+
+    public ProductStockDto(Long productId, String title, Integer price) {
+        this.productId = productId;
+        this.title = title;
+        this.price = price;
+    }
 }

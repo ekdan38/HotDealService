@@ -1,24 +1,31 @@
 package com.hong.productservice.service.product;
 
-import com.hong.common.dto.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hong.common.dto.ProductStockCheckRequestDto;
+import com.hong.common.dto.ProductStockCheckResponseDto;
+import com.hong.common.dto.ProductStockUpdateRequestDto;
+import com.hong.common.dto.ProductStockUpdateResponseDto;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.HotDealProductException;
 import com.hong.common.exception.custom.ProductException;
 import com.hong.productservice.domain.Product;
+import com.hong.productservice.dto.category.CategoryDto;
+import com.hong.productservice.dto.product.ProductCacheDto;
 import com.hong.productservice.dto.product.ProductStockDto;
+import com.hong.productservice.dto.product.ProductStockProjection;
 import com.hong.productservice.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.data.redis.core.RedisCallback;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -28,6 +35,9 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class ProductApiService {
 
+    private ObjectMapper objectMapper;
+    private final RedisTemplate<String, ProductCacheDto> redisTemplate;
+//    private final ProductStockCacheService cacheService;
     private final ProductRepository productRepository;
     private final RedissonClient redissonClient;
 
@@ -42,6 +52,8 @@ public class ProductApiService {
 
     // products 조회, 검증
     private List<Product> fetchProductsAndValidate(List<Long> productIds) {
+        // productIds 정렬 (DB 조회시 IN절 약간의 성능 향상)
+        Collections.sort(productIds);
         // product 조회
         List<Product> products = productRepository.findByIds(productIds);
 
@@ -58,11 +70,29 @@ public class ProductApiService {
         return products;
     }
 
-    //  products 재고 조회
-    public List<ProductStockDto> getProductStocks(List<Long> productIds){
-        // 추후 캐싱
-        List<Product> foundProducts = fetchProductsAndValidate(productIds);
-        return convertToProductStockDto(foundProducts);
+
+    public List<ProductStockDto> getProductsWithStock(List<Long> productIds){
+        // productIds 정렬
+        List<Long> sortedProductIds = productIds.stream()
+                .sorted()
+                .distinct()
+                .collect(Collectors.toList());
+
+        Map<Long, ProductCacheDto> cacheMap = new HashMap<>();
+        List<Long> missedProductIds = new ArrayList<>();
+        // Redis 캐싱된 데이터 조회 및 정리
+        fetchCachedProductData(sortedProductIds, cacheMap, missedProductIds);
+
+        // CacheMiss 존재 하면 DB 조회 후 Redis 에 MultiSet
+        if(!missedProductIds.isEmpty()){
+            fetchAndCacheMissedProducts(missedProductIds, cacheMap);
+        }
+
+        // Stock DB 조회
+        Map<Long, Integer> stockMap = fetchProductStock(sortedProductIds);
+
+        // ProductStockDto 변환
+        return convertProductStockResponse(sortedProductIds, cacheMap, stockMap);
     }
 
     // products 조회, 재고 확인
@@ -70,7 +100,7 @@ public class ProductApiService {
         // productId 추출
         List<Long> productIds = extractProductIdsFromCheckDto(requestDtos);
         // product 조회, 검증
-        List<ProductStockDto> productStocks = getProductStocks(productIds);
+        List<ProductStockDto> productStocks = getProductsWithStock(productIds);
         // dto 변환
         return validateRequestAndConvertDto(requestDtos, productStocks);
     }
@@ -118,6 +148,7 @@ public class ProductApiService {
         return responseDtos;
     }
 
+
     // products 요청 검증 Dto 변환
     private List<ProductStockCheckResponseDto> validateRequestAndConvertDto(List<ProductStockCheckRequestDto> requestDtos,
                                                                             List<ProductStockDto> productStockDtos) {
@@ -152,6 +183,94 @@ public class ProductApiService {
             throw new HotDealProductException(ErrorCode.PRODUCT_STOCK_NOT_ENOUGH, insufficientStockProductIds);
         }
         return productStockCheckResponseDto;
+    }
+
+
+    // Redis 에서 캐싱된 데이터 조회
+    private void fetchCachedProductData(List<Long> productIds,
+                                        Map<Long, ProductCacheDto> cacheMap,
+                                        List<Long> missedProductIds) {
+        // Redis 조회 key 생성
+        List<String> keys = productIds.stream()
+                .map(id -> "getProduct::products:" + id)
+                .collect(Collectors.toList());
+
+        // 캐싱된 데이터 조회
+        List<ProductCacheDto> cachedProductStockDtos = redisTemplate.opsForValue().multiGet(keys);
+
+        // cacheHit, cacheMiss 데이터 정리
+        for (int i = 0; i < productIds.size(); i++) {
+            ProductCacheDto cachedData = cachedProductStockDtos.get(i);
+            if (cachedData != null) {
+                cacheMap.put(productIds.get(i), cachedData);
+            } else {
+                missedProductIds.add(productIds.get(i));
+            }
+        }
+    }
+
+    // CacheMiss DB 조회, Redis MultiSet
+    private void fetchAndCacheMissedProducts(List<Long> missedProductIds,
+                                             Map<Long, ProductCacheDto> cacheMap) {
+        // DB 조회
+        List<Product> missedProducts = productRepository.findByIdsWithCategory(missedProductIds);
+
+        // DB 에도 존재하지 않는 ID 예외 처리
+        if (missedProducts.size() != missedProductIds.size()) {
+            List<Long> noneMatchedIds = missedProductIds.stream()
+                    .filter(id -> missedProducts.stream().noneMatch(product -> product.getId().equals(id)))
+                    .collect(Collectors.toList());
+            log.debug("요청된 상품이 존재하지 않습니다. productIds = {}", noneMatchedIds);
+            throw new ProductException(ErrorCode.PRODUCT_NOT_FOUND, noneMatchedIds);
+        }
+
+        Map<String, ProductCacheDto> newCacheEntries = new HashMap<>();
+
+        // Redis에 저장할 데이터 정리
+        for (Product product : missedProducts) {
+            ProductCacheDto productCacheDto = new ProductCacheDto(
+                    product.getId(),
+                    product.getTitle(),
+                    product.getPrice(),
+                    product.getCategoryProducts().stream()
+                            .map(cp -> new CategoryDto(cp.getCategory().getId(), cp.getCategory().getTitle()))
+                            .collect(Collectors.toList())
+            );
+
+            cacheMap.put(product.getId(), productCacheDto);
+            newCacheEntries.put("getProduct::products:" + product.getId(), productCacheDto);
+        }
+
+        // Redis에 MultiSet 저장
+        redisTemplate.opsForValue().multiSet(newCacheEntries);
+
+        // TTL 설정을 위해 Redis Pipeline 사용
+        long ttl = 600L; // 10분 TTL
+        redisTemplate.executePipelined((RedisCallback<Void>) connection -> {
+            for (String key : newCacheEntries.keySet()) {
+                connection.expire(key.getBytes(), ttl);
+            }
+            return null;
+        });
+    }
+    // Stock DB 조회
+    private Map<Long, Integer> fetchProductStock(List<Long> productIds) {
+        return productRepository.findStockByProductIds(productIds)
+                .stream()
+                .collect(Collectors.toMap(ProductStockProjection::getGetId, ProductStockProjection::getGetStock));
+    }
+
+    // ProductStockDto 변환
+    private List<ProductStockDto> convertProductStockResponse(List<Long> productIds,
+                                                              Map<Long, ProductCacheDto> cacheMap,
+                                                              Map<Long, Integer> stockMap) {
+        List<ProductStockDto> responseDtos = new ArrayList<>();
+        for (Long id : productIds) {
+            ProductCacheDto info = cacheMap.get(id);
+            Integer stock = stockMap.get(id);
+            responseDtos.add(new ProductStockDto(info.getId(), info.getTitle(), info.getPrice(), stock));
+        }
+        return responseDtos;
     }
 
     // 재고 감소
@@ -221,12 +340,9 @@ public class ProductApiService {
         return responseDtos;
     }
 
-
-
     // ProductStockCheckRequestDto 에서 productId 추출
     private List<Long> extractProductIdsFromCheckDto(List<ProductStockCheckRequestDto> requestDtos) {
-        List<Long> productIds = requestDtos.stream().map(ProductStockCheckRequestDto::getProductId).collect(Collectors.toList());
-        return productIds;
+        return requestDtos.stream().map(ProductStockCheckRequestDto::getProductId).collect(Collectors.toList());
     }
 
     // ProductStockUpdateRequestDto 에서 productId 추출

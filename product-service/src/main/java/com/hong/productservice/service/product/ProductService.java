@@ -1,5 +1,6 @@
 package com.hong.productservice.service.product;
 
+import com.hong.productservice.dto.product.ProductCacheDto;
 import com.hong.productservice.dto.product.ProductDto;
 import com.hong.productservice.dto.product.ProductPagingResponseDto;
 import com.hong.productservice.dto.product.ProductResponseDto;
@@ -13,7 +14,7 @@ public interface ProductService {
     ProductPagingResponseDto getProducts(String search, Long cursor, int size, Long categoryId);
 
     // product 단건 조회
-    ProductResponseDto getProduct(Long productId);
+    ProductCacheDto getProduct(Long productId);
 
     // product 수정
     ProductResponseDto updateProduct(Long productId, ProductDto requestDto);

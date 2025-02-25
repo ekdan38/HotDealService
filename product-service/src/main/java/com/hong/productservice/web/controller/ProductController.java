@@ -64,12 +64,12 @@ public class ProductController {
 
     // product 단건 조회
     @GetMapping("/{productId}")
-    public ResponseEntity<ResponseDto<ProductResponseDto>> getProduct(@PathVariable("productId") Long productId){
+    public ResponseEntity<ResponseDto<ProductCacheDto>> getProduct(@PathVariable("productId") Long productId){
 
-        ProductResponseDto resultDto = productService.getProduct(productId);
+        ProductCacheDto resultDto = productService.getProduct(productId);
 
         // 응답 설정
-        ResponseDto<ProductResponseDto> responseDto = new ResponseDto<>("상품 조회 완료", resultDto);
+        ResponseDto<ProductCacheDto> responseDto = new ResponseDto<>("상품 조회 완료", resultDto);
         return ResponseEntity.ok().body(responseDto);
     }
 
@@ -77,7 +77,7 @@ public class ProductController {
     @GetMapping("/stock")
     public ResponseEntity<ResponseDto<List<ProductStockDto>>> getProductStock(@RequestParam List<Long> productIds){
 
-        List<ProductStockDto> resultDto = productApiService.getProductStocks(productIds);
+        List<ProductStockDto> resultDto = productApiService.getProductsWithStock(productIds);
         // 응답 설정
         ResponseDto<List<ProductStockDto>> responseDto = new ResponseDto<>("상품 재고 조회 완료", resultDto);
         return ResponseEntity.ok().body(responseDto);

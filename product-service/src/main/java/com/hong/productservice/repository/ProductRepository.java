@@ -2,6 +2,7 @@ package com.hong.productservice.repository;
 
 import com.hong.productservice.domain.Product;
 import com.hong.productservice.dto.product.ProductResponseDto;
+import com.hong.productservice.dto.product.ProductStockProjection;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -42,4 +43,16 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             "FROM Product p " +
             "WHERE p.id IN :productIds")
     List<Product> findByIds(@Param("productIds") List<Long> productIds);
+
+    @Query("SELECT p " +
+            "FROM Product p " +
+            "JOIN FETCH p.categoryProducts cp " +
+            "JOIN FETCH cp.category c " +
+            "WHERE p.id IN :productIds")
+    List<Product> findByIdsWithCategory(@Param("productIds") List<Long> productIds);
+
+    @Query("SELECT new com.hong.productservice.dto.product.ProductStockProjection(p.id, p.stock) " +
+            "FROM Product p " +
+            "WHERE p.id IN :productIds")
+    List<ProductStockProjection>findStockByProductIds(@Param("productIds") List<Long> productIds);
 }

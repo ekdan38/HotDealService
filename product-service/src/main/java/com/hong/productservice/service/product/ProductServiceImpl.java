@@ -6,6 +6,7 @@ import com.hong.productservice.domain.Category;
 import com.hong.productservice.domain.CategoryProduct;
 import com.hong.productservice.domain.Product;
 import com.hong.productservice.dto.category.CategoryDto;
+import com.hong.productservice.dto.product.ProductCacheDto;
 import com.hong.productservice.dto.product.ProductDto;
 import com.hong.productservice.dto.product.ProductPagingResponseDto;
 import com.hong.productservice.dto.product.ProductResponseDto;
@@ -84,10 +85,10 @@ public class ProductServiceImpl implements ProductService {
     // product 단건 조회
     @Override
     @Cacheable(cacheNames = "getProduct", key = "'products:' + #productId", cacheManager = "productCacheManager")
-    public ProductResponseDto getProduct(Long productId) {
+    public ProductCacheDto getProduct(Long productId) {
         // fetch join 으로 product, categoryProduct, category 조회
         Product product = fetchProductWithCategoryAndCategoryProductsAndValidate(productId);
-        return convertProductResponseDtoWithoutStock(product);
+        return convertProductCacheDtoWithoutStock(product);
     }
 
     // product 수정
@@ -95,7 +96,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Caching(evict = {
             @CacheEvict(cacheNames = "getProducts", allEntries = true),
-            @CacheEvict(cacheNames = "getProduct", key = "#productId")
+            @CacheEvict(cacheNames = "getProduct", key = "'products:' + #productId")
     })
     public ProductResponseDto updateProduct(Long productId, ProductDto requestDto) {
         // fetch join 으로 product, categoryProduct, category 조회
@@ -108,13 +109,10 @@ public class ProductServiceImpl implements ProductService {
                 throw new ProductException(ErrorCode.PRODUCT_TITLE_ALREADY_EXISTS, requestDto.getTitle());
             }
         }
-
         // product 수정, 연관 관계 적용
         updateProductAndSetAssociations(requestDto, product);
-
         // product 명시적으로 저장
         Product updatedProduct = productRepository.save(product);
-
         return convertProductResponseDtoWithStock(updatedProduct);
     }
 
@@ -124,7 +122,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Caching(evict = {
             @CacheEvict(cacheNames = "getProducts", allEntries = true),
-            @CacheEvict(cacheNames = "getProduct", key = "#productId")
+            @CacheEvict(cacheNames = "getProduct", key = "'products:' + #productId")
     })
     public ProductResponseDto deleteProduct(Long productId) {
         // fetch join 으로 product, categoryProduct, category 조회
@@ -159,9 +157,9 @@ public class ProductServiceImpl implements ProductService {
                         .collect(Collectors.toList()));
     }
 
-    // ProductResponseDto 변환 (stock 미 포함)
-    private ProductResponseDto convertProductResponseDtoWithoutStock(Product product) {
-        return new ProductResponseDto(
+    // ProductCacheDto 변환 (stock 미 포함)
+    private ProductCacheDto convertProductCacheDtoWithoutStock(Product product) {
+        return new ProductCacheDto(
                 product.getId(),
                 product.getTitle(),
                 product.getPrice(),
