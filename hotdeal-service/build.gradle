@@ -54,6 +54,8 @@ dependencies {
     // redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation("it.ozimov:embedded-redis:0.7.2")
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.1'
+
     // lombok
     annotationProcessor 'org.projectlombok:lombok'
     compileOnly 'org.projectlombok:lombok'
