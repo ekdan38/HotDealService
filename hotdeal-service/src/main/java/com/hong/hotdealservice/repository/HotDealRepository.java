@@ -51,7 +51,7 @@ public interface HotDealRepository extends JpaRepository<HotDeal, Long> {
 
     // hotDeal status 변경 (ACTIVE)
     // 벌크 업데이트
-    @Modifying(clearAutomatically=true, flushAutomatically=true)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE HotDeal h SET h.status = 'ACTIVE' " +
             "WHERE h.deleted = false " +
             "AND h.status = 'SCHEDULED' " +
@@ -61,7 +61,7 @@ public interface HotDealRepository extends JpaRepository<HotDeal, Long> {
 
     // hotDeal status 변경 (EXPIRED)
     // 벌크 업데이트
-    @Modifying(clearAutomatically=true, flushAutomatically=true)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE HotDeal h SET h.status = 'EXPIRED', h.expiredAt =:currentTime " +
             "WHERE h.deleted = false " +
             "AND h.status = 'ACTIVE' " +

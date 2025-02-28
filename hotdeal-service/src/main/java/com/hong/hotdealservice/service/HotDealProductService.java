@@ -1,5 +1,6 @@
 package com.hong.hotdealservice.service;
 
+import com.hong.hotdealservice.dto.HotDealProductCacheDto;
 import com.hong.hotdealservice.dto.HotDealProductPagingResponseDto;
 import com.hong.hotdealservice.dto.HotDealProductResponseDto;
 
@@ -9,5 +10,5 @@ public interface HotDealProductService {
     HotDealProductPagingResponseDto getHotDealProducts(Long hotDealId, String search, Long cursor, int size);
 
     // HotDealProduct 단건 조회
-    HotDealProductResponseDto getHotDealProduct(Long hotDealProductId);
+    HotDealProductCacheDto getHotDealProduct(Long hotDealProductId);
 }

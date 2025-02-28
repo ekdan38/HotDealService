@@ -1,8 +1,8 @@
 package com.hong.hotdealservice.web.controller;
 
 import com.hong.common.dto.ResponseDto;
+import com.hong.hotdealservice.dto.HotDealProductCacheDto;
 import com.hong.hotdealservice.dto.HotDealProductPagingResponseDto;
-import com.hong.hotdealservice.dto.HotDealProductResponseDto;
 import com.hong.hotdealservice.dto.HotDealProductStockDto;
 import com.hong.hotdealservice.service.HotDealApiService;
 import com.hong.hotdealservice.service.HotDealProductService;
@@ -38,12 +38,12 @@ public class HotDealProductController {
 
     // HotDealProduct 단건 조회
     @GetMapping("/hotDealProducts/{hotDealProductId}")
-    public ResponseEntity<ResponseDto<HotDealProductResponseDto>> getHotDealProduct(@PathVariable("hotDealProductId") Long hotDealProductId) {
+    public ResponseEntity<ResponseDto<HotDealProductCacheDto>> getHotDealProduct(@PathVariable("hotDealProductId") Long hotDealProductId) {
 
-        HotDealProductResponseDto resultDto = hotDealProductService.getHotDealProduct(hotDealProductId);
+        HotDealProductCacheDto resultDto = hotDealProductService.getHotDealProduct(hotDealProductId);
 
         // 응답 설정
-        ResponseDto<HotDealProductResponseDto> responseDto = new ResponseDto<>("HotDealProduct 조회 성공", resultDto);
+        ResponseDto<HotDealProductCacheDto> responseDto = new ResponseDto<>("HotDealProduct 조회 성공", resultDto);
         return ResponseEntity.ok().body(responseDto);
     }
 

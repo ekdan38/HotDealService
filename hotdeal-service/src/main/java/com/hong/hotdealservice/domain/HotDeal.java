@@ -91,6 +91,7 @@ public class HotDeal extends TimeEntity {
 
     // == HotDealProducts remove 메서드 ==
     public void removeHotDealProducts(List<HotDealProduct> hotDealProducts) {
+        hotDealProducts.forEach(hp -> hp.setHotDeal(null));
         this.hotDealProducts.removeAll(hotDealProducts);
     }
 

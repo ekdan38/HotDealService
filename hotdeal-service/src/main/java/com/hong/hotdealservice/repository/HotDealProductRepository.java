@@ -26,12 +26,6 @@ public interface HotDealProductRepository extends JpaRepository<HotDealProduct, 
 
     @Query("SELECT hp " +
             "FROM HotDealProduct hp " +
-            "JOIN FETCH hp.hotDeal " +
-            "WHERE hp.id =:hotDealProductId")
-    Optional<HotDealProduct> findByIdWithHotDeal(@Param("hotDealProductId") Long hotDealProductId);
-
-    @Query("SELECT hp " +
-            "FROM HotDealProduct hp " +
             "WHERE hp.id IN :hotDealProductIds")
     List<HotDealProduct> findByIds(@Param("hotDealProductIds") List<Long>hotDealProductIds);
 }

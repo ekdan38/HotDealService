@@ -13,15 +13,16 @@ public class HotDealProductResponseDto {
 
     private Long hotDealId;
     private Long hotDealProductId;
+    private Long originalProductId;
     private String productTitle;
     private Integer originalPrice;
     private Integer hotDealPrice;
     private Double discountRate;
     private Integer stock;
 
-    public HotDealProductResponseDto(Long hotDealId, Long hotDealProductId, String productTitle, Integer originalPrice, Integer hotDealPrice, Double discountRate) {
-        this.hotDealId = hotDealId;
+    public HotDealProductResponseDto(Long hotDealProductId, Long originalProductId, String productTitle, Integer originalPrice, Integer hotDealPrice, Double discountRate) {
         this.hotDealProductId = hotDealProductId;
+        this.originalProductId = originalProductId;
         this.productTitle = productTitle;
         this.originalPrice = originalPrice;
         this.hotDealPrice = hotDealPrice;
@@ -36,11 +37,4 @@ public class HotDealProductResponseDto {
         this.discountRate = discountRate;
         this.stock = stock;
     }
-//    public HotDealProductResponseDto(Long hotDealProductId, String productTitle, Integer originalPrice, Integer hotDealPrice, Double discountRate) {
-//        this.hotDealProductId = hotDealProductId;
-//        this.productTitle = productTitle;
-//        this.originalPrice = originalPrice;
-//        this.hotDealPrice = hotDealPrice;
-//        this.discountRate = discountRate;
-//    }
 }

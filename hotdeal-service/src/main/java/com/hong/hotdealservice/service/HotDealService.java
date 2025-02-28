@@ -1,8 +1,6 @@
 package com.hong.hotdealservice.service;
 
 import com.hong.hotdealservice.dto.HotDealPagingResponseDto;
-import com.hong.hotdealservice.dto.HotDealProductPagingResponseDto;
-import com.hong.hotdealservice.dto.HotDealProductResponseDto;
 import com.hong.hotdealservice.dto.HotDealResponseDto;
 import com.hong.hotdealservice.web.dto.HotDealRequestDto;
 import com.hong.hotdealservice.web.dto.HotDealUpdateRequestDto;

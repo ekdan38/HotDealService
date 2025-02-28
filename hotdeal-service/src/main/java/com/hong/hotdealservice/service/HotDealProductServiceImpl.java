@@ -3,11 +3,13 @@ package com.hong.hotdealservice.service;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.HotDealProductException;
 import com.hong.hotdealservice.domain.HotDealProduct;
+import com.hong.hotdealservice.dto.HotDealProductCacheDto;
 import com.hong.hotdealservice.dto.HotDealProductPagingResponseDto;
 import com.hong.hotdealservice.dto.HotDealProductResponseDto;
 import com.hong.hotdealservice.repository.HotDealProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +28,9 @@ public class HotDealProductServiceImpl implements HotDealProductService {
 
     // HotDealProduct 페이징 조회
     @Override
+    @Cacheable(cacheNames = "getHotDealProducts"
+            , key = "'hotdeal:' + #hotDealId + 'hotdeal_products:cursor:' + #cursor + ':size:' + #size + ':search:' + (#search != null ? #search : '')"
+            , cacheManager = "HotDealCacheManager")
     public HotDealProductPagingResponseDto getHotDealProducts(Long hotDealId, String search, Long cursor, int size) {
         // cursor 가 null 이면 가장 최근 데이터 조회 처리
         if (cursor == null) cursor = Long.MAX_VALUE;
@@ -45,26 +50,29 @@ public class HotDealProductServiceImpl implements HotDealProductService {
 
     // HotDealProduct 단건 조회
     @Override
-    public HotDealProductResponseDto getHotDealProduct(Long hotDealProductId) {
+    @Cacheable(cacheNames = "getHotDealProduct"
+            , key = "'hotdeal_products:' + #hotDealProductId", cacheManager = "HotDealCacheManager")
+    public HotDealProductCacheDto getHotDealProduct(Long hotDealProductId) {
         // hotDealProduct 단건 조회, 검증
         HotDealProduct hotDealProduct = fetchByIdAndValidate(hotDealProductId);
 
         // 응답 dto 변환
-        return convertToHotDealProductResponseDto(hotDealProduct);
+        return convertHotDealCacheDtoWithoutStock(hotDealProduct);
     }
 
     // hotDealProduct 단건 조회, 검증
     private HotDealProduct fetchByIdAndValidate(Long hotDealProductId) {
-        return hotDealProductRepository.findByIdWithHotDeal(hotDealProductId).orElseThrow(() -> {
+        return hotDealProductRepository.findById(hotDealProductId).orElseThrow(() -> {
             log.debug("요청된 핫딜 상품이 존재하지 않습니다. hotDealProductId = {}", hotDealProductId);
             return new HotDealProductException(ErrorCode.HOTDEAL_PRODUCT_NOT_FOUND, hotDealProductId);
         });
     }
 
     // hotDealProductResponseDto 변환
-    private HotDealProductResponseDto convertToHotDealProductResponseDto(HotDealProduct hotDealProduct) {
-        return new HotDealProductResponseDto(
+    private HotDealProductCacheDto convertHotDealCacheDtoWithoutStock(HotDealProduct hotDealProduct) {
+        return new HotDealProductCacheDto(
                 hotDealProduct.getHotDeal().getId(),
+                hotDealProduct.getId(),
                 hotDealProduct.getProductId(),
                 hotDealProduct.getProductTitle(),
                 hotDealProduct.getOriginalPrice(),

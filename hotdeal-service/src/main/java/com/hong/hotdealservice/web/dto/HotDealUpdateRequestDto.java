@@ -30,5 +30,5 @@ public class HotDealUpdateRequestDto {
     private HotDealStatus status;
 
     @NotEmpty(message = "productInfos 는 최소 1개 이상이어야 합니다.")
-    private List<@Valid HotDealProductRequestDto> productInfos;
+    private List<@Valid HotDealProductUpdateRequestDto> productInfos;
 }
