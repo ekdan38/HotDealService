@@ -35,9 +35,7 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class ProductApiService {
 
-    private ObjectMapper objectMapper;
     private final RedisTemplate<String, ProductCacheDto> redisTemplate;
-//    private final ProductStockCacheService cacheService;
     private final ProductRepository productRepository;
     private final RedissonClient redissonClient;
 
