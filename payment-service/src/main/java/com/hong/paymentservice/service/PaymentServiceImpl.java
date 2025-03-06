@@ -13,11 +13,13 @@ import com.hong.paymentservice.dto.PaymentProcessResponseDto;
 import com.hong.paymentservice.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,12 +32,16 @@ public class PaymentServiceImpl implements PaymentService {
     private final Resilience4JOrderServiceClient resilience4JOrderServiceClient;
     private final Resilience4JHotDealServiceClient resilience4JHotDealServiceClient;
     private final Resilience4JProductServiceClient resilience4JProductServiceClient;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     // 결제 진입
     @Transactional
     @Override
     public PaymentEntryResponseDto paymentEntry(Long userId, Long orderId) {
-        // order FeignClient 조회
+        // 이미 생성된 결제 인지 확인
+        validateExistsPaymentByOrderId(orderId);
+
+        // order 조회
         OrderFetchResponseDto orderFetchResponseDto = fetchOrderAndValidate(userId, orderId);
 
         // hotDealProduct 재고 감소
@@ -70,6 +76,17 @@ public class PaymentServiceImpl implements PaymentService {
 
         return new PaymentProcessResponseDto(paymentId, payment.getStatus().name());
     }
+
+    // 이미 생성된 결제 인지 확인
+    private void validateExistsPaymentByOrderId(Long orderId) {
+        Optional<Payment> existingPayment = paymentRepository.findByOrderId(orderId);
+        if(existingPayment.isPresent()){
+            Payment payment = existingPayment.get();
+            log.debug("이미 존재 하는 결제 입니다. paymentId = {}, orderId = {}", payment.getId(), payment.getOrderId());
+            throw new PaymentException(ErrorCode.PAYMENT_EXISTS, payment.getId(), payment.getOrderId());
+        }
+    }
+
 
     // 결제 진행 (fakePaymentGateway => 결제 가격 만큼 요청을 보냈는지 확인), 결과 처리
     private void ProcessingPGAndValidateResult(Long userId, Long paymentId, Integer userPaymentAmount, Payment payment, Long orderId) {
@@ -137,6 +154,8 @@ public class PaymentServiceImpl implements PaymentService {
         // payment 만료 여부 확인
         // 만료 되었으면 재고 복구 처리
         if(payment.expiredPay()) {
+            log.info("결제 진행 : 만료된 결제 입니다. payment = {}", payment);
+            log.warn("결제 진행 : 만료된 결제 입니다. payment = {}", payment);
             // order FeignClient 조회
             OrderFetchResponseDto orderFetchResponseDto = fetchOrderAndValidate(userId, orderId);
             // order, delivery field update FeignClient 호출
@@ -176,7 +195,10 @@ public class PaymentServiceImpl implements PaymentService {
         List<ProductStockUpdateRequestDto> productStockUpdateRequestDtos = converToProductStockUpdateRequestDto(orderFetchResponseDto);
 
         // productStockUpdateRequestDtos 가 empty 면 feignClient 호출 할 필요 없다.
-        if(productStockUpdateRequestDtos.isEmpty()) return new ArrayList<>();
+        if(productStockUpdateRequestDtos.isEmpty()) {
+            log.info("이거 product 없습니다요!!!!!=========================================");
+            return new ArrayList<>();
+        }
 
         // hotDealProduct 재고 감소 feignClient 호출
         List<ProductStockUpdateResponseDto> productStockUpdateResponseDtos = resilience4JProductServiceClient.decreaseStock(productStockUpdateRequestDtos);
@@ -280,16 +302,15 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
 
-    // order FeignClient 조회
     private OrderFetchResponseDto fetchOrderAndValidate(Long userId, Long orderId) {
-        // order 조회 feignClient 호출
-        OrderFetchResponseDto orderFetchResponseDto = resilience4JOrderServiceClient.fetchOrder(new OrderFetchRequestDto(userId, orderId));
+        // order FeignClient 조회
+            OrderFetchResponseDto orderFetchResponseDto = resilience4JOrderServiceClient.fetchOrder(new OrderFetchRequestDto(userId, orderId));
 
-        // CircuitBreaker OPEN
-        if(orderFetchResponseDto.isEmpty()){
-            log.debug("주문 조회 호출을 실패했습니다. userId = {}, orderId = {}", userId, orderId);
-            throw new PaymentException(ErrorCode.PAYMENT_FETCH_ORDER_FAILED, userId, orderId);
-        }
+            // CircuitBreaker OPEN
+            if(orderFetchResponseDto.isEmpty()){
+                log.debug("주문 조회 호출을 실패했습니다. userId = {}, orderId = {}", userId, orderId);
+                throw new PaymentException(ErrorCode.PAYMENT_FETCH_ORDER_FAILED, userId, orderId);
+            }
         return orderFetchResponseDto;
     }
 
