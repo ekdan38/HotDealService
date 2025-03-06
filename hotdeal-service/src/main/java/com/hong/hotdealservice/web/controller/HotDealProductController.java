@@ -49,7 +49,7 @@ public class HotDealProductController {
 
     @GetMapping("/hotDealProducts/stock")
     public ResponseEntity<ResponseDto<List<HotDealProductStockDto>>> getHotDealProductStock(@RequestParam List<Long> hotDealProductId){
-        List<HotDealProductStockDto> resultDto = hotDealApiService.getHotDealProductStocks(hotDealProductId);
+        List<HotDealProductStockDto> resultDto = hotDealApiService.getHotDealProductsWithStock(hotDealProductId);
 
         // 응답 설정
         ResponseDto<List<HotDealProductStockDto>> responseDto = new ResponseDto<>("HotDealProducts 재고 조회 성공", resultDto);

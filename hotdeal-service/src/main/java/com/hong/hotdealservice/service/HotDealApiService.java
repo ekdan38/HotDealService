@@ -1,23 +1,33 @@
 package com.hong.hotdealservice.service;
 
-import com.hong.common.dto.*;
+import com.hong.common.dto.HotDealProductStockCheckRequestDto;
+import com.hong.common.dto.HotDealProductStockCheckResponseDto;
+import com.hong.common.dto.HotDealProductStockUpdateRequestDto;
+import com.hong.common.dto.HotDealProductStockUpdateResponseDto;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.HotDealException;
 import com.hong.common.exception.custom.HotDealProductException;
+import com.hong.common.exception.custom.ProductException;
 import com.hong.hotdealservice.domain.HotDeal;
 import com.hong.hotdealservice.domain.HotDealProduct;
+import com.hong.hotdealservice.dto.HotDealProductCacheDto;
 import com.hong.hotdealservice.dto.HotDealProductStockDto;
+import com.hong.hotdealservice.dto.HotDealProductStockProjection;
 import com.hong.hotdealservice.repository.HotDealProductRepository;
 import com.hong.hotdealservice.repository.HotDealRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.data.redis.core.RedisCallback;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -31,21 +41,35 @@ public class HotDealApiService {
     private final HotDealProductRepository hotDealProductRepository;
     private final HotDealRepository hotDealRepository;
     private final RedissonClient redissonClient;
+    private final RedisTemplate<String, Object> redisTemplate;
 
 
     // 단순 핫딜 상품 재고 조회
-    // 추후 캐싱 예정
-    public List<HotDealProductStockDto> getHotDealProductStocks(List<Long> hotDealProductIds) {
-        // hotDealProducts 조회, hotDealProduct 존재 검증
-        // 추후 캐싱
-        List<HotDealProduct> foundHotDealProducts = fetchHotDealProductsAndValidate(hotDealProductIds);
+    public List<HotDealProductStockDto> getHotDealProductsWithStock(List<Long> hotDealProductIds) {
+        // hotDealProductIds 정렬
+        List<Long> sortedHotDealProductIds = hotDealProductIds.stream()
+                .sorted()
+                .distinct()
+                .toList();
 
-        return convertToHotDealProductStockDto(foundHotDealProducts);
+        Map<Long, Object> cacheMap = new HashMap<>();
+        List<Long> missedHotDealProductIds = new ArrayList<>();
+        // Redis 캐싱된 데이터 조회 및 정리
+        fetchCachedProductData(sortedHotDealProductIds, cacheMap, missedHotDealProductIds);
+        // CacheMiss 존재 하면 DB 조회 후 Redis 에 MultiSet
+        if(!missedHotDealProductIds.isEmpty()){
+            fetchAndCacheMissedProducts(missedHotDealProductIds, cacheMap);
+        }
+
+        // Stock DB 조회
+        Map<Long, Integer> stockMap = fetchProductStock(sortedHotDealProductIds);
+
+        return convertProductStockResponse(hotDealProductIds, cacheMap, stockMap);
     }
 
 
     // 핫딜 상품 조회, 재고 확인
-    public List<HotDealProductStockCheckResponseDto> fetchHotDealProductStockAndValidateStocks(List<HotDealProductStockCheckRequestDto> requestDtos) {
+    public List<HotDealProductStockCheckResponseDto> fetchHotDealProductsStockAndValidateStock(List<HotDealProductStockCheckRequestDto> requestDtos) {
         // 요청 Dto 에서 hotDealId 추출
         List<Long> hotDealIds = extractHotDealIdsFromCheckDto(requestDtos);
 
@@ -56,7 +80,7 @@ public class HotDealApiService {
         List<Long> hotDealProductIds = extractHotDealProductIdsFromStockCheckRequestDto(requestDtos);
 
         // hotDealProduct stock 조회, hotDealProduct 존재 검증
-        List<HotDealProductStockDto> stockDtos = getHotDealProductStocks(hotDealProductIds);
+        List<HotDealProductStockDto> stockDtos = getHotDealProductsWithStock(hotDealProductIds);
 
         // hotDealProducts 요청 검증 Dto 변환
         return validateRequestedHotDealProductsAndConvertDto(stockDtos, requestDtos);
@@ -70,15 +94,9 @@ public class HotDealApiService {
         // 락 획득
         List<RLock> locks = acquireLocks(hotDealProductIds);
 
-        // HotDealProductStockUpdateRequestDto 에서 hotDealIds 추출
-        List<Long> hotDealIds = extractHotDealIdsFromUpdateDto(requestDtos);
-
-        // hotDeal 조회, 존재 검증, 주문 가능 검증
-        fetchHotDealAndValidateHotDealAndOrderable(hotDealIds);
-
         // hotDealProduct 재고 감소, 재고 감소 가능 검증
         List<HotDealProductStockUpdateResponseDto> responseDtos = decreaseStockAndValidateAndConvertResponseDto(hotDealProductIds, requestDtos);
-        // 트랜잭션 끝나기 전에 락 해제
+        // 트랜잭션 commit 후 락 해제
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
@@ -96,15 +114,9 @@ public class HotDealApiService {
         // 락 획득
         List<RLock> locks = acquireLocks(hotDealProductIds);
 
-        // HotDealProductStockUpdateRequestDto 에서 hotDealIds 추출
-        List<Long> hotDealIds = extractHotDealIdsFromUpdateDto(requestDtos);
-
-        // hotDeal 조회, 존재 검증
-        fetchHotDealWithProductsAndValidateForIncrease(hotDealIds);
-
         // hotDealProduct 재고 증가, 재고 증가 가능 검증
         List<HotDealProductStockUpdateResponseDto> responseDtos = increaseStockAndValidateAndConvertResponseDto(hotDealProductIds, requestDtos);
-        // 트랜잭션 끝나기 전에 락 해제
+        // 트랜잭션 commit 후 락 해제
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
@@ -120,6 +132,7 @@ public class HotDealApiService {
         // 락 객체 목록 생성
         List<RLock> locks = new ArrayList<>();
         // 핫딜 상품 락 생성
+        LocalDateTime start = LocalDateTime.now();
         for (Long hotDealProductId : hotDealProductIds) {
             String lockKey = "hot_deal_product_lock:" + hotDealProductId;
             log.info("락 획득 시도 key = {}", lockKey);
@@ -138,6 +151,9 @@ public class HotDealApiService {
             }
             locks.add(lock);
             log.info("락 획득 성공 key = {}", lockKey);
+            Duration duration = Duration.between(start, LocalDateTime.now());
+            long waitMillis = duration.toMillis();
+            log.info("hotDealProductId : " + hotDealProductId + "의 락 획득 대기 시간 = {}", waitMillis);
         }
         return locks;
     }
@@ -172,10 +188,15 @@ public class HotDealApiService {
     }
 
     // hotDealProducts 조회, hotDealProduct 존재 검증
-    // 추후 캐싱
     private List<HotDealProduct> fetchHotDealProductsAndValidate(List<Long> hotDealProductIds) {
         // hotDealProducts 조회
-        List<HotDealProduct> foundHotDealProducts = hotDealProductRepository.findByIds(hotDealProductIds);
+        List<Long> sortedHotDealProductIds = hotDealProductIds
+                .stream()
+                .sorted()
+                .distinct()
+                .toList();
+        // hotDealProducts 조회
+        List<HotDealProduct> foundHotDealProducts = hotDealProductRepository.findByIds(sortedHotDealProductIds);
 
         // 조회된 hotDealProductIds 추출
         Set<Long> foundHotDealProductIds = foundHotDealProducts.stream()
@@ -183,7 +204,7 @@ public class HotDealApiService {
                 .collect(Collectors.toSet());
 
         // reqeust Ids 중에서 조회되지 않은 ids 추출
-        List<Long> noneMatchedHotDealProductIds = hotDealProductIds.stream()
+        List<Long> noneMatchedHotDealProductIds = sortedHotDealProductIds.stream()
                 .filter(id -> !foundHotDealProductIds.contains(id))
                 .collect(Collectors.toList());
 
@@ -378,6 +399,99 @@ public class HotDealApiService {
         }
         return hotDeals;
     }
+
+    // Redis 에서 캐싱된 데이터 조회
+    private void fetchCachedProductData(List<Long> hotDealProductIds,
+                                        Map<Long, Object> cacheMap,
+                                        List<Long> missedProductIds) {
+        // Redis 조회 key 생성
+        List<String> keys = hotDealProductIds.stream()
+                .map(id -> "getHotDealProduct::hotdeal_products:" + id)
+                .collect(Collectors.toList());
+
+        // 캐싱된 데이터 조회
+        List<Object> cachedProductStockDtos = redisTemplate.opsForValue().multiGet(keys);
+
+        // cacheHit, cacheMiss 데이터 정리
+        for (int i = 0; i < hotDealProductIds.size(); i++) {
+            Object cachedData = cachedProductStockDtos.get(i);
+            if (cachedData != null) {
+                cacheMap.put(hotDealProductIds.get(i), cachedData);
+            } else {
+                missedProductIds.add(hotDealProductIds.get(i));
+            }
+        }
+    }
+    // CacheMiss DB 조회, Redis MultiSet
+    private void fetchAndCacheMissedProducts(List<Long> missedProductIds,
+                                             Map<Long, Object> cacheMap) {
+        // DB 조회
+        List<HotDealProduct> missedProducts = hotDealProductRepository.findByIds(missedProductIds);
+
+        // DB 에도 존재하지 않는 ID 예외 처리
+        if (missedProducts.size() != missedProductIds.size()) {
+            List<Long> noneMatchedIds = missedProductIds.stream()
+                    .filter(id -> missedProducts.stream().noneMatch(product -> product.getId().equals(id)))
+                    .collect(Collectors.toList());
+            log.debug("요청된 핫딜 상품이 존재하지 않습니다. productIds = {}", noneMatchedIds);
+            throw new ProductException(ErrorCode.HOTDEAL_NOT_FOUND, noneMatchedIds);
+        }
+
+        Map<String, Object> newCacheEntries = new HashMap<>();
+
+        // Redis에 저장할 데이터 정리
+        for (HotDealProduct hp : missedProducts) {
+            HotDealProductCacheDto hotDealProductCacheDto = new HotDealProductCacheDto(
+                    hp.getHotDeal().getId(),
+                    hp.getId(),
+                    hp.getProductId(),
+                    hp.getProductTitle(),
+                    hp.getOriginalPrice(),
+                    hp.getHotDealPrice(),
+                    hp.getDiscountRate()
+            );
+
+            cacheMap.put(hp.getId(), hotDealProductCacheDto);
+            newCacheEntries.put("getHotDealProduct::hotdeal_products:" + hp.getId(), hotDealProductCacheDto);
+        }
+
+        // Redis에 MultiSet 저장
+        redisTemplate.opsForValue().multiSet(newCacheEntries);
+
+        // TTL 설정을 위해 Redis Pipeline 사용
+        long ttl = 300L; // 5분 TTL
+        redisTemplate.executePipelined((RedisCallback<Void>) connection -> {
+            for (String key : newCacheEntries.keySet()) {
+                connection.expire(key.getBytes(), ttl);
+            }
+            return null;
+        });
+    }
+
+    // Stock DB 조회
+    private Map<Long, Integer> fetchProductStock(List<Long> productIds) {
+        return hotDealProductRepository.findStockByProductIds(productIds)
+                .stream()
+                .collect(Collectors.toMap(HotDealProductStockProjection::getGetId, HotDealProductStockProjection::getGetStock));
+    }
+    // ProductStockDto 변환
+    private List<HotDealProductStockDto> convertProductStockResponse(List<Long> hotDealProductIds,
+                                                                     Map<Long, Object> cacheMap,
+                                                                     Map<Long, Integer> stockMap) {
+        List<HotDealProductStockDto> responseDtos = new ArrayList<>();
+        for (Long id : hotDealProductIds) {
+            HotDealProductCacheDto info = (HotDealProductCacheDto)cacheMap.get(id);
+            Integer stock = stockMap.get(id);
+            responseDtos.add(new HotDealProductStockDto(
+                    info.getHotDealProductId(),
+                    info.getOriginalProductId(),
+                    info.getProductTitle(),
+                    stock,
+                    info.getHotDealPrice()));
+        }
+        return responseDtos;
+    }
+
     // hotDealProducts => ProductStockDto
     private List<HotDealProductStockDto> convertToHotDealProductStockDto(List<HotDealProduct> foundHotDealProducts) {
         return foundHotDealProducts.stream()

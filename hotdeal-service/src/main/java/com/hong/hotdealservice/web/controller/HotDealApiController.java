@@ -22,7 +22,7 @@ public class HotDealApiController {
 
     @PostMapping("/products")
     public ResponseEntity<List<HotDealProductStockCheckResponseDto>> fetchProducts(@RequestBody List<HotDealProductStockCheckRequestDto> requestDtos) {
-        List<HotDealProductStockCheckResponseDto> responseDtos = hotDealApiService.fetchHotDealProductStockAndValidateStocks(requestDtos);
+        List<HotDealProductStockCheckResponseDto> responseDtos = hotDealApiService.fetchHotDealProductsStockAndValidateStock(requestDtos);
         return ResponseEntity.ok(responseDtos);
     }
     @PostMapping("/decrease-stock")

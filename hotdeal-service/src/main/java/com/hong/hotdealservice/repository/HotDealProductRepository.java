@@ -1,13 +1,13 @@
 package com.hong.hotdealservice.repository;
 
 import com.hong.hotdealservice.domain.HotDealProduct;
+import com.hong.hotdealservice.dto.HotDealProductStockProjection;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
-import java.util.Optional;
 
 public interface HotDealProductRepository extends JpaRepository<HotDealProduct, Long> {
 
@@ -28,4 +28,9 @@ public interface HotDealProductRepository extends JpaRepository<HotDealProduct, 
             "FROM HotDealProduct hp " +
             "WHERE hp.id IN :hotDealProductIds")
     List<HotDealProduct> findByIds(@Param("hotDealProductIds") List<Long>hotDealProductIds);
+
+    @Query("SELECT new com.hong.hotdealservice.dto.HotDealProductStockProjection(hp.id, hp.stock) " +
+            "FROM HotDealProduct hp " +
+            "WHERE hp.id IN :hotDealProductIds")
+    List<HotDealProductStockProjection>findStockByProductIds(@Param("hotDealProductIds") List<Long> hotDealProductIds);
 }
