@@ -1,6 +1,5 @@
 package com.hong.productservice.service.product;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hong.common.dto.ProductStockCheckRequestDto;
 import com.hong.common.dto.ProductStockCheckResponseDto;
 import com.hong.common.dto.ProductStockUpdateRequestDto;
@@ -25,6 +24,8 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -35,7 +36,7 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class ProductApiService {
 
-    private final RedisTemplate<String, ProductCacheDto> redisTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
     private final ProductRepository productRepository;
     private final RedissonClient redissonClient;
 
@@ -194,11 +195,11 @@ public class ProductApiService {
                 .collect(Collectors.toList());
 
         // 캐싱된 데이터 조회
-        List<ProductCacheDto> cachedProductStockDtos = redisTemplate.opsForValue().multiGet(keys);
+        List<Object> cachedProductStockDtos = redisTemplate.opsForValue().multiGet(keys);
 
         // cacheHit, cacheMiss 데이터 정리
         for (int i = 0; i < productIds.size(); i++) {
-            ProductCacheDto cachedData = cachedProductStockDtos.get(i);
+            ProductCacheDto cachedData = (ProductCacheDto) cachedProductStockDtos.get(i);
             if (cachedData != null) {
                 cacheMap.put(productIds.get(i), cachedData);
             } else {
@@ -356,6 +357,7 @@ public class ProductApiService {
         // 락 객체 목록 생성
         List<RLock> locks = new ArrayList<>();
         // 상품 락 생성
+        LocalDateTime start = LocalDateTime.now();
         for (Long productId : productIds) {
             String lockKey = "product_lock:" + productId;
             log.info("락 획득 시도 key = {}", lockKey);
@@ -372,6 +374,10 @@ public class ProductApiService {
             }
             locks.add(lock);
             log.info("락 획득 성공 key = {}", lockKey);
+            Duration duration = Duration.between(start, LocalDateTime.now());
+            long waitMillis = duration.toMillis();
+            log.info("ProductId : " + productId + "의 락 획득 대기 시간 = {}", waitMillis);
+
         }
         return locks;
     }
