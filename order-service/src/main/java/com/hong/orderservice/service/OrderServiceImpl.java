@@ -50,7 +50,6 @@ public class OrderServiceImpl implements OrderService {
 
         // 주문 생성
         Order savedOrder = createOrder(userId, requestDto, hotDealProductStockCheckResponseDto, productStockCheckResponseDtos);
-
         return convertToOrderResponse(savedOrder);
     }
 
@@ -101,9 +100,9 @@ public class OrderServiceImpl implements OrderService {
 
         // 주문 상품 중 일반 상품 재고 증가 처리
         // 핫딜 상품에 대한 재고 증가는 성공 했지만, 일반 상품 재고 증가 호출이 실패 하면 성공한 핫딜 상품에 대한 재고 감소 처리
-        try{
+        try {
             increaseProductStockAndValidate(userId, orderId, order);
-        }catch (OrderException e){
+        } catch (OrderException e) {
             decreaseHotDealProductStockAndValidate(userId, orderId, order);
             throw e;
         }
@@ -187,7 +186,7 @@ public class OrderServiceImpl implements OrderService {
     // 결제 까지 완료한 주문 조회, 검증 (Fetch Join 으로 orderProducts, delivery 조회)
     private Order getOrderWithOrderProductsAndDelivery(Long userId, Long orderId) {
         // 결제 까지 완료한 주문 조회 (Fetch Join 으로 orderProducts, delivery 조회)
-       return orderRepository.findPaidOrderByOrderIdAndUserIdWithOpAndD(orderId, userId).orElseThrow(() -> {
+        return orderRepository.findPaidOrderByOrderIdAndUserIdWithOpAndD(orderId, userId).orElseThrow(() -> {
             log.debug("요청된 주문이 존재하지 않습니다. userId = {}, orderId = {}", userId, orderId);
             return new OrderException(ErrorCode.ORDER_NOT_FOUND, userId, orderId);
         });
@@ -215,7 +214,18 @@ public class OrderServiceImpl implements OrderService {
     private Order createOrder(Long userId, OrderRequestDto requestDto,
                               List<HotDealProductStockCheckResponseDto> hotDealProductStockCheckResponseDtos,
                               List<ProductStockCheckResponseDto> productStockCheckResponseDtos) {
+        // 총 주문 가격 구하기
         List<OrderProduct> orderProducts = new ArrayList<>();
+
+        int hotDealProductAmount = hotDealProductStockCheckResponseDtos.stream()
+                .mapToInt(product -> product.getRequestQuantity() * product.getHotDealPrice())
+                .sum();
+        int productAmount = hotDealProductStockCheckResponseDtos.stream()
+                .mapToInt(product -> product.getRequestQuantity() * product.getHotDealPrice())
+                .sum();
+
+        int amount = hotDealProductAmount + productAmount;
+
         // OrderProduct 생성
         // hotDealProduct 에 대한 주문 생성
         orderProducts.addAll(hotDealProductStockCheckResponseDtos.stream()
@@ -226,7 +236,7 @@ public class OrderServiceImpl implements OrderService {
                         product.getProductTitle(),
                         product.getRequestQuantity(),
                         product.getHotDealPrice()))
-                .collect(Collectors.toList()));
+                .toList());
 
         // product 에 대한 주문 생성
         orderProducts.addAll(productStockCheckResponseDtos.stream()
@@ -235,15 +245,16 @@ public class OrderServiceImpl implements OrderService {
                         product.getTitle(),
                         product.getQuantity(),
                         product.getPrice()))
-                .collect(Collectors.toList()));
+                .toList());
 
         // Delivery 생성
         Address address = Address.create(requestDto.getCity(), requestDto.getStreet(), requestDto.getZipCode());
         Delivery delivery = Delivery.create(address);
         // Order 생성
-        Order order = Order.create(userId, delivery, orderProducts);
+        Order order = Order.create(userId, delivery, orderProducts, amount);
         return orderRepository.save(order);
     }
+
 
     // 상품 조회
     private List<ProductStockCheckResponseDto> fetchProductAndValidate(Long userId, List<OrderRequestDto.OrderProductRequest> products) {
@@ -286,13 +297,13 @@ public class OrderServiceImpl implements OrderService {
         List<ProductStockUpdateRequestDto> productStockUpdateRequestDtos = convertToProductStockUpdateDto(order);
 
         // product 없으면 empty List 반환 => productService 로 요청 보낼 필요 없음
-        if(productStockUpdateRequestDtos.isEmpty()) return new ArrayList<>();
+        if (productStockUpdateRequestDtos.isEmpty()) return new ArrayList<>();
 
         // product 재고 증가 feignClient 호출
         List<ProductStockUpdateResponseDto> productStockUpdateResponseDtos = resilience4JProductServiceClient.increaseStock(productStockUpdateRequestDtos);
 
         // circuitBreaker OPEN
-        if(productStockUpdateResponseDtos.isEmpty()){
+        if (productStockUpdateResponseDtos.isEmpty()) {
             log.debug("상품 증가 호출을 실패했습니다. userId = {}, orderId = {}, products = {}", userId, orderId, productStockUpdateResponseDtos);
             throw new OrderException(ErrorCode.ORDER_INCREASE_PRODUCT_FAILED, userId, orderId, productStockUpdateResponseDtos);
         }
@@ -306,13 +317,13 @@ public class OrderServiceImpl implements OrderService {
         List<HotDealProductStockUpdateRequestDto> hotDealProductStockUpdateRequestDtos = convertToHotDealProductStockUpdateDto(order);
 
         // hotDealProduct 없으면 empty List 반환 => hotDealService 로 요청 보낼 필요 없음
-        if(hotDealProductStockUpdateRequestDtos.isEmpty()) return new ArrayList<>();
+        if (hotDealProductStockUpdateRequestDtos.isEmpty()) return new ArrayList<>();
 
         // hotDealProduct 재고 증가 feignClient 호출
         List<HotDealProductStockUpdateResponseDto> hotDealProductStockUpdateResponseDtos = resilience4JHotDealServiceClient.increaseStock(hotDealProductStockUpdateRequestDtos);
 
         // circuitBreaker OPEN
-        if(hotDealProductStockUpdateResponseDtos.isEmpty()){
+        if (hotDealProductStockUpdateResponseDtos.isEmpty()) {
             log.debug("핫딜 상품 증가 호출을 실패했습니다. userId = {}, orderId = {}, hotDealProducts = {}", userId, orderId, hotDealProductStockUpdateResponseDtos);
             throw new OrderException(ErrorCode.ORDER_INCREASE_HOTDEAL_PRODUCT_FAILED, userId, orderId, hotDealProductStockUpdateResponseDtos);
         }
@@ -325,13 +336,13 @@ public class OrderServiceImpl implements OrderService {
         List<HotDealProductStockUpdateRequestDto> hotDealProductStockUpdateRequestDtos = convertToHotDealProductStockUpdateDto(order);
 
         // hotDealProduct 없으면 empty List 반환 => hotDealService 로 요청 보낼 필요 없음
-        if(hotDealProductStockUpdateRequestDtos.isEmpty()) return new ArrayList<>();
+        if (hotDealProductStockUpdateRequestDtos.isEmpty()) return new ArrayList<>();
 
         // hotDealProduct 재고 감소 feignClient 호출
         List<HotDealProductStockUpdateResponseDto> hotDealProductStockUpdateResponseDtos = resilience4JHotDealServiceClient.decreaseStock(hotDealProductStockUpdateRequestDtos);
 
         // circuitBreaker OPEN
-        if(hotDealProductStockUpdateResponseDtos.isEmpty()){
+        if (hotDealProductStockUpdateResponseDtos.isEmpty()) {
             log.debug("핫딜 상품 감소 호출을 실패했습니다. userId = {}, orderId = {}, hotDealProducts = {}", userId, orderId, hotDealProductStockUpdateResponseDtos);
             throw new OrderException(ErrorCode.ORDER_DECREASE_HOTDEAL_PRODUCT_FAILED, userId, orderId, hotDealProductStockUpdateResponseDtos);
         }

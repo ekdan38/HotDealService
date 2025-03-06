@@ -29,6 +29,9 @@ public class Order extends TimeEntity {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderProduct> orderProducts = new ArrayList<>();
 
+    @Column(nullable = false)
+    private Integer amount;
+
     @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private Delivery delivery;
 
@@ -39,15 +42,17 @@ public class Order extends TimeEntity {
     @Column(nullable = true)
     private LocalDateTime paidAt;
 
+
     private Order(Long userId) {
         this.userId = userId;
         this.status = OrderStatus.PENDING_PAYMENT;
     }
 
     // == 생성 메서드 ==
-    public static Order create(Long userId, Delivery delivery, List<OrderProduct> orderProducts){
+    public static Order create(Long userId, Delivery delivery, List<OrderProduct> orderProducts, Integer amount){
         Order order = new Order(userId);
         order.addOrderProducts(orderProducts);
+        order.amount = amount;
         order.setDelivery(delivery);
         return order;
     }

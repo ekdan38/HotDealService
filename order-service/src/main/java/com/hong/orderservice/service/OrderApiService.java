@@ -35,10 +35,7 @@ public class OrderApiService {
         List<orderHotDealProductDto> hotDealProducts = extractHotDealProducts(order);
         List<OrderProductDto> products = extractProducts(order);
 
-        // 결제 가격 연산
-        int amount = getAmount(order);
-
-        return new OrderFetchResponseDto(userId, orderId, amount, order.getStatus().name(), hotDealProducts, products);
+        return new OrderFetchResponseDto(userId, orderId, order.getAmount(), order.getStatus().name(), hotDealProducts, products);
     }
 
     // payment 처리 기반 order, delivery update 처리
@@ -93,7 +90,7 @@ public class OrderApiService {
 
     // order 조회, 검증
     private Order fetchOrderAndValidate(Long orderId, Long userId) {
-        Order order = orderRepository.findOrderWithOrderProductsByUserIdAndOrderId(userId, orderId).orElseThrow(() -> {
+        Order order = orderRepository.findByOrderIdAndUserId(userId, orderId).orElseThrow(() -> {
             log.debug("요청된 주문이 존재하지 않습니다. userId = {}, orderId = {}", userId, orderId);
             return new OrderException(ErrorCode.ORDER_NOT_FOUND, userId, orderId);
         });
