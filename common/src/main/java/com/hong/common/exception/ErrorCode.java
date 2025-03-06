@@ -94,28 +94,31 @@ public enum ErrorCode {
     PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "PAYMENT_00",
             "존재 하지 않는 결제입니다. userId = %s, paymentId = %s"),
 
-    PAYMENT_EXPIRED(HttpStatus.BAD_REQUEST, "PAYMENT_01",
+    PAYMENT_EXISTS(HttpStatus.BAD_REQUEST, "PAYMENT_01",
+            "이미 존재 하는 결제 입니다. paymentId = %s, orderId = %s"),
+
+    PAYMENT_EXPIRED(HttpStatus.BAD_REQUEST, "PAYMENT_02",
             "만료된 결제입니다. userId = %s, paymentId = %s"),
 
-    PAYMENT_COMPLETED(HttpStatus.BAD_REQUEST, "PAYMENT_02",
+    PAYMENT_COMPLETED(HttpStatus.BAD_REQUEST, "PAYMENT_03",
             "이미 완료된 결제입니다. userId = %s, paymentId = %s"),
 
-    PAYMENT_PG_FAILED(HttpStatus.BAD_REQUEST, "PAYMENT_03",
+    PAYMENT_PG_FAILED(HttpStatus.BAD_REQUEST, "PAYMENT_04",
             "결제 잔액이 부족합니다. userId = %s, paymentId = %s"),
 
-    PAYMENT_PARSE_RESPONSE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_04",
+    PAYMENT_PARSE_RESPONSE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_05",
             "feign Client 에러 응답 파싱 실패했습니다."),
 
-    PAYMENT_ORDER_SERVICE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_05",
+    PAYMENT_ORDER_SERVICE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_06",
             "%s"),
 
-    PAYMENT_FETCH_ORDER_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_06",
+    PAYMENT_FETCH_ORDER_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_07",
             "주문 조회 호출을 실패했습니다. userId = %s, orderId = %s"),
 
-    PAYMENT_UPDATE_ORDER_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_07",
+    PAYMENT_UPDATE_ORDER_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_08",
             "주문 상태 업데이트 호출을 실패했습니다. userId = %s, orderId = %s"),
 
-    PAYMENT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_08",
+    PAYMENT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_09",
             "결제를 실패했습니다. userId = %s, paymentId = %s"),
 
     PAYMENT_DECREASE_HOTDEAL_PRODUCT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_09",
@@ -129,7 +132,6 @@ public enum ErrorCode {
 
     PAYMENT_INCREASE_PRODUCT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_12",
             "상품 재고 증가 호출을 실패했습니다. userId = %s, orderId = %s, products = %s"),
-
 
 
     // Delivery
