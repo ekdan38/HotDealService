@@ -47,6 +47,8 @@ dependencies {
     implementation group: 'org.redisson', name: 'redisson-spring-boot-starter', version: '3.41.0'
     // redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    // embedded-redis
+    implementation group: 'it.ozimov', name: 'embedded-redis', version: '0.7.2'
     // p6spy
     implementation 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.9.0'
     // lombok
