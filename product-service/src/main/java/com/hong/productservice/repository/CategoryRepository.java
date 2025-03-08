@@ -32,9 +32,9 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     List<Category> findCategoryByCategoryIdWithChildren(@Param("categoryId") Long categoryId);
 
     // categoryId 로 조회 하면서 join 으로 CategoryProduct 조회
-    @Query("SELECT c " +
+    @Query("SELECT CASE WHEN COUNT(cp) > 0 THEN true ELSE false END " +
             "FROM Category c " +
-            "LEFT JOIN CategoryProduct cp " +
+            "LEFT JOIN CategoryProduct cp ON cp.category = c " +
             "WHERE c.id = :categoryId")
     boolean existsProductCategoryByCategoryId(@Param("categoryId") Long categoryId);
 

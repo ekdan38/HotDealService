@@ -1,13 +1,10 @@
 package com.hong.productservice.repository;
 
-import com.hong.productservice.domain.Product;
 import com.hong.productservice.domain.Wishlist;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.List;
 import java.util.Optional;
 
 public interface WishlistRepository extends JpaRepository<Wishlist, Long> {
@@ -15,7 +12,7 @@ public interface WishlistRepository extends JpaRepository<Wishlist, Long> {
     Optional<Wishlist>findByUserId(Long userId);
 
     // wishlist, wishlistProduct fetch join
-    @Query("SELECT w FROM Wishlist w JOIN FETCH w.wishlistProducts WHERE w.id = :userId")
+    @Query("SELECT w FROM Wishlist w JOIN FETCH w.wishlistProducts WHERE w.userId = :userId")
     Optional<Wishlist> findByUserIdWithProducts(@Param("userId") Long userId);
 
     // userId로 wishlist 조회 하면서 wishlistProducts, product fetch join

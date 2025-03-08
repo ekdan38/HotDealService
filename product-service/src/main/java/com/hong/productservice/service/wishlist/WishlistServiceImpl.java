@@ -10,7 +10,7 @@ import com.hong.productservice.dto.wishlist.WishlistPagingResponseDto;
 import com.hong.productservice.dto.wishlist.WishlistProductDto;
 import com.hong.productservice.dto.wishlist.WishlistResponseDto;
 import com.hong.productservice.repository.WishlistRepository;
-import com.hong.productservice.repository.wishlistProductRepository;
+import com.hong.productservice.repository.WishlistProductRepository;
 import com.hong.productservice.service.product.ProductApiService;
 import com.hong.productservice.web.dto.wishlist.WishlistRequestDto;
 import com.hong.productservice.web.dto.wishlist.WishlistUpdateRequestDto;
@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class WishlistServiceImpl implements WishlistService {
 
-    private final wishlistProductRepository wishlistProductRepository;
+    private final WishlistProductRepository wishlistProductRepository;
     private final WishlistRepository wishlistRepository;
     private final ProductApiService productApiService;
 

@@ -8,7 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
-public interface wishlistProductRepository extends JpaRepository<WishlistProduct, Long> {
+public interface WishlistProductRepository extends JpaRepository<WishlistProduct, Long> {
 
 
     @Query("SELECT wp " +
