@@ -96,7 +96,6 @@ public class CategoryServiceImpl implements CategoryService {
             }
         });
 
-        // 최상위 category 만 반환
         return categories.stream()
                 .filter(category -> category.getParent() == null)
                 .map(category -> categoryMap.get(category.getId()))
@@ -139,7 +138,10 @@ public class CategoryServiceImpl implements CategoryService {
     public CategoryResponseDto updateCategory(Long categoryId, CategoryRequestDto requestDto) {
         // category 조회
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new CategoryException(ErrorCode.CATEGORY_PARENT_NOT_FOUND));
+                .orElseThrow(() -> {
+                        log.debug("요청된 카테고리가 존재하지 않습니다. categoryId = {}", categoryId);
+                        return new CategoryException(ErrorCode.CATEGORY_NOT_FOUND, categoryId);
+                });
 
         String newTitle = requestDto.getTitle();
 
@@ -157,7 +159,10 @@ public class CategoryServiceImpl implements CategoryService {
     public CategoryResponseDto deleteCategory(Long categoryId) {
         // category 조회
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new CategoryException(ErrorCode.CATEGORY_NOT_FOUND));
+                .orElseThrow(() -> {
+                    log.debug("요청된 카테고리가 존재 하지 않습니다. categoryId = {}", categoryId);
+                    return new CategoryException(ErrorCode.CATEGORY_NOT_FOUND, categoryId);
+                });
 
         // childCategory 존재 하는지 확인
         if (!category.getChilds().isEmpty()) {
@@ -189,7 +194,8 @@ public class CategoryServiceImpl implements CategoryService {
 
         // 조회한 category empty 이면
         if(categoryList.isEmpty()){
-            throw new CategoryException(ErrorCode.CATEGORY_NOT_FOUND);
+            log.debug("요청된 카테고리가 존재 하지 않습니다. categoryIds = {}", categoryIds);
+            throw new CategoryException(ErrorCode.CATEGORY_NOT_FOUND, categoryIds);
         }
 
         return categoryList;
@@ -227,14 +233,16 @@ public class CategoryServiceImpl implements CategoryService {
         if(category.getParent() == null){
             if(categoryRepository.existsByParentIsNullAndTitle(newTitle)) {
                 log.error("이미 존재 하는 최상위 카테고리 입니다. 등록 시도 = {}", newTitle);
-                throw new CategoryException(ErrorCode.CATEGORY_ROOT_EXISTS);
+                throw new CategoryException(ErrorCode.CATEGORY_ROOT_EXISTS, newTitle);
             }
         }
         else{
             // child category 경우, 동일 parent category 중에서 newTitle 이 중복 되는지 검증
             if (categoryRepository.existsByTitleAndParentId(newTitle, category.getParent().getId())) {
-                log.error("부모 카테고리 아래 이미 존재하는 카테고리입니다. 등록 시도 = {}", newTitle);
-                throw new CategoryException(ErrorCode.CATEGORY_PARENT_UNDER_CHILD_EXISTS);
+                log.error("부모 카테고리에 이미 존재하는 자식 카테고리 입니다.parent's Title = {}, child's Title = {}",
+                        category.getParent().getTitle(), newTitle);
+                throw new CategoryException(ErrorCode.CATEGORY_PARENT_UNDER_CHILD_EXISTS,
+                        category.getParent().getTitle(), newTitle);
             }
         }
     }
