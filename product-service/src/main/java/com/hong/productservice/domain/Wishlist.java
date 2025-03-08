@@ -12,7 +12,9 @@ import java.util.List;
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-public class Wishlist extends TimeEntity {
+@Table(name = "wishlist", indexes = {
+        @Index(name = "idx_user_id", columnList = "userId")
+})public class Wishlist extends TimeEntity {
 
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
