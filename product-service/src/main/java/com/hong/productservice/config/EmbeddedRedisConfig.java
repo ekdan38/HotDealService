@@ -4,37 +4,52 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.PreDestroy;
+import org.redisson.Redisson;
+import org.redisson.api.RedissonClient;
+import org.redisson.config.Config;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
-import org.springframework.core.env.Environment;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+import redis.embedded.RedisServer;
 
-@Profile("!test")
+@Profile("test")
 @Configuration
-@RequiredArgsConstructor
-public class RedisConfig {
+public class EmbeddedRedisConfig {
+    @Value("${spring.data.redis.host:localhost}")
+    private String redisHost;
 
-    private final Environment env;
-    private String host;
-    private int port;
+    @Value("${spring.data.redis.port:6379}")
+    private int redisPort;
+
+
+    private RedisServer redisServer;
 
     @PostConstruct
-    public void init(){
-        this.host = env.getProperty("spring.data.redis.host");
-        this.port = Integer.parseInt(env.getProperty("spring.data.redis.port"));
+    public void redisServer() {
+        redisServer = RedisServer.builder()
+                .port(redisPort)
+                .setting("maxmemory 128M")
+                .build();
+            redisServer.start();
     }
 
-    // Lettuce 라이브러리 활용해 redis 연결을 관리 하는 객체 생성, redis 서버에 대한 정보(host, port) 설정
+    @PreDestroy
+    public void stopRedis() {
+        if (redisServer != null) {
+            redisServer.stop();
+        }
+    }
     @Bean
     public LettuceConnectionFactory redisConnectionFactory(){
-        return new LettuceConnectionFactory(new RedisStandaloneConfiguration(host, port));
+        return new LettuceConnectionFactory(new RedisStandaloneConfiguration(redisHost, redisPort));
     }
 
     @Bean
@@ -57,5 +72,12 @@ public class RedisConfig {
         template.setHashValueSerializer(serializer);
         template.afterPropertiesSet();
         return template;
+    }
+
+    @Bean
+    public RedissonClient redissonClient() {
+        Config config = new Config();
+        config.useSingleServer().setAddress("redis://" + redisHost + ":" + redisPort);
+        return Redisson.create(config);
     }
 }
