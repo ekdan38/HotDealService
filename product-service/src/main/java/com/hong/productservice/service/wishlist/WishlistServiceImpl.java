@@ -140,8 +140,10 @@ public class WishlistServiceImpl implements WishlistService {
     @Transactional
     @Override
     public Long deleteWishlist(Long userId) {
-        Wishlist wishlist = wishlistRepository.findByUserId(userId)
-                .orElseThrow(() -> new WishlistException(ErrorCode.WISHLIST_NOT_FOUND));
+        Wishlist wishlist = wishlistRepository.findByUserId(userId).orElseThrow(() -> {
+                    log.debug("위시리스트가 존재하지 않습니다. userId = {}", userId);
+                    return new WishlistException(ErrorCode.WISHLIST_NOT_FOUND, userId);
+                });
 
         // Cascade, orphanRemoval 삭제
         Long wishlistId = wishlist.getId();
