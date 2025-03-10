@@ -20,6 +20,9 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import redis.embedded.RedisServer;
 
+import java.io.IOException;
+import java.net.Socket;
+
 @Profile("test")
 @Configuration
 public class EmbeddedRedisConfig {
@@ -29,16 +32,18 @@ public class EmbeddedRedisConfig {
     @Value("${spring.data.redis.port:6379}")
     private int redisPort;
 
-
     private RedisServer redisServer;
 
     @PostConstruct
     public void redisServer() {
-        redisServer = RedisServer.builder()
-                .port(redisPort)
-                .setting("maxmemory 128M")
-                .build();
+        if(!isRedisRunning()){
+            System.setProperty("redis.embedded.redisExecutable", "C:\\embeddedRedis\\redis-server.exe");
+            redisServer = RedisServer.builder()
+                    .port(redisPort)
+                    .setting("maxmemory 128M")
+                    .build();
             redisServer.start();
+        }
     }
 
     @PreDestroy
@@ -47,6 +52,15 @@ public class EmbeddedRedisConfig {
             redisServer.stop();
         }
     }
+
+    private boolean isRedisRunning() {
+        try (Socket socket = new Socket(redisHost, redisPort)) {
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
     @Bean
     public LettuceConnectionFactory redisConnectionFactory(){
         return new LettuceConnectionFactory(new RedisStandaloneConfiguration(redisHost, redisPort));
