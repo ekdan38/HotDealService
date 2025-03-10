@@ -19,7 +19,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.test.context.TestPropertySource;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.ArrayList;
@@ -34,7 +34,6 @@ import static org.mockito.Mockito.when;
 
 
 @ExtendWith(MockitoExtension.class)
-@TestPropertySource(properties = "spring.cache.type=none")
 class ProductServiceImplUnitTest {
 
     @InjectMocks
@@ -43,6 +42,8 @@ class ProductServiceImplUnitTest {
     ProductRepository productRepository;
     @Mock
     CategoryService categoryService;
+    @Mock
+    RedisTemplate<String, Object> redisTemplate;
 
     private Category category;
     @BeforeEach
@@ -51,16 +52,10 @@ class ProductServiceImplUnitTest {
         ReflectionTestUtils.setField(category, "id", 1L);
     }
 
-    private Long generateProducts() {
-        Long maxId = 0L;
-        for(long i = 1; i <= 10; i++){
-            Product product;
-            if(i % 2 == 0) product = Product.create("EvenProduct" + i, 100, 10, List.of(CategoryProduct.create(category)));
-            else product = Product.create("OddProduct" + i, 100, 10, List.of(CategoryProduct.create(category)));
-            productRepository.save(product);
-            if(i == 10) maxId = product.getId();
-        }
-        return maxId;
+    private Product createTestProduct(long id, String title, int price, int stock, List<CategoryProduct> cp) {
+        Product product = Product.create(title, price, stock, cp);
+        ReflectionTestUtils.setField(product, "id", id);
+        return product;
     }
 
     @Test
@@ -71,8 +66,7 @@ class ProductServiceImplUnitTest {
         Long productId = 1L;
         int price = 1000;
         int stock = 1000;
-        Product product = Product.create(productTitle, price, stock, List.of(CategoryProduct.create(category)));
-        ReflectionTestUtils.setField(product, "id", productId);
+        Product product = createTestProduct(productId, productTitle, price, stock, List.of(CategoryProduct.create(category)));
         List<CategoryDto> categoryDtos = List.of(new CategoryDto(1L));
 
         ProductDto requestDto = new ProductDto(productTitle, price, stock, categoryDtos);
@@ -96,11 +90,8 @@ class ProductServiceImplUnitTest {
     public void createProduct_failure_exists_title(){
         //given
         String productTitle = "product";
-        Long productId = 1L;
         int price = 1000;
         int stock = 1000;
-        Product product = Product.create(productTitle, price, stock, List.of(CategoryProduct.create(category)));
-        ReflectionTestUtils.setField(product, "id", productId);
         List<CategoryDto> categoryDtos = List.of(new CategoryDto(1L));
 
         ProductDto requestDto = new ProductDto(productTitle, price, stock, categoryDtos);
@@ -145,8 +136,8 @@ class ProductServiceImplUnitTest {
         String productTitle = "product";
         int price = 1000;
         int stock = 100;
-        Product product = Product.create(productTitle, price, stock, List.of());
-        ReflectionTestUtils.setField(product, "id", productId);
+        Product product = createTestProduct(productId, productTitle, price, stock, List.of());
+
 
         when(productRepository.findProductByProductIdWithCategoryProducts(productId)).thenReturn(Optional.of(product));
         // when
@@ -177,18 +168,19 @@ class ProductServiceImplUnitTest {
         String productTitle = "product";
         int price = 1000;
         int stock = 100;
-        Product product = Product.create("originalProduct", 10, 10, List.of());
-        ReflectionTestUtils.setField(product, "id", productId);
-
         String categoryTitle = "category";
-        Product eiditedProduct = Product.create(productTitle, price, stock,
+
+        Product product = createTestProduct(productId, "originalTitle", price, stock,
                 List.of(CategoryProduct.create(Category.create(categoryTitle))));
-        ReflectionTestUtils.setField(eiditedProduct, "id", productId);
+
+        Product updatedProduct = Product.create(productTitle, price, stock,
+                List.of(CategoryProduct.create(Category.create(categoryTitle))));
+        ReflectionTestUtils.setField(updatedProduct, "id", productId);
         Long targetId = product.getId();
 
         when(productRepository.findProductByProductIdWithCategoryProducts(productId)).thenReturn(Optional.of(product));
         when(productRepository.existsByTitle(any(String.class))).thenReturn(false);
-        when(productRepository.save(any(Product.class))).thenReturn(eiditedProduct);
+        when(productRepository.save(any(Product.class))).thenReturn(updatedProduct);
         ProductDto requestDto = new ProductDto(productTitle, price, stock, List.of());
 
         //when
@@ -210,7 +202,8 @@ class ProductServiceImplUnitTest {
         String productTitle = "product";
         int price = 1000;
         int stock = 100;
-        Product product = Product.create("originalProduct", 10, 10, List.of());
+        Product product = createTestProduct(productId, "originalProduct", 10, 10, List.of());
+
         ReflectionTestUtils.setField(product, "id", productId);
         Long targetId = product.getId();
 
@@ -229,8 +222,8 @@ class ProductServiceImplUnitTest {
         String productTitle = "product";
         int price = 1000;
         int stock = 100;
-        Product product = Product.create("originalProduct", 10, 10, List.of());
-        ReflectionTestUtils.setField(product, "id", productId);
+        Product product = createTestProduct(productId, "originalProduct", 10, 10, List.of());
+
         Long targetId = product.getId();
 
         when(productRepository.findProductByProductIdWithCategoryProducts(productId)).thenReturn(Optional.of(product));
@@ -252,8 +245,7 @@ class ProductServiceImplUnitTest {
         int stock = 100;
         String categoryTitle = "category";
 
-        Product product = Product.create(productTitle, price, stock,
-                List.of(CategoryProduct.create(Category.create(categoryTitle))));
+        Product product = Product.create(productTitle, price, stock, List.of(CategoryProduct.create(Category.create(categoryTitle))));
         ReflectionTestUtils.setField(product, "id", productId);
         Long targetId = product.getId();
 
