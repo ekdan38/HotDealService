@@ -16,8 +16,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +32,7 @@ public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryService categoryService;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     // product 생성
     @Transactional
@@ -94,14 +95,11 @@ public class ProductServiceImpl implements ProductService {
     // product 수정
     @Transactional
     @Override
-    @Caching(evict = {
-            @CacheEvict(cacheNames = "getProducts", allEntries = true),
-            @CacheEvict(cacheNames = "getProduct", key = "'products:' + #productId")
-    })
+    @CacheEvict(cacheNames = "getProduct", key = "'products:' + #productId")
     public ProductResponseDto updateProduct(Long productId, ProductDto requestDto) {
         // fetch join 으로 product, categoryProduct, category 조회
         Product product = fetchProductWithCategoryAndCategoryProductsAndValidate(productId);
-
+        List<CategoryProduct> categoryProducts = product.getCategoryProducts();
         // title 수정 요청 시에 title 이 이미 존재 하는지 검증
         if (!product.getTitle().equals(requestDto.getTitle())) {
             if (productRepository.existsByTitle(requestDto.getTitle())) {
@@ -113,24 +111,35 @@ public class ProductServiceImpl implements ProductService {
         updateProductAndSetAssociations(requestDto, product);
         // product 명시적으로 저장
         Product updatedProduct = productRepository.save(product);
+        // categoryId 같은 getProducts() 캐싱 삭제
+
+        categoryProducts.forEach(cp -> {
+            String pattern = "getProducts::products:*:categoryId:" + cp.getCategory().getId() + ":*";
+            redisTemplate.delete(redisTemplate.keys(pattern));
+        });
+
         return convertProductResponseDtoWithStock(updatedProduct);
     }
-
 
     // product 삭제
     @Transactional
     @Override
-    @Caching(evict = {
-            @CacheEvict(cacheNames = "getProducts", allEntries = true),
-            @CacheEvict(cacheNames = "getProduct", key = "'products:' + #productId")
-    })
+    @CacheEvict(cacheNames = "getProduct", key = "'products:' + #productId")
     public ProductResponseDto deleteProduct(Long productId) {
         // fetch join 으로 product, categoryProduct, category 조회
         Product product = fetchProductWithCategoryAndCategoryProductsAndValidate(productId);
+        List<CategoryProduct> categoryProducts = product.getCategoryProducts();
 
         // 상품 삭제
         // cascade, orphanRemoval 로 categoryProducts 삭제
         productRepository.delete(product);
+
+        // categoryId 같은 getProducts() 캐싱 삭제
+        categoryProducts.forEach(cp -> {
+            String pattern = "getProducts::products:*:categoryId:" + cp.getCategory().getId() + ":*";
+            redisTemplate.delete(redisTemplate.keys(pattern));
+        });
+
         return convertProductResponseDtoWithStock(product);
     }
 
