@@ -179,7 +179,7 @@ public class ProductApiService {
         }
         if(!insufficientStockProductIds.isEmpty()){
             log.debug("요청 수량보다 재고가 부족합니다. productIds = {}", insufficientStockProductIds);
-            throw new HotDealProductException(ErrorCode.PRODUCT_STOCK_NOT_ENOUGH, insufficientStockProductIds);
+            throw new ProductException(ErrorCode.PRODUCT_STOCK_NOT_ENOUGH, insufficientStockProductIds);
         }
         return productStockCheckResponseDto;
     }
