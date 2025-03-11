@@ -63,7 +63,7 @@ class ProductControllerUnitTest {
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andDo(print())
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.message").value("상품 생성 완료"))
                 .andExpect(jsonPath("$.data.id").value(productId))
                 .andExpect(jsonPath("$.data.title").value(title))

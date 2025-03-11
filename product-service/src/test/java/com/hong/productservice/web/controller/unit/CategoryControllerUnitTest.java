@@ -53,7 +53,7 @@ class CategoryControllerUnitTest {
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andDo(print())
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.message").value("최상위 카테고리 생성 완료"))
                 .andExpect(jsonPath("$.data.id").value(categoryId))
                 .andExpect(jsonPath("$.data.title").value(categoryTitle));
@@ -97,7 +97,7 @@ class CategoryControllerUnitTest {
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andDo(print())
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.message").value("자식 카테고리 생성 완료"))
                 .andExpect(jsonPath("$.data.id").value(categoryId))
                 .andExpect(jsonPath("$.data.title").value(categoryTitle))
@@ -212,5 +212,7 @@ class CategoryControllerUnitTest {
                 .andExpect(jsonPath("$.data.id").value(categoryId))
                 .andExpect(jsonPath("$.data.title").value(categoryTitle));
     }
+
+
 
 }
