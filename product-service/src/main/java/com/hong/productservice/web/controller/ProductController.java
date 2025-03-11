@@ -8,6 +8,7 @@ import com.hong.productservice.service.product.ProductService;
 import com.hong.productservice.web.dto.product.ProductRequestDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
@@ -45,7 +46,7 @@ public class ProductController {
 
         // 응답 설정
         ResponseDto<ProductResponseDto> responseDto = new ResponseDto<>("상품 생성 완료", resultDto);
-        return ResponseEntity.ok().body(responseDto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
     }
 
     // product 페이징 조회
