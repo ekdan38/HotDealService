@@ -1,4 +1,4 @@
-package com.hong.productservice.web.controller;
+package com.hong.productservice.web.controller.unit;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,6 +8,7 @@ import com.hong.common.dto.ProductStockUpdateRequestDto;
 import com.hong.common.dto.ProductStockUpdateResponseDto;
 import com.hong.productservice.dto.product.ProductStockDto;
 import com.hong.productservice.service.product.ProductApiService;
+import com.hong.productservice.web.controller.ProductApiController;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

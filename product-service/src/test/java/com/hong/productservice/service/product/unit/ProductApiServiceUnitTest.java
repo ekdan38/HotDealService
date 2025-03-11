@@ -1,4 +1,4 @@
-package com.hong.productservice.service.product;
+package com.hong.productservice.service.product.unit;
 
 import com.hong.common.dto.ProductStockCheckRequestDto;
 import com.hong.common.dto.ProductStockCheckResponseDto;
@@ -10,6 +10,7 @@ import com.hong.productservice.dto.product.ProductCacheDto;
 import com.hong.productservice.dto.product.ProductStockDto;
 import com.hong.productservice.dto.product.ProductStockProjection;
 import com.hong.productservice.repository.ProductRepository;
+import com.hong.productservice.service.product.ProductApiService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

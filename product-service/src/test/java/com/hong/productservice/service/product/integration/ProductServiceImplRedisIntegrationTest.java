@@ -1,4 +1,4 @@
-package com.hong.productservice.service.product;
+package com.hong.productservice.service.product.integration;
 
 import com.hong.productservice.domain.Category;
 import com.hong.productservice.domain.CategoryProduct;
@@ -10,6 +10,7 @@ import com.hong.productservice.dto.product.ProductPagingResponseDto;
 import com.hong.productservice.dto.product.ProductResponseDto;
 import com.hong.productservice.repository.CategoryRepository;
 import com.hong.productservice.repository.ProductRepository;
+import com.hong.productservice.service.product.ProductServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

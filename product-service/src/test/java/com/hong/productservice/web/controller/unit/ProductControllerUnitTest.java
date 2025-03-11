@@ -1,4 +1,4 @@
-package com.hong.productservice.web.controller;
+package com.hong.productservice.web.controller.unit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hong.productservice.dto.category.CategoryDto;
@@ -8,6 +8,7 @@ import com.hong.productservice.dto.product.ProductResponseDto;
 import com.hong.productservice.dto.product.ProductStockDto;
 import com.hong.productservice.service.product.ProductApiService;
 import com.hong.productservice.service.product.ProductService;
+import com.hong.productservice.web.controller.ProductController;
 import com.hong.productservice.web.dto.product.ProductRequestDto;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

@@ -1,4 +1,4 @@
-package com.hong.productservice.service.product;
+package com.hong.productservice.service.product.integration;
 
 import com.hong.common.dto.ProductStockUpdateRequestDto;
 import com.hong.productservice.domain.Category;
@@ -6,6 +6,7 @@ import com.hong.productservice.domain.CategoryProduct;
 import com.hong.productservice.domain.Product;
 import com.hong.productservice.repository.CategoryRepository;
 import com.hong.productservice.repository.ProductRepository;
+import com.hong.productservice.service.product.ProductApiService;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

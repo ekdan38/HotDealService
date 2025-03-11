@@ -1,4 +1,4 @@
-package com.hong.productservice.service.product;
+package com.hong.productservice.service.product.integration;
 
 import com.hong.productservice.domain.Category;
 import com.hong.productservice.domain.CategoryProduct;
@@ -7,6 +7,7 @@ import com.hong.productservice.dto.product.ProductCacheDto;
 import com.hong.productservice.dto.product.ProductStockDto;
 import com.hong.productservice.repository.CategoryRepository;
 import com.hong.productservice.repository.ProductRepository;
+import com.hong.productservice.service.product.ProductApiService;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

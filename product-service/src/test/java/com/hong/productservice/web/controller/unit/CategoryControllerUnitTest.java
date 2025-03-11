@@ -1,9 +1,10 @@
-package com.hong.productservice.web.controller;
+package com.hong.productservice.web.controller.unit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hong.productservice.domain.Category;
 import com.hong.productservice.dto.category.CategoryResponseDto;
 import com.hong.productservice.service.category.CategoryService;
+import com.hong.productservice.web.controller.CategoryController;
 import com.hong.productservice.web.dto.cateogry.CategoryRequestDto;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
