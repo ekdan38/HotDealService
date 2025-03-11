@@ -1,6 +1,7 @@
 package com.hong.productservice.web.dto.product;
 
 import jakarta.validation.constraints.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -8,6 +9,7 @@ import java.util.List;
 
 @Data
 @NoArgsConstructor
+@AllArgsConstructor
 public class ProductRequestDto {
 
     @NotBlank(message = "title은 필수입니다.")

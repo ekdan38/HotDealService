@@ -6,6 +6,7 @@ import com.hong.productservice.service.category.CategoryService;
 import com.hong.productservice.web.dto.cateogry.CategoryRequestDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
@@ -36,7 +37,7 @@ public class CategoryController {
 
         // 응답 설정
         ResponseDto<CategoryResponseDto> responseDto = new ResponseDto<>("최상위 카테고리 생성 완료", resultDto);
-        return ResponseEntity.ok().body(responseDto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
     }
     // 자식 category 생성
     @PostMapping("/{parentCategoryId}/childcategories")
@@ -53,7 +54,7 @@ public class CategoryController {
 
         // 응답 설정
         ResponseDto<CategoryResponseDto> responseDto = new ResponseDto<>("자식 카테고리 생성 완료", resultDto);
-        return ResponseEntity.ok().body(responseDto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
     }
 
     // 전체 category 조회
