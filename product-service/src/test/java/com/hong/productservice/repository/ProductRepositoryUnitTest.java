@@ -1,5 +1,6 @@
 package com.hong.productservice.repository;
 
+import com.hong.productservice.config.JpaConfig;
 import com.hong.productservice.domain.Category;
 import com.hong.productservice.domain.CategoryProduct;
 import com.hong.productservice.domain.Product;
@@ -8,6 +9,7 @@ import com.hong.productservice.dto.product.ProductStockProjection;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageRequest;
 
 import java.util.ArrayList;
@@ -17,6 +19,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.*;
 
 @DataJpaTest
+@Import(JpaConfig.class)
 class ProductRepositoryUnitTest {
 
     @Autowired
