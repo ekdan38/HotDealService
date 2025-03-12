@@ -20,6 +20,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -52,7 +53,7 @@ public class HotDealScheduler {
             log.info("락 획득 성공 key = {}", lockKey);
             log.info("{} 인스턴스가 스케쥴링을 진행합니다.", instanceId);
 
-            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS);
 
             // hotDeal status 변경 (ACTIVE)
             hotDealRepository.updateScheduledToActive(now);

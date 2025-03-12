@@ -175,12 +175,14 @@ public class HotDealServiceImpl implements HotDealService {
         HotDeal hotDeal = fetchHotDealByIdWithHotDealProductsAndValidate(hotDealId);
 
         // HotDeal 삭제 (softDelete)
-        // 1. 핫딜 상품 남은 재고 원본 상품에 반영
-        // hotDealProducts 재고 감소 요청 Dto 변환
-        List<ProductStockUpdateRequestDto> increaseProductStockRequestDtos = hotDeal.getHotDealProducts().stream()
+        // 핫딜 상품 남은 재고 원본 상품에 반영 및 핫딜 상품 재고 0으로 변경
+        List<ProductStockUpdateRequestDto> increaseProductStockRequestDtos = hotDeal.getHotDealProducts()
+                .stream()
                 .map(hp -> new ProductStockUpdateRequestDto(hp.getProductId(), hp.getStock()))
                 .collect(Collectors.toList());
-        // 2. 핫딜 상품 남은 재고 원본 상품에 재고 감소 요청
+        hotDeal.getHotDealProducts().forEach(hp -> hp.decreaseStock(hp.getStock()));
+
+        // 핫딜 상품 남은 재고 원본 상품에 재고 증가 요청
         increaseOriginalProductStockAndValidate(increaseProductStockRequestDtos);
 
         hotDeal.softDelete();
@@ -352,13 +354,9 @@ public class HotDealServiceImpl implements HotDealService {
                             int diffAmount = originalStock - requestedQuantity;
 
                             // 재고 증가
-                            if (diffAmount > 0) {
-                                increaseStocks.add(new ProductStockUpdateRequestDto(hp.getProductId(), diffAmount));
-                            }
+                            if (diffAmount > 0) increaseStocks.add(new ProductStockUpdateRequestDto(hp.getProductId(), diffAmount));
                             // 재고 감소
-                            else if (diffAmount < 0) {
-                                decreaseStocks.add(new ProductStockUpdateRequestDto(hp.getProductId(), Math.abs(diffAmount)));
-                            }
+                            else if (diffAmount < 0) decreaseStocks.add(new ProductStockUpdateRequestDto(hp.getProductId(), Math.abs(diffAmount)));
                             // hotDealProduct 에 update 처리
                             hotDeal.updateHotDealProducts(hp.getProductId(), requestedQuantity, rp.getDiscountRate());
                         }));
@@ -376,14 +374,6 @@ public class HotDealServiceImpl implements HotDealService {
                         .filter(Objects::nonNull)
                         .noneMatch(id -> id.equals(hp.getId())))
                 .toList();
-
-
-//        List<HotDealProduct> productsToDelete = hotDeal.getHotDealProducts().stream()
-//                .filter(hp -> requestDto.getProductInfos().stream()
-//                        .map(HotDealProductUpdateRequestDto::getHotDealProductId)
-//                        .filter(Objects::nonNull)
-//                        .noneMatch(id -> id.equals(hp.getId())))
-//                .toList();
 
         // 삭제 대상 hotDealProductIds 캐싱 부분 무효화 대상에 add
         hotDealProductIdsToEvict.addAll(
@@ -434,17 +424,7 @@ public class HotDealServiceImpl implements HotDealService {
     // 응답 Dto 변환
     private HotDealResponseDto convertHotDealResponseDtoWithHotDealProducts(HotDeal hotDeal) {
         List<HotDealProductResponseDto> hotDealProductResponseDtos = convertHotDealProductDto(hotDeal);
-        return new HotDealResponseDto(
-                hotDeal.getId(),
-                hotDeal.getUserId(),
-                hotDeal.getTitle(),
-                hotDeal.getDescription(),
-                hotDeal.getStartTime(),
-                hotDeal.getEndTime(),
-                hotDeal.getStatus().name(),
-                hotDeal.getDeleted(),
-                hotDealProductResponseDtos
-        );
+        return new HotDealResponseDto(hotDeal, hotDealProductResponseDtos);
     }
 
     // 응답 Dto 변환
@@ -452,6 +432,7 @@ public class HotDealServiceImpl implements HotDealService {
         return hotDeal.getHotDealProducts().stream()
                 .map(hp -> new HotDealProductResponseDto(
                         hp.getId(),
+                        hp.getProductId(),
                         hp.getProductTitle(),
                         hp.getOriginalPrice(),
                         hp.getHotDealPrice(),
@@ -462,14 +443,6 @@ public class HotDealServiceImpl implements HotDealService {
 
     // 응답 Dto 변환
     private HotDealResponseDto convertHotDealResponseDto(HotDeal hotDeal) {
-        return new HotDealResponseDto(
-                hotDeal.getId(),
-                hotDeal.getUserId(),
-                hotDeal.getTitle(),
-                hotDeal.getDescription(),
-                hotDeal.getStartTime(),
-                hotDeal.getEndTime(),
-                hotDeal.getStatus().name(),
-                hotDeal.getDeleted());
+        return new HotDealResponseDto(hotDeal);
     }
 }

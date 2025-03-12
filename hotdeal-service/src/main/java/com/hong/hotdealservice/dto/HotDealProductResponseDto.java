@@ -29,8 +29,9 @@ public class HotDealProductResponseDto {
         this.discountRate = discountRate;
     }
 
-    public HotDealProductResponseDto(Long hotDealProductId, String productTitle, Integer originalPrice, Integer hotDealPrice, Double discountRate, Integer stock) {
+    public HotDealProductResponseDto(Long hotDealProductId, Long originalProductId, String productTitle, Integer originalPrice, Integer hotDealPrice, Double discountRate, Integer stock) {
         this.hotDealProductId = hotDealProductId;
+        this.originalProductId = originalProductId;
         this.productTitle = productTitle;
         this.originalPrice = originalPrice;
         this.hotDealPrice = hotDealPrice;

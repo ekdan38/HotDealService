@@ -35,14 +35,6 @@ public interface HotDealRepository extends JpaRepository<HotDeal, Long> {
             "AND h.id = :hotDealId")
     Optional<HotDeal> findByIdWithHotDealProducts(@Param("hotDealId") Long hotDealId);
 
-
-    @Query("SELECT h " +
-            "FROM HotDeal h " +
-            "JOIN FETCH h.hotDealProducts hp " +
-            "WHERE h.deleted = false " +
-            "AND h.id IN :hotDealIds")
-    List<HotDeal> findByIdsWithHotDealProducts(@Param("hotDealIds") List<Long> hotDealIds);
-
     @Query("SELECT h " +
             "FROM HotDeal h " +
             "WHERE h.deleted = false " +

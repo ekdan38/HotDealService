@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Where;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -63,7 +64,7 @@ public class HotDeal extends TimeEntity {
     // == 생성 메서드 ==
     public static HotDeal create(Long adminId, String title, String description,
                                  LocalDateTime startTime, LocalDateTime endTime, List<HotDealProduct> hotDealProducts){
-        HotDeal hotDeal = new HotDeal(adminId, title, description, startTime, endTime);
+        HotDeal hotDeal = new HotDeal(adminId, title, description, startTime.truncatedTo(ChronoUnit.MILLIS), endTime.truncatedTo(ChronoUnit.MILLIS));
         hotDeal.addHotDealProducts(hotDealProducts);
         return hotDeal;
     }
@@ -85,7 +86,7 @@ public class HotDeal extends TimeEntity {
     //== HotDeal 이 현재 시각 기준으로 주문 처리가 가능한지 판단 ==
     public boolean canOrder(){
         if(this.deleted) return false;
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS);
         return now.isAfter(startTime) && now.isBefore(endTime);
     }
 
@@ -112,8 +113,8 @@ public class HotDeal extends TimeEntity {
     public void updateFields(String title, String description, LocalDateTime startTime, LocalDateTime endTime, HotDealStatus status){
         this.title = title;
         this.description = description;
-        this.startTime = startTime;
-        this.endTime = endTime;
+        this.startTime = startTime.truncatedTo(ChronoUnit.MILLIS);
+        this.endTime = endTime.truncatedTo(ChronoUnit.MILLIS);
         updateStatus(status);
     }
 }
