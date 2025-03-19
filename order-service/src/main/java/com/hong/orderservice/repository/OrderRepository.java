@@ -13,19 +13,26 @@ import java.util.Optional;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
-    // 결제 까지 완료한 주문들 조회 (Fetch Join 으로 쿼리 최적화 하기 위해서 List 로 반환 페이징)
-    // jpql은 limit 미지원 => pageable 사용 해서 size 적용
+    // 주문 조회 (Fetch Join 으로 orderProducts, delivery 조회)
     @Query("SELECT o " +
             "FROM Order o " +
             "JOIN FETCH o.orderProducts op " +
             "JOIN FETCH o.delivery " +
+            "WHERE o.id = :orderId " +
+            "AND o.userId = :userId ")
+    Optional<Order> findOrderWithDeliveryAndOpById(@Param("orderId") Long orderId,
+                                                   @Param("userId") Long userId);
+
+    // user 의 모든 주문 페이징 조회
+    @Query("SELECT o " +
+            "FROM Order o " +
+            "JOIN FETCH o.delivery " +
             "WHERE o.id < :cursor " +
-            "AND o.status = 'PAID' " +
-            "AND (:userId IS NULL OR o.userId = :userId) " +
+            "AND o.userId = :userId " +
             "ORDER BY o.id DESC")
     List<Order> findOrdersByCursorAndUserIdAndSize(@Param("cursor") Long cursor,
-                                                   @Param("userId") Long userId,
-                                                   Pageable pageable);
+                                                    @Param("userId") Long userId,
+                                                    Pageable pageable);
 
     // 결제 까지 완료한 주문 조회 (Fetch Join 으로 orderProducts, delivery 조회)
     @Query("SELECT o " +
@@ -38,7 +45,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Optional<Order> findPaidOrderByOrderIdAndUserIdWithOpAndD(@Param("orderId") Long orderId,
                                                     @Param("userId") Long userId);
 
-    // 주문 환불 처리 update 쿼리
+    // 환불 처리 후 1일 경과한 order status bulkUpdate
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Order o " +
             "SET o.status = 'RETURNED' " +
@@ -49,27 +56,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             "WHERE d.deliveryStatus = 'RETURN_REQUESTED' " +
             "AND d.returnStartedAt <= :oneDayAgo)")
     int bulkUpdateOrderStatusToReturned(@Param("oneDayAgo") LocalDateTime oneDayAgo);
-
-    // 특정 user 의 order 를 주문 환불 처리 update 쿼리
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("UPDATE Order o " +
-            "SET o.status = 'RETURNED' " +
-            "WHERE o.status = 'RETURN_REQUESTED' " +
-            "AND o.userId = :userId " +
-            "AND o.delivery.id IN (" +
-            "SELECT d.id " +
-            "FROM Delivery d " +
-            "WHERE d.deliveryStatus = 'RETURN_REQUESTED' " +
-            "AND d.returnStartedAt <= :oneDayAgo)")
-    int bulkUpdateOrderStatusToReturnedByUserId(@Param("userId") Long userId,
-                                                @Param("oneDayAgo") LocalDateTime oneDayAgo);
-
-
-    // userId 로 order 조회
-    @Query("SELECT o.id " +
-            "FROM Order o " +
-            "WHERE o.userId = :userId")
-    List<Long> findOrdersByUserId(@Param("userId") Long userId);
 
     // userId, orderId 로 order 조회 (Fetch Join Delivery)
     @Query("SELECT o " +
@@ -84,8 +70,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             "JOIN FETCH o.orderProducts " +
             "WHERE o.userId = :userId " +
             "AND o.id = :orderId")
-    Optional<Order> findByOrderIdAndUserId(@Param("userId") Long userId,
-                                           @Param("orderId") Long orderId);
+    Optional<Order> findByOrderIdAndUserIdWithOp(@Param("userId") Long userId,
+                                                 @Param("orderId") Long orderId);
 
 
 }
