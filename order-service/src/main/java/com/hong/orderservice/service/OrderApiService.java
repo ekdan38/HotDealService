@@ -12,6 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,33 +27,28 @@ public class OrderApiService {
 
     // Order 조회
     public OrderFetchResponseDto fetchOrder(OrderFetchRequestDto requestDto) {
-        Long orderId = requestDto.getOrderId();
-        Long userId = requestDto.getUserId();
+        // 1. order 조회, 검증
+        Order order = fetchOrderAndValidate(requestDto.getOrderId(), requestDto.getUserId());
 
-        // order 조회, 검증
-        Order order = fetchOrderAndValidate(orderId, userId);
-
-        // 주문 상품 추출
+        // 2. 주문 상품 추출
+        // hotDealProduct
         List<orderHotDealProductDto> hotDealProducts = extractHotDealProducts(order);
+        // product
         List<OrderProductDto> products = extractProducts(order);
 
-        return new OrderFetchResponseDto(userId, orderId, order.getAmount(), order.getStatus().name(), hotDealProducts, products);
+        // 3. 응답 Dto 변환
+        return convertToOrderFetchResponse(requestDto, order, hotDealProducts, products);
     }
 
     // payment 처리 기반 order, delivery update 처리
     @Transactional
     public Boolean updateOrderAndDelivery(OrderUpdateRequestDto requestDto){
-        Long orderId = requestDto.getOrderId();
-        Long userId = requestDto.getUserId();
+        // 1. order 조회 (delivery fetch join) 및 검증
+        Order order = fetchOrderWithDeliveryAndValidate(requestDto);
 
-        // order 조회 (fetch Join 으로 delivery 포함)
-        Order order = orderRepository.findByIdAndUserIdWithDelivery(orderId, userId).orElseThrow(() -> {
-            log.debug("요청된 주문이 존재하지 않습니다. userId = {}, orderId = {}", userId, orderId);
-            return new OrderException(ErrorCode.ORDER_NOT_FOUND, userId, orderId);
-        });
-
+        // 2. 결제 성공 실패 처리(requestDto 로 결제 성공 유무)
         // 결제 성공 처리
-        if(requestDto.getIsSuccess()) order.paymentSuccess();
+        if(requestDto.getIsSuccess()) order.paymentSuccess(LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS));
         // 결제 실패 처리
         else order.paymentFailed();
 
@@ -61,9 +58,8 @@ public class OrderApiService {
     // hotDealProducts 추출
     private List<orderHotDealProductDto> extractHotDealProducts(Order order) {
         return  order.getOrderProducts().stream()
-                .filter(op -> op.getHotDealId() != null)
+                .filter(op -> op.getHotDealProductId() != null && op.getProductId() == null)
                 .map(op -> new orderHotDealProductDto(
-                        op.getHotDealId(),
                         op.getHotDealProductId(),
                         op.getQuantity()))
                 .collect(Collectors.toList());
@@ -72,10 +68,27 @@ public class OrderApiService {
     // products 추출
     private List<OrderProductDto> extractProducts(Order order) {
         return order.getOrderProducts().stream()
+                .filter(op -> op.getProductId() != null && op.getHotDealProductId() == null)
                 .map(op -> new OrderProductDto(
                         op.getProductId(),
                         op.getQuantity()))
                 .collect(Collectors.toList());
+    }
+
+    private OrderFetchResponseDto convertToOrderFetchResponse(OrderFetchRequestDto requestDto,
+                                                              Order order,
+                                                              List<orderHotDealProductDto> hotDealProducts,
+                                                              List<OrderProductDto> products) {
+        return new OrderFetchResponseDto(requestDto.getUserId(), requestDto.getOrderId(),
+                order.getAmount(), order.getStatus().name(), hotDealProducts, products);
+    }
+
+    private Order fetchOrderWithDeliveryAndValidate(OrderUpdateRequestDto requestDto) {
+        Order order = orderRepository.findByIdAndUserIdWithDelivery(requestDto.getOrderId(),  requestDto.getUserId()).orElseThrow(() -> {
+            log.debug("요청된 주문이 존재하지 않습니다. userId = {}, orderId = {}",  requestDto.getUserId(), requestDto.getOrderId());
+            return new OrderException(ErrorCode.ORDER_NOT_FOUND,  requestDto.getUserId(), requestDto.getOrderId());
+        });
+        return order;
     }
 
     // 결제 가격 연산
@@ -90,7 +103,7 @@ public class OrderApiService {
 
     // order 조회, 검증
     private Order fetchOrderAndValidate(Long orderId, Long userId) {
-        Order order = orderRepository.findByOrderIdAndUserId(userId, orderId).orElseThrow(() -> {
+        Order order = orderRepository.findByOrderIdAndUserIdWithOp(userId, orderId).orElseThrow(() -> {
             log.debug("요청된 주문이 존재하지 않습니다. userId = {}, orderId = {}", userId, orderId);
             return new OrderException(ErrorCode.ORDER_NOT_FOUND, userId, orderId);
         });

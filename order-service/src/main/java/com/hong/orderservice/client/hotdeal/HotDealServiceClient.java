@@ -14,7 +14,7 @@ import java.util.List;
 public interface HotDealServiceClient {
 
     @PostMapping("/hotdeal-service/products")
-    List<HotDealProductStockCheckResponseDto> fetchProducts(@RequestBody List<HotDealProductStockCheckRequestDto> requestDtos);
+    List<HotDealProductStockCheckResponseDto> fetchProductsAndValidateStock(@RequestBody List<HotDealProductStockCheckRequestDto> requestDtos);
 
     @PostMapping("/hotdeal-service/decrease-stock")
     List<HotDealProductStockUpdateResponseDto> decreaseStock(@RequestBody List<HotDealProductStockUpdateRequestDto> requestDtos);

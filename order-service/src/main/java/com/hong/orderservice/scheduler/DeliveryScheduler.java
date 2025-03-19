@@ -2,7 +2,6 @@ package com.hong.orderservice.scheduler;
 
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.BusinessException;
-import com.hong.orderservice.domain.status.DeliveryStatus;
 import com.hong.orderservice.repository.DeliveryRepository;
 import com.hong.orderservice.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +16,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -36,7 +36,9 @@ public class DeliveryScheduler {
     @Scheduled(fixedRate = 14400000)
     @Transactional
     public void updateDeliveryStatus(){
+        // 1. 현재 스케쥴링 처리할 instanceId
         String instanceId = env.getProperty("eureka.instance.instance-id");
+        // 2. 여러 instance 가동시 하나의 instance 만 스케쥴링 처리
         String lockKey = "delivery_status_lock:";
         RLock lock = redissonClient.getLock(lockKey);
         try {
@@ -47,30 +49,27 @@ public class DeliveryScheduler {
             log.info("락 획득 성공 key = {}", lockKey);
             log.info("{} 인스턴스가 스케쥴링을 진행합니다.", instanceId);
 
-            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS);
 
             // 결제 완료, 주문 후 1일 경과한 배송 DELIVERING 로 상태 변경
             deliveryRepository.bulkUpdatePendingDeliveriesToDelivering(
                     now.minusDays(1),
-                    LocalDateTime.now(),
-                    DeliveryStatus.DELIVERABLE,
-                    DeliveryStatus.DELIVERING
+                    LocalDateTime.now()
             );
             log.info("Scheduler DELIVERING 로 상태 변경");
 
             // 결제 완료, 배송 시작 후 1일 경과한 배송 DELIVERED 로 상태 변경
             deliveryRepository.bulkUpdateDeliveringDeliveriesToDelivered(
                     now.minusDays(1),
-                    LocalDateTime.now(),
-                    DeliveryStatus.DELIVERING,
-                    DeliveryStatus.DELIVERED
+                    LocalDateTime.now()
             );
             log.info("Scheduler DELIVERED 로 상태 변경");
 
             // 배송 상태 반품 처리
             deliveryRepository.bulkUpdateDeliveryStatusReturned(
-                    now,
-                    now.minusDays(1));
+                    now.minusDays(1),
+                    now
+                   );
             log.info("Scheduler 배송 반품 처리");
 
             // 주문 상태 반품 처리
