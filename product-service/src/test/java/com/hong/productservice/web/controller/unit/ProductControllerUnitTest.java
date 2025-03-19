@@ -74,12 +74,19 @@ class ProductControllerUnitTest {
 
     @ParameterizedTest
     @CsvSource({
+            // 1. title 빈 문자열
             "'', 100, 10, '1', 'NotBlank', 'title은 필수입니다.'",
+            // 2. title 범위
             "'a', 100, 10, '1', 'Size', 'title은 2 글자에서 20 글자입니다.'",
+            // 3. price null
             "'product', null, 10, '1', 'NotNull', 'price는 필수입니다.'",
+            // 3. price 최소 값
             "'product', -1, 10, '1', 'Min', 'price는 0 이상이어야 합니다.'",
+            // 4. stock null
             "'product', 100, null, '1', 'NotNull', 'stock은 필수입니다.'",
+            // 5. stock 최소 값
             "'product', 100, -5, '1', 'Min', 'stock은 0 이상이어야 합니다.'",
+            // 6. categoryIds 1개 이상
             "'product', 100, 10, '', 'NotEmpty', 'categoryIds는 최소 1개 이상이어야 합니다.'"
     })
     @DisplayName("product 생성_실패_입력 값 오류")
@@ -105,6 +112,7 @@ class ProductControllerUnitTest {
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andDo(print())
                 .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("입력 값에 대한 검증을 실패했습니다."))
                 .andExpect(jsonPath("$.errors[?(@.code == '" + expectedError + "')].defaultMessage").value(expectedValue));
     }
 
@@ -196,12 +204,19 @@ class ProductControllerUnitTest {
 
     @ParameterizedTest
     @CsvSource({
+            // 1. title 빈 문자열
             "'', 100, 10, '1', 'NotBlank', 'title은 필수입니다.'",
+            // 2. title 범위
             "'a', 100, 10, '1', 'Size', 'title은 2 글자에서 20 글자입니다.'",
+            // 3. price null
             "'product', null, 10, '1', 'NotNull', 'price는 필수입니다.'",
+            // 4. price 최소 값
             "'product', -1, 10, '1', 'Min', 'price는 0 이상이어야 합니다.'",
+            // 5. stock null
             "'product', 100, null, '1', 'NotNull', 'stock은 필수입니다.'",
+            // 6. stock 최소 값
             "'product', 100, -5, '1', 'Min', 'stock은 0 이상이어야 합니다.'",
+            // 7. categoryIds 필수
             "'product', 100, 10, '', 'NotEmpty', 'categoryIds는 최소 1개 이상이어야 합니다.'"
     })
     @DisplayName("product 수정_실패_입력 값 오류")
@@ -228,6 +243,7 @@ class ProductControllerUnitTest {
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andDo(print())
                 .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("입력 값에 대한 검증을 실패했습니다."))
                 .andExpect(jsonPath("$.errors[?(@.code == '" + expectedError + "')].defaultMessage").value(expectedValue));
     }
 

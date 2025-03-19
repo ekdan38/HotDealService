@@ -18,18 +18,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @SpringBootTest
 public class ProductServiceImplRedisIntegrationTest {
 
     @Autowired
     ProductServiceImpl productService;
-    @Autowired
+    @MockitoSpyBean
     ProductRepository productRepository;
     @Autowired
     CategoryRepository categoryRepository;
@@ -85,8 +89,8 @@ public class ProductServiceImplRedisIntegrationTest {
 
         //then
         assertThat(result.getNextCursor()).isEqualTo(expectedNextCursor);
-        assertThat(result.getProductResponseDtos()).hasSize(5);
-        result.getProductResponseDtos().forEach(pr -> {
+        assertThat(result.getProducts()).hasSize(5);
+        result.getProducts().forEach(pr -> {
             assertThat(pr.getTitle()).startsWith(titlePrefix);
             assertThat(pr.getPrice()).isEqualTo(price);
         });
@@ -97,8 +101,8 @@ public class ProductServiceImplRedisIntegrationTest {
 
         assertThat(cachedResult).isNotNull();
         assertThat(cachedResult.getNextCursor()).isEqualTo(expectedNextCursor);
-        assertThat(cachedResult.getProductResponseDtos()).hasSize(5);
-        cachedResult.getProductResponseDtos().forEach(pr -> {
+        assertThat(cachedResult.getProducts()).hasSize(5);
+        cachedResult.getProducts().forEach(pr -> {
             assertThat(pr.getId()).isNotNull();
             assertThat(pr.getTitle()).startsWith(titlePrefix);
             assertThat(pr.getPrice()).isEqualTo(price);
@@ -121,13 +125,28 @@ public class ProductServiceImplRedisIntegrationTest {
         Long expectedNextCursor = createTestProducts(titlePrefix, price, stock, category);
         productService.getProducts(search, cursor, size, categoryId);
 
+        ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
+        String key = "getProducts::products:cursor:" + cursor + ":size:" + size + ":categoryId:" + categoryId + ":search:" + search;
+        ProductPagingResponseDto cachedResult = (ProductPagingResponseDto) valueOperations.get(key);
+
+        assertThat(cachedResult).isNotNull();
+        assertThat(cachedResult.getNextCursor()).isEqualTo(expectedNextCursor);
+        assertThat(cachedResult.getProducts()).hasSize(5);
+        cachedResult.getProducts().forEach(pr -> {
+            assertThat(pr.getId()).isNotNull();
+            assertThat(pr.getTitle()).startsWith(titlePrefix);
+            assertThat(pr.getPrice()).isEqualTo(price);
+        });
+
         //when
         ProductPagingResponseDto result = productService.getProducts(search, cursor, size, categoryId);
 
         //then
+        verify(productRepository, times(1))
+                .findProductsByCursorAndCategoryIdAndSearchAndSize(anyLong(), anyLong(), anyString(), any());
         assertThat(result.getNextCursor()).isEqualTo(expectedNextCursor);
-        assertThat(result.getProductResponseDtos()).hasSize(5);
-        result.getProductResponseDtos().forEach(pr -> {
+        assertThat(result.getProducts()).hasSize(5);
+        result.getProducts().forEach(pr -> {
             assertThat(pr.getId()).isNotNull();
             assertThat(pr.getTitle()).startsWith(titlePrefix);
         });
@@ -205,10 +224,19 @@ public class ProductServiceImplRedisIntegrationTest {
         Product product = createTestProduct(titlePrefix, price, stock, category);
         productService.getProduct(product.getId());
 
+        ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
+        String key = "getProduct::products:" + product.getId();
+        ProductCacheDto cachedResult = (ProductCacheDto)valueOperations.get(key);
+        assertThat(cachedResult.getId()).isEqualTo(product.getId());
+        assertThat(cachedResult.getTitle()).isEqualTo(product.getTitle());
+        assertThat(cachedResult.getPrice()).isEqualTo(product.getPrice());
+
         //when
         ProductCacheDto result = productService.getProduct(product.getId());
 
         //then
+        verify(productRepository, times(1))
+                .findProductByProductIdWithCategoryProducts(anyLong());
         assertThat(result.getId()).isEqualTo(product.getId());
         assertThat(result.getTitle()).isEqualTo(product.getTitle());
         assertThat(result.getPrice()).isEqualTo(product.getPrice());

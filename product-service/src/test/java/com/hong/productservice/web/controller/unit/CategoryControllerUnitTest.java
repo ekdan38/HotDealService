@@ -1,7 +1,6 @@
 package com.hong.productservice.web.controller.unit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hong.productservice.domain.Category;
 import com.hong.productservice.dto.category.CategoryResponseDto;
 import com.hong.productservice.service.category.CategoryService;
 import com.hong.productservice.web.controller.CategoryController;
@@ -14,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.ArrayList;
@@ -61,7 +59,9 @@ class CategoryControllerUnitTest {
 
     @ParameterizedTest
     @CsvSource({
+            // 1. title 빈 문자열
             "'', NotBlank, title은 필수입니다.",
+            // 2. title 범위
             "'tooLongTitle', Size, title은 2 글자에서 10 글자입니다."
     })
     @DisplayName("최상위 category 생성_실패_입력 값 오류")
@@ -76,6 +76,7 @@ class CategoryControllerUnitTest {
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andDo(print())
                 .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("입력 값에 대한 검증을 실패했습니다."))
                 .andExpect(jsonPath("$.errors[?(@.code == '" + expectedError + "')].defaultMessage").value(expectedValue));
     }
 
@@ -106,7 +107,9 @@ class CategoryControllerUnitTest {
 
     @ParameterizedTest
     @CsvSource({
+            // 1. title 빈 문자열
             "'', NotBlank, title은 필수입니다.",
+            // 2. title 범위
             "'tooLongTitle', Size, title은 2 글자에서 10 글자입니다."
     })
     @DisplayName("자식 category 생성_실패_입력 값 오류")
@@ -122,6 +125,7 @@ class CategoryControllerUnitTest {
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andDo(print())
                 .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("입력 값에 대한 검증을 실패했습니다."))
                 .andExpect(jsonPath("$.errors[?(@.code == '" + expectedError + "')].defaultMessage").value(expectedValue));
     }
 
@@ -174,7 +178,9 @@ class CategoryControllerUnitTest {
 
     @ParameterizedTest
     @CsvSource({
+            // 1. title 빈 문자열
             "'', NotBlank, title은 필수입니다.",
+            // 2. title 범위
             "'tooLongTitle', Size, title은 2 글자에서 10 글자입니다."
     })
     @DisplayName("category 수정_실패_입력 값 오류")
@@ -190,6 +196,7 @@ class CategoryControllerUnitTest {
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andDo(print())
                 .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("입력 값에 대한 검증을 실패했습니다."))
                 .andExpect(jsonPath("$.errors[?(@.code == '" + expectedError + "')].defaultMessage").value(expectedValue));
     }
 

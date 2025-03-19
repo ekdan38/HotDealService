@@ -62,11 +62,14 @@ class WishlistControllerUnitTest {
                 .andExpect(jsonPath("$.data.quantity").value(quantity));
     }
 
-
     @ParameterizedTest
     @CsvSource({
+            // 1. productId null
             "null, '5', 'NotNull', 'productId 는 필수입니다.'",
-            "1, null , 'NotNull', 'quantity 는 필수입니다.'"
+            // 2. quantity null
+            "1, null , 'NotNull', 'quantity 는 필수입니다.'",
+            // 3. quantity 양수
+            "1, -2 , 'Positive', 'quantity 는 양수여야 합니다.'"
     })
     @DisplayName("wishlist 생성_실패_입력 값 오류")
     public void createWishlist_failure_invalidInput(String productIdStr,
@@ -88,6 +91,7 @@ class WishlistControllerUnitTest {
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andDo(print())
                 .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("입력 값에 대한 검증을 실패했습니다."))
                 .andExpect(jsonPath("$.errors[?(@.code == '" + expectedError + "')].defaultMessage").value(expectedValue));
     }
 

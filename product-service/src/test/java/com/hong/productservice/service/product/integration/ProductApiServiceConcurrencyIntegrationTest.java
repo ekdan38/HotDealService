@@ -7,9 +7,11 @@ import com.hong.productservice.domain.Product;
 import com.hong.productservice.repository.CategoryRepository;
 import com.hong.productservice.repository.ProductRepository;
 import com.hong.productservice.service.product.ProductApiService;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,10 +26,8 @@ class ProductApiServiceConcurrencyIntegrationTest {
 
     @Autowired
     ProductApiService productApiService;
-
     @Autowired
     ProductRepository productRepository;
-
     @Autowired
     CategoryRepository categoryRepository;
 
@@ -50,8 +50,8 @@ class ProductApiServiceConcurrencyIntegrationTest {
     }
 
     @Test
-    @DisplayName("멀티 스레드 Product 조회, 재고 감소_성공")
-    public void fetchAndDecreaseStock_success() throws InterruptedException {
+    @DisplayName("product 재고 감소_동시성 테스트_성공")
+    public void decreaseStock_success() throws InterruptedException {
         //given
         List<ProductStockUpdateRequestDto> requestDtos = new ArrayList<>();
         for (Product product : products) {
@@ -83,8 +83,8 @@ class ProductApiServiceConcurrencyIntegrationTest {
     }
 
     @Test
-    @DisplayName("멀티 스레드 Product 조회, 재고 증가_성공")
-    public void fetchAndIncreaseStock_success() throws InterruptedException {
+    @DisplayName("product 재고 증가_동시성 테스트_성공")
+    public void increaseStock_success() throws InterruptedException {
         //given
         List<ProductStockUpdateRequestDto> productStockUpdateRequestDtos = new ArrayList<>();
         for (Product product : products) {

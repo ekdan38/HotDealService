@@ -8,6 +8,7 @@ import com.hong.productservice.dto.product.ProductStockDto;
 import com.hong.productservice.repository.CategoryRepository;
 import com.hong.productservice.repository.ProductRepository;
 import com.hong.productservice.service.product.ProductApiService;
+import jakarta.persistence.EntityManager;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -35,6 +36,8 @@ public class ProductApiServiceRedisIntegrationTest {
     CategoryRepository categoryRepository;
     @Autowired
     RedisTemplate<String, Object> redisTemplate;
+    @Autowired
+    EntityManager em;
 
     @BeforeEach
     void clearRedis(){
@@ -59,6 +62,8 @@ public class ProductApiServiceRedisIntegrationTest {
             keys.add("getProduct::products:" + product.getId());
             productMap.put(product.getId(), product);
         }
+        em.flush();
+        em.clear();
 
         ArrayList<Long> request = new ArrayList<>();
         request.add(productIds.get(0));
@@ -101,6 +106,8 @@ public class ProductApiServiceRedisIntegrationTest {
             keys.add("getProduct::products:" + product.getId());
             productMap.put(product.getId(), product);
         }
+        em.flush();
+        em.clear();
 
         ArrayList<Long> request = new ArrayList<>();
         request.add(productIds.get(0));

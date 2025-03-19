@@ -70,6 +70,7 @@ class ProductServiceImplUnitTest {
         Product product = createTestProduct(productId, productTitle, price, stock, List.of(CategoryProduct.create(category)));
         List<CategoryDto> categoryDtos = List.of(new CategoryDto(1L));
 
+        // request
         ProductDto requestDto = new ProductDto(productTitle, price, stock, categoryDtos);
         when(productRepository.existsByTitle(requestDto.getTitle())).thenReturn(false);
         when(categoryService.getCategoriesById(categoryDtos)).thenReturn(List.of(Category.create("category")));
@@ -95,6 +96,7 @@ class ProductServiceImplUnitTest {
         int stock = 1000;
         List<CategoryDto> categoryDtos = List.of(new CategoryDto(1L));
 
+        // request
         ProductDto requestDto = new ProductDto(productTitle, price, stock, categoryDtos);
         when(productRepository.existsByTitle(requestDto.getTitle())).thenReturn(true);
 
@@ -118,7 +120,8 @@ class ProductServiceImplUnitTest {
                 new ProductResponseDto(4L, "product4", 4000, 40, new ArrayList<>()),
                 new ProductResponseDto(5L, "product5", 5000, 50, new ArrayList<>())
         );
-        when(productRepository.findProductsByCursorAndCategoryIdAndSearchAndSize(any(Long.class), eq(categoryId), eq(search), any(PageRequest.class)))
+        when(productRepository.findProductsByCursorAndCategoryIdAndSearchAndSize(
+                eq(Long.MAX_VALUE), eq(categoryId), eq(search), any(PageRequest.class)))
                 .thenReturn(productResponseDtos);
 
         // when
@@ -126,7 +129,7 @@ class ProductServiceImplUnitTest {
 
         //then
         assertThat(response.getNextCursor()).isEqualTo(5);
-        assertThat(response.getProductResponseDtos()).hasSize(5);
+        assertThat(response.getProducts()).hasSize(5);
     }
 
     @Test
@@ -138,7 +141,6 @@ class ProductServiceImplUnitTest {
         int price = 1000;
         int stock = 100;
         Product product = createTestProduct(productId, productTitle, price, stock, List.of());
-
 
         when(productRepository.findProductByProductIdWithCategoryProducts(productId)).thenReturn(Optional.of(product));
         // when
@@ -180,8 +182,8 @@ class ProductServiceImplUnitTest {
         Long targetId = product.getId();
 
         when(productRepository.findProductByProductIdWithCategoryProducts(productId)).thenReturn(Optional.of(product));
-        when(productRepository.existsByTitle(any(String.class))).thenReturn(false);
-        when(productRepository.save(any(Product.class))).thenReturn(updatedProduct);
+        when(productRepository.existsByTitle(productTitle)).thenReturn(false);
+        when(productRepository.save(product)).thenReturn(updatedProduct);
         ProductDto requestDto = new ProductDto(productTitle, price, stock, List.of());
 
         //when
@@ -228,7 +230,7 @@ class ProductServiceImplUnitTest {
         Long targetId = product.getId();
 
         when(productRepository.findProductByProductIdWithCategoryProducts(productId)).thenReturn(Optional.of(product));
-        when(productRepository.existsByTitle(any(String.class))).thenReturn(true);
+        when(productRepository.existsByTitle(productTitle)).thenReturn(true);
 
         ProductDto requestDto = new ProductDto(productTitle, price, stock, List.of());
 

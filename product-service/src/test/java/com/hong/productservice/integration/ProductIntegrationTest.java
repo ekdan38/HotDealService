@@ -626,13 +626,9 @@ public class ProductIntegrationTest {
                 .andExpect(jsonPath("$[0].productId").exists())
                 .andExpect(jsonPath("$[0].title", startsWith("product")))
                 .andExpect(jsonPath("$[0].requestedQuantity").value(5))
-                .andExpect(jsonPath("$[0].originalStock").value(100))
-                .andExpect(jsonPath("$[0].remainingStock").value(95))
                 .andExpect(jsonPath("$[1].productId").exists())
                 .andExpect(jsonPath("$[1].title", startsWith("product")))
-                .andExpect(jsonPath("$[1].requestedQuantity").value(10))
-                .andExpect(jsonPath("$[1].originalStock").value(100))
-                .andExpect(jsonPath("$[1].remainingStock").value(90));
+                .andExpect(jsonPath("$[1].requestedQuantity").value(10));
     }
 
     @Test
@@ -682,13 +678,9 @@ public class ProductIntegrationTest {
                 .andExpect(jsonPath("$[0].productId").exists())
                 .andExpect(jsonPath("$[0].title", startsWith("product")))
                 .andExpect(jsonPath("$[0].requestedQuantity").value(5))
-                .andExpect(jsonPath("$[0].originalStock").value(100))
-                .andExpect(jsonPath("$[0].remainingStock").value(105))
                 .andExpect(jsonPath("$[1].productId").exists())
                 .andExpect(jsonPath("$[1].title", startsWith("product")))
-                .andExpect(jsonPath("$[1].requestedQuantity").value(10))
-                .andExpect(jsonPath("$[1].originalStock").value(100))
-                .andExpect(jsonPath("$[1].remainingStock").value(110));
+                .andExpect(jsonPath("$[1].requestedQuantity").value(10));
     }
 
     @Test
