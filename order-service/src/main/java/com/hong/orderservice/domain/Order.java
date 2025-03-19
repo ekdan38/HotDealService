@@ -73,15 +73,6 @@ public class Order extends TimeEntity {
         delivery.setOrder(this);
     }
 
-    // == 주문의 총 가격 반환 메서드 ==
-    public Integer getTotalPrice() {
-        int totalPrice = 0;
-        for (OrderProduct orderProduct : orderProducts) {
-            totalPrice += orderProduct.getTotalPrice();
-        }
-        return totalPrice;
-    }
-
     // == 주문 취소 메서드 ==
     public void updateStatusToCancel() {
         this.status = OrderStatus.CANCEL;
@@ -89,18 +80,24 @@ public class Order extends TimeEntity {
     }
 
     // == 반품 메서드 ==
-    public void updateStatusReturnRequested(){
+    public void updateStatusReturnRequested(LocalDateTime startTime){
         this.status = OrderStatus.RETURN_REQUESTED;
-        this.delivery.updateStatus(DeliveryStatus.RETURN_REQUESTED);
-        this.delivery.updateReturnStartedAt(LocalDateTime.now());
+        this.delivery.updateToReturnRequested(startTime);
+    }
+
+    // == 반품 완료 메서드 ==
+    public void updateStatusReturned(LocalDateTime endTime){
+        this.status = OrderStatus.RETURNED;
+        this.delivery.updateToReturned(endTime);
     }
 
     // == 결제 성공 적용 메서드 ==
-    public void paymentSuccess(){
+    public void paymentSuccess(LocalDateTime paidAt){
         this.status = OrderStatus.PAID;
-        this.paidAt = LocalDateTime.now();
+        this.paidAt = paidAt;
         this.delivery.updateStatus(DeliveryStatus.DELIVERABLE);
     }
+
     // == 결제 실패 적용 메서드 ==
     public void paymentFailed(){
         this.status = OrderStatus.PAYMENT_FAILED;

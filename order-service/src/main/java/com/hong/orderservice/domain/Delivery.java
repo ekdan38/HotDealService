@@ -63,6 +63,30 @@ public class Delivery {
         this.order = order;
     }
 
+    // == 배송 상태 DELIVERING 으로 update 메서드 ==
+    public void updateToDelivering(LocalDateTime startTime){
+        this.startedAt = startTime;
+        this.deliveryStatus = DeliveryStatus.DELIVERING;
+    }
+
+    // == 배송 상태 DELIVERED 으로 update 메서드 ==
+    public void updateToDelivered(LocalDateTime completedTime){
+        this.completedAt = completedTime;
+        this.deliveryStatus = DeliveryStatus.DELIVERED;
+    }
+
+    // == 배송 상태 RETURN_REQUESTED 으로 update 메서드 ==
+    public void updateToReturnRequested(LocalDateTime startTime){
+        this.returnStartedAt = startTime;
+        this.deliveryStatus = DeliveryStatus.RETURN_REQUESTED;
+    }
+
+    // == 배송 상태 RETURNED 으로 update 메서드 ==
+    public void updateToReturned(LocalDateTime endTime){
+        this.returnCompletedAt = endTime;
+        this.deliveryStatus = DeliveryStatus.RETURNED;
+    }
+
     // == 배송 상태 update 메서드 ==
     public void updateStatus(DeliveryStatus status){
         this.deliveryStatus = status;
