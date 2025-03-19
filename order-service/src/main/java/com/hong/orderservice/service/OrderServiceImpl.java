@@ -67,7 +67,7 @@ public class OrderServiceImpl implements OrderService {
 
         // 2. 사용자 조회 시점에서 주문, 배송 상태 update
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS);
-        updateDeliveryAndOrderStatusForUser(now, page);
+        updateDeliveryAndOrderStatusForUser(userId, now, page);
 
         // 3. 응답 Dto 변환, cursor 지정
         return convertToOrderPagingResponse(page);
@@ -82,7 +82,7 @@ public class OrderServiceImpl implements OrderService {
 
         // 2. 사용자 조회 시점에서 주문, 배송 상태 update
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS);
-        updateDeliveryAndOrderStatusForUser(now, List.of(order));
+        updateDeliveryAndOrderStatusForUser(userId, now, List.of(order));
 
         // 3. 응답 Dto 변환
         return convertToOrderResponse(order, order.getOrderProducts());
@@ -134,12 +134,12 @@ public class OrderServiceImpl implements OrderService {
         Delivery delivery = order.getDelivery();
         DeliveryStatus deliveryStatus = delivery.getDeliveryStatus();
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS);
-        LocalDateTime oneDatAgo = now.minusDays(1);
+        LocalDateTime oneDayAgo = now.minusDays(1);
 
         // 배송 완료 후 1일 이내 까지 반품 가능
         if (!(deliveryStatus.equals(DeliveryStatus.DELIVERED)
                 && delivery.getCompletedAt() != null
-                && delivery.getCompletedAt().isBefore(oneDatAgo))) {
+                && delivery.getCompletedAt().isAfter(oneDayAgo))) {
             log.debug("환불은 배송 완료 후 하루 이내에 가능합니다. userId = {}, orderId = {}", userId, orderId);
             throw new OrderException(ErrorCode.ORDER_RETURN_EXPIRED, userId, orderId);
         }
@@ -155,7 +155,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     // Delivery Status 사용자 조회 시점에서 update
-    void updateDeliveryAndOrderStatusForUser(LocalDateTime now, List<Order> page) {
+    void updateDeliveryAndOrderStatusForUser(Long userId, LocalDateTime now, List<Order> page) {
 
         // 스케쥴링과 별개로 사용자의 관점에서 배송 상태가 변경 되야 한다.
         LocalDateTime oneDayAgo = now.minusDays(1);
@@ -176,13 +176,19 @@ public class OrderServiceImpl implements OrderService {
                 .toList();
         updateToDelivered.forEach(o -> o.getDelivery().updateToDelivered(now));
 
-        // 3. 환불 처리 후 1일 경과한 된 배송 RETURNED 로 변경
+        // 3. 환불 처리 후 1일 경과한 된 배송 RETURNED 로 변경 및 재고 복구
         List<Order> updateToReturned = page.stream()
                 .filter(o -> o.getStatus() == OrderStatus.RETURN_REQUESTED
                         && o.getDelivery().getDeliveryStatus() == DeliveryStatus.RETURN_REQUESTED
                         && o.getDelivery().getReturnStartedAt().isBefore(now))
                 .toList();
         updateToReturned.forEach(o -> o.updateStatusReturned(now));
+
+        // 재고 복구
+        updateToReturned.forEach(o -> {
+            increaseHotDealProductStockAndValidate(userId, o.getId(), o);
+            increaseProductStockAndValidate(userId, o.getId(), o);
+        });
     }
 
     // 결제 까지 완료한 주문 조회, 검증 (Fetch Join 으로 orderProducts, delivery 조회)
