@@ -38,52 +38,85 @@ public class WishlistServiceImpl implements WishlistService {
     @Transactional
     @Override
     public WishlistResponseDto createWishlist(Long userId, WishlistRequestDto requestDto) {
-        // wishlist 에 등록 시도 하는 product 가 존재 하는지 확인
-        Long productId = requestDto.getProductId();
-        Product product = productApiService.getProduct(productId);
+        // 1. wishlist 에 등록 시도 하는 product 가 존재 하는지 조회 및 검증
+        Product product = productApiService.getProduct(requestDto.getProductId());
 
-        // wishlist 조회 (없으면 생성)
+        // 2. user 의 wishlist 조회 (없으면 생성)
         Wishlist wishlist = wishlistRepository.findWithProductsByUserId(userId)
                 .orElseGet(() -> wishlistRepository.save(Wishlist.create(userId)));
 
-        //WishlistProduct 조회 또는 생성/수량 업데이트
-        WishlistProduct wishlistProduct = findOrCreateWishlistProduct(requestDto, wishlist, productId, product);
+        // 3. wishlistProduct 조회 또는 생성/수량 업데이트
+        WishlistProduct wishlistProduct = findOrCreateWishlistProduct(requestDto, wishlist, requestDto.getProductId(), product);
 
+        // 4. 변경 사항 명시적 저장
         Wishlist savedWishlist = wishlistRepository.save(wishlist);
 
+        // 5. 응답 Dto 변환
+        return convertToCreateWishlistResponse(savedWishlist, wishlistProduct);
+    }
+
+    // wishlist Products cursor 기반 페이징 조회
+    @Override
+    public WishlistPagingResponseDto getWishlists(Long userId, Long cursor, int size) {
+        // 1. wishlist 조회 wishlist 없으면 return 처리
+        Wishlist wishlist;
+        Optional<Wishlist> optionalWishlist = wishlistRepository.findByUserId(userId);
+        // wishlist 없으면 return 처리
+        if(optionalWishlist.isEmpty()) return new WishlistPagingResponseDto(null, 0L);
+        else wishlist = optionalWishlist.get();
+
+        // 2. wishlistProducts 커서 기반 페이징 조회
+        List<WishlistProduct> wishlistProducts = fetchWishllistProductsByCursor(cursor, size, wishlist);
+
+        // 3. cursor 지정 및 응답 Dto 변환
+        return convertToWishlistPagingResponse(wishlistProducts, wishlist);
+    }
+
+    // wishlist 수정 (상품 수량 변경 포함)
+    @Transactional
+    @Override
+    public String updateWishlist(Long userId, List<WishlistUpdateRequestDto.WishlistProductUpdate> updates) {
+
+        // 1. wishlist 조회 (wishlistProduct fetch join) 및 검증
+        Wishlist wishlist = fetchWishlistWithWishlistProductAndValidate(userId);
+        Long wishlistId = wishlist.getId();
+
+        // 2. wishlist 수정 및 검증
+        updateWishlistAndValidate(updates, wishlistId, wishlist);
+
+        return "wishlist 수정 성공";
+    }
+
+    // wishlist 삭제
+    @Transactional
+    @Override
+    public Long deleteWishlist(Long userId) {
+        // 1. wishlist 조회 및 검증
+        Wishlist wishlist = fetchWishlistByIdAndValidate(userId);
+
+        // 2. wishlist 삭제 (Cascade, orphanRemoval 삭제)
+        Long wishlistId = wishlist.getId();
+        wishlistRepository.deleteById(wishlist.getId());
+
+        return wishlistId;
+    }
+
+    private Wishlist fetchWishlistByIdAndValidate(Long userId) {
+        Wishlist wishlist = wishlistRepository.findByUserId(userId).orElseThrow(() -> {
+                    log.debug("위시리스트가 존재하지 않습니다. userId = {}", userId);
+                    return new WishlistException(ErrorCode.WISHLIST_NOT_FOUND, userId);
+                });
+        return wishlist;
+    }
+
+    private WishlistResponseDto convertToCreateWishlistResponse(Wishlist savedWishlist, WishlistProduct wishlistProduct) {
         return new WishlistResponseDto(
                 savedWishlist.getId(),
                 savedWishlist.getUserId(),
                 wishlistProduct.getProduct().getId(),
                 wishlistProduct.getQuantity());
     }
-
-    // wishlist cursor 기반 페이징 조회
-    @Override
-    public WishlistPagingResponseDto getWishlists(Long userId, Long cursor, int size) {
-        // wishlist 조회
-        Wishlist wishlist;
-        Optional<Wishlist> optionalWishlist = wishlistRepository.findByUserId(userId);
-        // wishlist 없으면 return 처리
-        if(optionalWishlist.isEmpty()){
-            return new WishlistPagingResponseDto(null, 0L);
-        }
-        else {
-            wishlist = optionalWishlist.get();
-        }
-
-        Long wishlistId = wishlist.getId();
-        // cursor 가 null 이면 가장 최근 데이터 조회 처리
-        if(cursor == null) cursor = Long.MAX_VALUE;
-
-        // PageRequest 객체로 조회 size 지정
-        PageRequest pageRequest = PageRequest.of(0, size);
-
-        // Wishlist 와 관련된 WishlistProduct, Product 를 fetch join 으로 조회
-        List<WishlistProduct> wishlistProducts = wishlistProductRepository
-                .findByWishlistIdAndCursor(wishlistId, cursor, pageRequest);
-
-        // dto 변환
+    private WishlistPagingResponseDto convertToWishlistPagingResponse(List<WishlistProduct> wishlistProducts, Wishlist wishlist) {
         List<WishlistProductDto> wishlistProductDtos = wishlistProducts.stream()
                 .map(wp -> new WishlistProductDto(
                         wp.getProduct().getId(),
@@ -95,22 +128,23 @@ public class WishlistServiceImpl implements WishlistService {
         // nextCursor 지정
         Long nextCursor = wishlistProducts.isEmpty() ? 0 : wishlistProducts.get(wishlistProducts.size() - 1).getId();
 
-        return new WishlistPagingResponseDto(wishlistId, nextCursor, wishlistProductDtos);
+        return new WishlistPagingResponseDto(wishlist.getId(), nextCursor, wishlistProductDtos);
     }
 
-    // wishlist 수정 (상품 수량 변경 포함)
-    @Transactional
-    @Override
-    public String updateWishlist(Long userId, List<WishlistUpdateRequestDto.WishlistProductUpdate> updates) {
+    private List<WishlistProduct> fetchWishllistProductsByCursor(Long cursor, int size, Wishlist wishlist) {
+        // cursor 가 null 이면 가장 최근 데이터 조회 처리
+        if(cursor == null) cursor = Long.MAX_VALUE;
 
-        // wishlist, wishlistProduct fetch join
-        Wishlist wishlist = wishlistRepository.findByUserIdWithProducts(userId)
-                .orElseThrow(() -> {
-                    log.debug("위시리스트가 존재하지 않습니다. {}", userId);
-                    return new WishlistException(ErrorCode.WISHLIST_NOT_FOUND, userId);
-                });
-        Long wishlistId = wishlist.getId();
+        // PageRequest 객체로 조회 size 지정
+        PageRequest pageRequest = PageRequest.of(0, size);
 
+        // Wishlist 와 관련된 WishlistProduct, Product 를 fetch join 으로 조회
+        List<WishlistProduct> wishlistProducts = wishlistProductRepository
+                .findByWishlistIdAndCursor(wishlist.getId(), cursor, pageRequest);
+        return wishlistProducts;
+    }
+
+    private void updateWishlistAndValidate(List<WishlistUpdateRequestDto.WishlistProductUpdate> updates, Long wishlistId, Wishlist wishlist) {
         // 수정 해야할 productId
         List<Long> productsIds = updates.stream().map(WishlistUpdateRequestDto.WishlistProductUpdate::getProductId)
                 .collect(Collectors.toList());
@@ -130,25 +164,18 @@ public class WishlistServiceImpl implements WishlistService {
 
             // 수량 변경
             if(update.getMethod().equals("update")) wishlistProduct.updateQuantity(update.getQuantity());
-            // 삭제
+                // 삭제
             else if(update.getMethod().equals("delete")) wishlist.getWishlistProducts().remove(wishlistProduct);
         }
-        return "wishlist 수정 성공";
     }
 
-    // wishlist 삭제
-    @Transactional
-    @Override
-    public Long deleteWishlist(Long userId) {
-        Wishlist wishlist = wishlistRepository.findByUserId(userId).orElseThrow(() -> {
-                    log.debug("위시리스트가 존재하지 않습니다. userId = {}", userId);
+    private Wishlist fetchWishlistWithWishlistProductAndValidate(Long userId) {
+        Wishlist wishlist = wishlistRepository.findByUserIdWithProducts(userId)
+                .orElseThrow(() -> {
+                    log.debug("위시리스트가 존재하지 않습니다. {}", userId);
                     return new WishlistException(ErrorCode.WISHLIST_NOT_FOUND, userId);
                 });
-
-        // Cascade, orphanRemoval 삭제
-        Long wishlistId = wishlist.getId();
-        wishlistRepository.deleteById(wishlist.getId());
-        return wishlistId;
+        return wishlist;
     }
 
     //WishlistProduct 조회 또는 생성/수량 업데이트
