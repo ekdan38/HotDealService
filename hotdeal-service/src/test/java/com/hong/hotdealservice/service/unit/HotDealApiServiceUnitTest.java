@@ -548,12 +548,9 @@ class HotDealApiServiceUnitTest {
         //then
         assertThat(result).hasSize(requestDtos.size());
         result.forEach(r -> {
-            assertThat(r.getHotDealId()).isEqualTo(hotDeal.getId());
             assertThat(r.getHotDealProductId()).isNotNull();
             assertThat(r.getTitle()).contains("product");
             assertThat(r.getRequestedQuantity()).isEqualTo(requestQuantity);
-            assertThat(r.getOriginalStock()).isEqualTo(stock);
-            assertThat(r.getRemainingStock()).isEqualTo(stock - requestQuantity);
         });
         TransactionSynchronizationManager.clearSynchronization();
     }
@@ -664,12 +661,9 @@ class HotDealApiServiceUnitTest {
         //then
         assertThat(result).hasSize(requestDtos.size());
         result.forEach(r -> {
-            assertThat(r.getHotDealId()).isEqualTo(hotDeal.getId());
             assertThat(r.getHotDealProductId()).isNotNull();
             assertThat(r.getTitle()).contains("product");
             assertThat(r.getRequestedQuantity()).isEqualTo(requestQuantity);
-            assertThat(r.getOriginalStock()).isEqualTo(stock);
-            assertThat(r.getRemainingStock()).isEqualTo(stock + requestQuantity);
         });
         TransactionSynchronizationManager.clearSynchronization();
     }
@@ -713,9 +707,6 @@ class HotDealApiServiceUnitTest {
         assertThat(result).hasSize(4);
         for(long i = 1; i <= 4; i++){
             HotDealProductStockCheckResponseDto resultDto = result.get((int)i - 1);
-            if(i < 3) assertThat(resultDto.getHotDealId()).isEqualTo(hotDeal1.getId());
-            else assertThat(resultDto.getHotDealId()).isEqualTo(hotDeal2.getId());
-            assertThat(resultDto.getProductId()).isEqualTo(i);
             assertThat(resultDto.getProductTitle()).isEqualTo("product" + i);
             assertThat(resultDto.getRequestedQuantity()).isEqualTo(requestedQuantity);
             assertThat(resultDto.getHotDealPrice()).isEqualTo(900);

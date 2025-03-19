@@ -118,12 +118,9 @@ public class HotDealProductIntegrationTest {
             if(i == 0) hotDealProduct = hotDealProduct1;
             else hotDealProduct = hotDealProduct2;
             resultActions
-                    .andExpect(jsonPath("$.[" + i + "].hotDealId").value(hotDealProduct.getHotDeal().getId()))
                     .andExpect(jsonPath("$.[" + i + "].hotDealProductId").value(hotDealProduct.getId()))
-                    .andExpect(jsonPath("$.[" + i + "].productId").value(hotDealProduct.getProductId()))
                     .andExpect(jsonPath("$.[" + i + "].productTitle").value(hotDealProduct.getProductTitle()))
-                    .andExpect(jsonPath("$.[" + i + "].requestQuantity").value(requestQuantity))
-                    .andExpect(jsonPath("$.[" + i + "].hotDealPrice").value(hotDealProduct.getHotDealPrice()));
+                    .andExpect(jsonPath("$.[" + i + "].requestedQuantity").value(requestQuantity));
         }
     }
 
@@ -259,12 +256,9 @@ public class HotDealProductIntegrationTest {
             if(i == 0) hotDealProduct = hotDealProduct1;
             else hotDealProduct = hotDealProduct2;
             resultActions
-                    .andExpect(jsonPath("$.[" + i + "].hotDealId").value(hotDealProduct.getHotDeal().getId()))
                     .andExpect(jsonPath("$.[" + i + "].hotDealProductId").value(hotDealProduct.getId()))
                     .andExpect(jsonPath("$.[" + i + "].title").value(hotDealProduct.getProductTitle()))
-                    .andExpect(jsonPath("$.[" + i + "].requestedQuantity").value(requestQuantity))
-                    .andExpect(jsonPath("$.[" + i + "].originalStock").value(hotDealProduct.getStock()))
-                    .andExpect(jsonPath("$.[" + i + "].remainingStock").value(hotDealProduct.getStock() - requestQuantity));
+                    .andExpect(jsonPath("$.[" + i + "].requestedQuantity").value(requestQuantity));
         }
     }
 
@@ -375,12 +369,9 @@ public class HotDealProductIntegrationTest {
             if(i == 0) hotDealProduct = hotDealProduct1;
             else hotDealProduct = hotDealProduct2;
             resultActions
-                    .andExpect(jsonPath("$.[" + i + "].hotDealId").value(hotDealProduct.getHotDeal().getId()))
                     .andExpect(jsonPath("$.[" + i + "].hotDealProductId").value(hotDealProduct.getId()))
                     .andExpect(jsonPath("$.[" + i + "].title").value(hotDealProduct.getProductTitle()))
-                    .andExpect(jsonPath("$.[" + i + "].requestedQuantity").value(requestQuantity))
-                    .andExpect(jsonPath("$.[" + i + "].originalStock").value(hotDealProduct.getStock()))
-                    .andExpect(jsonPath("$.[" + i + "].remainingStock").value(hotDealProduct.getStock() + requestQuantity));
+                    .andExpect(jsonPath("$.[" + i + "].requestedQuantity").value(requestQuantity));
         }
     }
 

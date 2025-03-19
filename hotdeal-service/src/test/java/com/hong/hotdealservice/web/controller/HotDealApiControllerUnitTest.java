@@ -71,9 +71,7 @@ class HotDealApiControllerUnitTest {
         List<HotDealProductStockCheckResponseDto> expectedResult = hotDealProducts
                 .stream()
                 .map(hp -> new HotDealProductStockCheckResponseDto(
-                        hp.getHotDeal().getId(),
                         hp.getId(),
-                        hp.getProductId(),
                         hp.getProductTitle(),
                         5,
                         hp.getHotDealPrice()))
@@ -90,11 +88,9 @@ class HotDealApiControllerUnitTest {
         // hotDeals
         for(int i = 0; i < 2; i++){
             resultActions
-                    .andExpect(jsonPath("$[" + i + "].hotDealId").value(expectedResult.get(i).getHotDealId()))
                     .andExpect(jsonPath("$[" + i + "].hotDealProductId").value(expectedResult.get(i).getHotDealProductId()))
-                    .andExpect(jsonPath("$[" + i + "].productId").value(expectedResult.get(i).getProductId()))
                     .andExpect(jsonPath("$[" + i + "].productTitle").value(expectedResult.get(i).getProductTitle()))
-                    .andExpect(jsonPath("$[" + i + "].requestQuantity").value(expectedResult.get(i).getRequestedQuantity()))
+                    .andExpect(jsonPath("$[" + i + "].requestedQuantity").value(expectedResult.get(i).getRequestedQuantity()))
                     .andExpect(jsonPath("$[" + i + "].hotDealPrice").value(expectedResult.get(i).getHotDealPrice()));
         }
     }
@@ -120,12 +116,9 @@ class HotDealApiControllerUnitTest {
         List<HotDealProductStockUpdateResponseDto> expectedResult = hotDealProducts
                 .stream()
                 .map(hp -> new HotDealProductStockUpdateResponseDto(
-                        hp.getHotDeal().getId(),
                         hp.getId(),
                         hp.getProductTitle(),
-                        50,
-                        hp.getStock(),
-                        hp.getStock() - 50))
+                        50))
                 .toList();
 
         when(hotDealApiService.decreaseStock(request)).thenReturn(expectedResult);
@@ -139,12 +132,9 @@ class HotDealApiControllerUnitTest {
                 .andExpect(status().isOk());
         for(int i = 0; i < 2; i++){
             resultActions
-                    .andExpect(jsonPath("$[" + i + "].hotDealId").value(expectedResult.get(i).getHotDealId()))
                     .andExpect(jsonPath("$[" + i + "].hotDealProductId").value(expectedResult.get(i).getHotDealProductId()))
                     .andExpect(jsonPath("$[" + i + "].title").value(expectedResult.get(i).getTitle()))
-                    .andExpect(jsonPath("$[" + i + "].requestedQuantity").value(expectedResult.get(i).getRequestedQuantity()))
-                    .andExpect(jsonPath("$[" + i + "].originalStock").value(expectedResult.get(i).getOriginalStock()))
-                    .andExpect(jsonPath("$[" + i + "].remainingStock").value(expectedResult.get(i).getRemainingStock()));
+                    .andExpect(jsonPath("$[" + i + "].requestedQuantity").value(expectedResult.get(i).getRequestedQuantity()));
         }
     }
 
@@ -169,12 +159,9 @@ class HotDealApiControllerUnitTest {
         List<HotDealProductStockUpdateResponseDto> expectedResult = hotDealProducts
                 .stream()
                 .map(hp -> new HotDealProductStockUpdateResponseDto(
-                        hp.getHotDeal().getId(),
                         hp.getId(),
                         hp.getProductTitle(),
-                        50,
-                        hp.getStock(),
-                        hp.getStock() + 50))
+                        50))
                 .toList();
 
         when(hotDealApiService.increaseStock(request)).thenReturn(expectedResult);
@@ -188,12 +175,9 @@ class HotDealApiControllerUnitTest {
                 .andExpect(status().isOk());
         for(int i = 0; i < 2 ; i++){
             resultActions
-                    .andExpect(jsonPath("$[" + i + "].hotDealId").value(expectedResult.get(i).getHotDealId()))
                     .andExpect(jsonPath("$[" + i + "].hotDealProductId").value(expectedResult.get(i).getHotDealProductId()))
                     .andExpect(jsonPath("$[" + i + "].title").value(expectedResult.get(i).getTitle()))
-                    .andExpect(jsonPath("$[" + i + "].requestedQuantity").value(expectedResult.get(i).getRequestedQuantity()))
-                    .andExpect(jsonPath("$[" + i + "].originalStock").value(expectedResult.get(i).getOriginalStock()))
-                    .andExpect(jsonPath("$[" + i + "].remainingStock").value(expectedResult.get(i).getRemainingStock()));
+                    .andExpect(jsonPath("$[" + i + "].requestedQuantity").value(expectedResult.get(i).getRequestedQuantity()));
         }
     }
 
