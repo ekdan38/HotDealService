@@ -2,8 +2,8 @@ package com.hong.hotdealservice.web.controller;
 
 
 import com.hong.common.dto.ResponseDto;
-import com.hong.hotdealservice.dto.HotDealPagingResponseDto;
-import com.hong.hotdealservice.dto.HotDealResponseDto;
+import com.hong.hotdealservice.dto.HotDealPagingCacheDto;
+import com.hong.hotdealservice.dto.HotDealCacheDto;
 import com.hong.hotdealservice.service.HotDealService;
 import com.hong.hotdealservice.web.dto.HotDealRequestDto;
 import com.hong.hotdealservice.web.dto.HotDealUpdateRequestDto;
@@ -36,35 +36,34 @@ public class HotDealController {
             return ResponseEntity.badRequest().body(bindingResult);
         }
 
-        HotDealResponseDto resultDto = hotDealService.createHotDeal(adminId, requestDto);
+        HotDealCacheDto resultDto = hotDealService.createHotDeal(adminId, requestDto);
 
         // 응답 설정
-        ResponseDto<HotDealResponseDto> responseDto = new ResponseDto<>("HotDeal 생성 성공", resultDto);
+        ResponseDto<HotDealCacheDto> responseDto = new ResponseDto<>("핫딜 생성 성공", resultDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
     }
 
     // HotDeal 페이징 조회
-    // 간단하게 HotDeal 내역 조회
     @GetMapping
-    public ResponseEntity<ResponseDto<HotDealPagingResponseDto>> getHotDeals(@RequestParam(required = false) Long cursor,
-                                                                             @RequestParam(required = false, defaultValue = "10") int size,
-                                                                             @RequestParam(required = false) String search) {
+    public ResponseEntity<ResponseDto<HotDealPagingCacheDto>> getHotDeals(@RequestParam(required = false) Long cursor,
+                                                                          @RequestParam(required = false, defaultValue = "10") int size,
+                                                                          @RequestParam(required = false) String search) {
 
-        HotDealPagingResponseDto resultDto = hotDealService.getHotDeals(search, cursor, size);
+        HotDealPagingCacheDto resultDto = hotDealService.getHotDeals(search, cursor, size);
 
         // 응답 설정
-        ResponseDto<HotDealPagingResponseDto> responseDto = new ResponseDto<>("HotDeal 조회 성공", resultDto);
+        ResponseDto<HotDealPagingCacheDto> responseDto = new ResponseDto<>("핫딜 페이징 조회 성공", resultDto);
         return ResponseEntity.ok().body(responseDto);
     }
 
     // HotDeal 단건 조회
     @GetMapping("/{hotDealId}")
-    public ResponseEntity<ResponseDto<HotDealResponseDto>> getHotDeal(@PathVariable("hotDealId") Long hotDealId) {
+    public ResponseEntity<ResponseDto<HotDealCacheDto>> getHotDeal(@PathVariable("hotDealId") Long hotDealId) {
 
-        HotDealResponseDto resultDto = hotDealService.getHotDeal(hotDealId);
+        HotDealCacheDto resultDto = hotDealService.getHotDeal(hotDealId);
 
         // 응답 설정
-        ResponseDto<HotDealResponseDto> responseDto = new ResponseDto<>("HotDeal 조회 성공", resultDto);
+        ResponseDto<HotDealCacheDto> responseDto = new ResponseDto<>("핫딜 단건 조회 성공", resultDto);
         return ResponseEntity.ok().body(responseDto);
     }
 
@@ -80,9 +79,9 @@ public class HotDealController {
             return ResponseEntity.badRequest().body(bindingResult);
         }
 
-        HotDealResponseDto resultDto = hotDealService.updateHotDeal(hotDealId, requestDto);
+        HotDealCacheDto resultDto = hotDealService.updateHotDeal(hotDealId, requestDto);
         // 응답 설정
-        ResponseDto<HotDealResponseDto> responseDto = new ResponseDto<>("HotDeal 수정 성공", resultDto);
+        ResponseDto<HotDealCacheDto> responseDto = new ResponseDto<>("핫딜 수정 성공", resultDto);
         return ResponseEntity.ok().body(responseDto);
 
     }
@@ -90,11 +89,11 @@ public class HotDealController {
     // HotDeal 삭제
     // Admin
     @DeleteMapping("/{hotDealId}")
-    public ResponseEntity<ResponseDto<HotDealResponseDto>> deleteHotDeal(@PathVariable("hotDealId") Long hotDealId) {
+    public ResponseEntity<ResponseDto<HotDealCacheDto>> deleteHotDeal(@PathVariable("hotDealId") Long hotDealId) {
 
-        HotDealResponseDto resultDto = hotDealService.deleteHotDeal(hotDealId);
+        HotDealCacheDto resultDto = hotDealService.deleteHotDeal(hotDealId);
         // 응답 설정
-        ResponseDto<HotDealResponseDto> responseDto = new ResponseDto<>("HotDeal 삭제 성공", resultDto);
+        ResponseDto<HotDealCacheDto> responseDto = new ResponseDto<>("핫딜 삭제 성공", resultDto);
         return ResponseEntity.ok().body(responseDto);
     }
 

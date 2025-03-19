@@ -4,6 +4,7 @@ import com.hong.common.dto.ResponseDto;
 import com.hong.hotdealservice.dto.HotDealProductCacheDto;
 import com.hong.hotdealservice.dto.HotDealProductPagingResponseDto;
 import com.hong.hotdealservice.dto.HotDealProductStockDto;
+import com.hong.hotdealservice.dto.HotDealProductStockProjection;
 import com.hong.hotdealservice.service.HotDealApiService;
 import com.hong.hotdealservice.service.HotDealProductService;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +33,7 @@ public class HotDealProductController {
         HotDealProductPagingResponseDto resultDto = hotDealProductService.getHotDealProducts(hotDealId, search, cursor, size);
 
         // 응답 설정
-        ResponseDto<HotDealProductPagingResponseDto> responseDto = new ResponseDto<>("HotDealProducts 조회 성공", resultDto);
+        ResponseDto<HotDealProductPagingResponseDto> responseDto = new ResponseDto<>("핫딜 상품 페이징 조회 성공", resultDto);
         return ResponseEntity.ok().body(responseDto);
     }
 
@@ -43,16 +44,17 @@ public class HotDealProductController {
         HotDealProductCacheDto resultDto = hotDealProductService.getHotDealProduct(hotDealProductId);
 
         // 응답 설정
-        ResponseDto<HotDealProductCacheDto> responseDto = new ResponseDto<>("HotDealProduct 조회 성공", resultDto);
+        ResponseDto<HotDealProductCacheDto> responseDto = new ResponseDto<>("핫딜 상품 단건 조회 성공", resultDto);
         return ResponseEntity.ok().body(responseDto);
     }
 
+    // HotDealProduct 재고 조회
     @GetMapping("/hotDealProducts/stock")
-    public ResponseEntity<ResponseDto<List<HotDealProductStockDto>>> getHotDealProductStock(@RequestParam List<Long> hotDealProductId){
-        List<HotDealProductStockDto> resultDto = hotDealApiService.getHotDealProductsWithStock(hotDealProductId);
+    public ResponseEntity<ResponseDto<List<HotDealProductStockProjection>>> getHotDealProductStock(@RequestParam List<Long> hotDealProductId){
+        List<HotDealProductStockProjection> resultDto = hotDealApiService.fetchStock(hotDealProductId);
 
         // 응답 설정
-        ResponseDto<List<HotDealProductStockDto>> responseDto = new ResponseDto<>("HotDealProducts 재고 조회 성공", resultDto);
+        ResponseDto<List<HotDealProductStockProjection>> responseDto = new ResponseDto<>("핫딜 상품 재고 조회 성공", resultDto);
         return ResponseEntity.ok().body(responseDto);
     }
 }

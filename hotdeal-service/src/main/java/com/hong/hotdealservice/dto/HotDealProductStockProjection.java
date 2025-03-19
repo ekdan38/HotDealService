@@ -8,6 +8,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class HotDealProductStockProjection {
-    private Long getId;
-    private Integer getStock;
+    private Long id;
+    private Integer stock;
 }

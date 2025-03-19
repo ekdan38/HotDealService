@@ -21,7 +21,7 @@ public class HotDealApiController {
     private final HotDealApiService hotDealApiService;
 
     @PostMapping("/products")
-    public ResponseEntity<List<HotDealProductStockCheckResponseDto>> fetchProducts(@RequestBody List<HotDealProductStockCheckRequestDto> requestDtos) {
+    public ResponseEntity<List<HotDealProductStockCheckResponseDto>> fetchProductsAndValidateStock(@RequestBody List<HotDealProductStockCheckRequestDto> requestDtos) {
         List<HotDealProductStockCheckResponseDto> responseDtos = hotDealApiService.fetchHotDealProductsStockAndValidateStock(requestDtos);
         return ResponseEntity.ok(responseDtos);
     }

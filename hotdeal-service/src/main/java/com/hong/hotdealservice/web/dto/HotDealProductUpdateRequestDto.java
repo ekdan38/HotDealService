@@ -13,8 +13,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class HotDealProductUpdateRequestDto {
 
+    @Positive(message = "hotDealProductId 는 양수여야 합니다.")
     private Long hotDealProductId;
 
+    @NotNull(message = "productId 는 필수입니다.")
+    @Positive(message = "productId 는 양수여야 합니다.")
     private Long productId;
 
     @NotNull(message = "quantity 는 필수입니다.")

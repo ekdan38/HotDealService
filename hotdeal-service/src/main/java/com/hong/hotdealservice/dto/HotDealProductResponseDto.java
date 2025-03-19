@@ -1,6 +1,7 @@
 package com.hong.hotdealservice.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.hong.hotdealservice.domain.HotDealProduct;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -20,22 +21,22 @@ public class HotDealProductResponseDto {
     private Double discountRate;
     private Integer stock;
 
-    public HotDealProductResponseDto(Long hotDealProductId, Long originalProductId, String productTitle, Integer originalPrice, Integer hotDealPrice, Double discountRate) {
-        this.hotDealProductId = hotDealProductId;
-        this.originalProductId = originalProductId;
-        this.productTitle = productTitle;
-        this.originalPrice = originalPrice;
-        this.hotDealPrice = hotDealPrice;
-        this.discountRate = discountRate;
+    public HotDealProductResponseDto(HotDealProduct hp) {
+        this.hotDealProductId = hp.getId();
+        this.originalProductId = hp.getProductId();
+        this.productTitle = hp.getProductTitle();
+        this.originalPrice = hp.getOriginalPrice();
+        this.hotDealPrice = hp.getHotDealPrice();
+        this.discountRate = hp.getDiscountRate();
     }
 
-    public HotDealProductResponseDto(Long hotDealProductId, Long originalProductId, String productTitle, Integer originalPrice, Integer hotDealPrice, Double discountRate, Integer stock) {
-        this.hotDealProductId = hotDealProductId;
-        this.originalProductId = originalProductId;
-        this.productTitle = productTitle;
-        this.originalPrice = originalPrice;
-        this.hotDealPrice = hotDealPrice;
-        this.discountRate = discountRate;
+    public HotDealProductResponseDto(HotDealProduct hp, Integer stock) {
+        this.hotDealProductId = hp.getId();
+        this.originalProductId = hp.getProductId();
+        this.productTitle = hp.getProductTitle();
+        this.originalPrice = hp.getOriginalPrice();
+        this.hotDealPrice = hp.getHotDealPrice();
+        this.discountRate = hp.getDiscountRate();
         this.stock = stock;
     }
 }

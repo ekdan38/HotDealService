@@ -1,5 +1,6 @@
 package com.hong.hotdealservice.web.dto;
 
+import com.hong.hotdealservice.Enum;
 import com.hong.hotdealservice.domain.status.HotDealStatus;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -25,9 +26,10 @@ public class HotDealUpdateRequestDto {
     @NotNull(message = "endTime 은 필수입니다.")
     private LocalDateTime endTime;
 
-    @NotNull(message = "status 는 필수입니다.")
+    @NotBlank(message = "status 는 필수입니다.")
+    @Enum(enumClass = HotDealStatus.class, message = "ACTIVE, EXPIRED, SCHEDULED 만 허용합니다.")
     // ACTIVE, EXPIRED, SCHEDULED
-    private HotDealStatus status;
+    private String status;
 
     @NotEmpty(message = "productInfos 는 최소 1개 이상이어야 합니다.")
     private List<@Valid HotDealProductUpdateRequestDto> productInfos;

@@ -29,9 +29,39 @@ public class HotDealProductServiceImpl implements HotDealProductService {
     // HotDealProduct 페이징 조회
     @Override
     @Cacheable(cacheNames = "getHotDealProducts"
-            , key = "'hotdeal:' + #hotDealId + 'hotdeal_products:cursor:' + #cursor + ':size:' + #size + ':search:' + (#search != null ? #search : '')"
+            , key = "'hotdeal:' + #hotDealId + 'hotdeal_products:cursor:' +" +
+            " (#cursor == null ? '' : #cursor) + ':size:' + #size + ':search:' + (#search == null ? '' : #search)"
             , cacheManager = "HotDealCacheManager")
     public HotDealProductPagingResponseDto getHotDealProducts(Long hotDealId, String search, Long cursor, int size) {
+        // 1. hotDealProducts 커서 기반 페이징 조회
+        List<HotDealProduct> page = fetchHotDealProductsByCursor(hotDealId, search, cursor, size);
+
+        // 2. cursor 지정 및 응답 Dto 변환
+        return convertToHotDealProductPagingResponse(hotDealId, page);
+    }
+
+
+    // HotDealProduct 단건 조회
+    @Override
+    @Cacheable(cacheNames = "getHotDealProduct"
+            , key = "'hotdeal_products:' + #hotDealProductId", cacheManager = "HotDealCacheManager")
+    public HotDealProductCacheDto getHotDealProduct(Long hotDealProductId) {
+        // 1. hotDealProduct 조회 및 검증
+        HotDealProduct hotDealProduct = fetchByIdAndValidate(hotDealProductId);
+
+        // 2. 응답 dto 변환
+        return convertHotDealCacheDtoWithoutStock(hotDealProduct);
+    }
+
+    private HotDealProductPagingResponseDto convertToHotDealProductPagingResponse(Long hotDealId, List<HotDealProduct> page) {
+        // nextCursor 지정
+        Long nextCursor = page.isEmpty() ? 0 : page.get(page.size() - 1).getId();
+
+        // 응답 dto 변환
+        return convertToHotDealPagingResponseDto(hotDealId, nextCursor, page);
+    }
+
+    private List<HotDealProduct> fetchHotDealProductsByCursor(Long hotDealId, String search, Long cursor, int size) {
         // cursor 가 null 이면 가장 최근 데이터 조회 처리
         if (cursor == null) cursor = Long.MAX_VALUE;
 
@@ -40,24 +70,7 @@ public class HotDealProductServiceImpl implements HotDealProductService {
 
         // 페이징 조회
         List<HotDealProduct> page = hotDealProductRepository.findByCursorAndSearchAndSizeHotDealProducts(hotDealId, cursor, search, pageRequest);
-
-        // nextCursor 지정
-        Long nextCursor = page.isEmpty() ? 0 : page.get(page.size() - 1).getId();
-
-        // 응답 dto 변환
-        return convertToHotDealPagingResponseDto(hotDealId, nextCursor, page);
-    }
-
-    // HotDealProduct 단건 조회
-    @Override
-    @Cacheable(cacheNames = "getHotDealProduct"
-            , key = "'hotdeal_products:' + #hotDealProductId", cacheManager = "HotDealCacheManager")
-    public HotDealProductCacheDto getHotDealProduct(Long hotDealProductId) {
-        // hotDealProduct 단건 조회, 검증
-        HotDealProduct hotDealProduct = fetchByIdAndValidate(hotDealProductId);
-
-        // 응답 dto 변환
-        return convertHotDealCacheDtoWithoutStock(hotDealProduct);
+        return page;
     }
 
     // hotDealProduct 단건 조회, 검증
@@ -70,14 +83,7 @@ public class HotDealProductServiceImpl implements HotDealProductService {
 
     // hotDealProductResponseDto 변환
     private HotDealProductCacheDto convertHotDealCacheDtoWithoutStock(HotDealProduct hotDealProduct) {
-        return new HotDealProductCacheDto(
-                hotDealProduct.getHotDeal().getId(),
-                hotDealProduct.getId(),
-                hotDealProduct.getProductId(),
-                hotDealProduct.getProductTitle(),
-                hotDealProduct.getOriginalPrice(),
-                hotDealProduct.getHotDealPrice(),
-                hotDealProduct.getDiscountRate());
+        return new HotDealProductCacheDto(hotDealProduct);
     }
 
     // hotDealProductResponseDto 변환
@@ -86,14 +92,7 @@ public class HotDealProductServiceImpl implements HotDealProductService {
                 nextCursor,
                 hotDealId,
                 page.stream()
-                        .map(hp -> new HotDealProductResponseDto(
-                                hp.getId(),
-                                hp.getProductId(),
-                                hp.getProductTitle(),
-                                hp.getOriginalPrice(),
-                                hp.getHotDealPrice(),
-                                hp.getDiscountRate()
-                        ))
+                        .map(HotDealProductResponseDto::new)
                         .collect(Collectors.toList()));
     }
 }

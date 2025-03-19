@@ -1,5 +1,6 @@
 package com.hong.hotdealservice.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.hong.hotdealservice.domain.HotDeal;
 import lombok.AllArgsConstructor;
@@ -13,20 +14,22 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
-public class HotDealResponseDto {
+public class HotDealCacheDto {
 
     private Long hotDealId;
     private Long adminId;
     private String title;
     private String description;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
     private LocalDateTime startTime;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
     private LocalDateTime endTime;
     private String status;
     private Boolean deleted;
     private List<HotDealProductResponseDto> hotDealProducts;
 
 
-    public HotDealResponseDto(HotDeal hotDeal){
+    public HotDealCacheDto(HotDeal hotDeal){
         this.hotDealId = hotDeal.getId();
         this.adminId = hotDeal.getUserId();
         this.title = hotDeal.getTitle();
@@ -37,7 +40,7 @@ public class HotDealResponseDto {
         this.deleted = hotDeal.getDeleted();
     }
 
-    public HotDealResponseDto(HotDeal hotDeal, List<HotDealProductResponseDto> hotDealProducts){
+    public HotDealCacheDto(HotDeal hotDeal, List<HotDealProductResponseDto> hotDealProducts){
         this.hotDealId = hotDeal.getId();
         this.adminId = hotDeal.getUserId();
         this.title = hotDeal.getTitle();
