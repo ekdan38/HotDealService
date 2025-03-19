@@ -16,7 +16,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     boolean existsByTitle(String title);
 
 
-     //FetchJoin 으로 쿼리 최적화 하기 위해서 List 로 반환 페이징
      //jpql은 limit 미지원 => pageable 사용 해서 size 적용
     @Query("SELECT new com.hong.productservice.dto.product.ProductResponseDto(p.id, p.title, p.price) " +
             "FROM Product p " +

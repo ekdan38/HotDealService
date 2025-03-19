@@ -5,7 +5,6 @@ import com.hong.common.dto.ProductStockCheckResponseDto;
 import com.hong.common.dto.ProductStockUpdateRequestDto;
 import com.hong.common.dto.ProductStockUpdateResponseDto;
 import com.hong.common.exception.ErrorCode;
-import com.hong.common.exception.custom.HotDealProductException;
 import com.hong.common.exception.custom.ProductException;
 import com.hong.productservice.domain.Product;
 import com.hong.productservice.dto.category.CategoryDto;
@@ -42,6 +41,102 @@ public class ProductApiService {
 
     // product 단건 조회
     public Product getProduct(Long productId) {
+        // 1. product 조회 및 검증
+        return fetctProductByIdAndValidate(productId);
+    }
+
+    // products 조회, 검증
+    private List<Product> fetchProductsAndValidate(List<Long> productIds) {
+        // 1. products 조회 및 검증
+        return fetchProductsByIdsAndValidate(productIds);
+    }
+
+    // product cache 조회(cacheAside) 및 stock 조회
+    public List<ProductStockDto> getProductsWithStock(List<Long> productIds){
+
+        // 조회 된 product 정리
+        Map<Long, ProductCacheDto> ProductMap = new HashMap<>();
+        // cacheHit ProductIds
+        List<Long> cacheHitProductIds = new ArrayList<>();
+        // cacheMiss ProductIds
+        List<Long> cacheMissProductIds = new ArrayList<>();
+
+        // 1. product 조회(Redis)
+        // productIds 정렬
+        List<Long> sortedProductIds = productIds.stream()
+                .sorted()
+                .distinct()
+                .collect(Collectors.toList());
+        fetchCachedProductData(sortedProductIds, ProductMap, cacheMissProductIds, cacheHitProductIds);
+
+        // 2. cacheMissProductIds 존재 하면 DB 조회 후 Redis 에 MultiSet
+        List<Product> cacheMissProducts = new ArrayList<>();
+        if(!cacheMissProductIds.isEmpty()){
+            cacheMissProducts.addAll(fetchAndCacheMissedProducts(cacheMissProductIds, ProductMap));
+        }
+
+        // 3. Stock DB 조회
+        Map<Long, Integer> stockMap = fetchProductStock(cacheHitProductIds, cacheMissProducts);
+
+        // ProductStockDto 변환
+        return convertProductStockResponse(sortedProductIds, ProductMap, stockMap);
+    }
+
+    // products 조회, 재고 확인
+    public List<ProductStockCheckResponseDto> fetchProductAndValidateStock(List<ProductStockCheckRequestDto> requestDtos) {
+        // 1. productId 추출
+        List<Long> productIds = extractProductIdsFromCheckDto(requestDtos);
+        // 2. product 조회(cacheAside), stock DB 조회 및 검증
+        List<ProductStockDto> productStocks = getProductsWithStock(productIds);
+        // dto 변환
+        return validateRequestAndConvertDto(requestDtos, productStocks);
+    }
+
+    // product 재고 감소
+    @Transactional
+    public List<ProductStockUpdateResponseDto> decreaseStock(List<ProductStockUpdateRequestDto> requestDtos) {
+        // 1. productIds 추출
+        List<Long> productIds = extractProductIdsFromUpdateDto(requestDtos);
+        // 2. 락 획득
+        List<RLock> locks = acquireLocks(productIds);
+        // 3. products 조회 및 검증
+        List<Product> products = fetchProductsAndValidate(productIds);
+        // 4. product 재고 감소
+        List<ProductStockUpdateResponseDto> responseDtos = decreaseStockAndConvertResponseDtos(requestDtos, products);
+        // 5. 트랜잭션 성공 유무 상관 없이 트랜잭션 종료 시점 무조건 락 해제
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                releaseLocks(locks);
+            }
+        });
+        // 6. 응답 Dto 변환
+        return responseDtos;
+    }
+
+    // product 재고 증가
+    @Transactional
+    public List<ProductStockUpdateResponseDto> increaseStock(List<ProductStockUpdateRequestDto> requestDtos) {
+        // 1. productIds 추출
+        List<Long> productIds = extractProductIdsFromUpdateDto(requestDtos);
+        // 2. 락 획득
+        List<RLock> locks = acquireLocks(productIds);
+        // 3. products 조회 및 검증
+        List<Product> products = fetchProductsAndValidate(productIds);
+        // 4. product 재고 증가
+        List<ProductStockUpdateResponseDto> responseDtos = increaseStockAndConvertDtos(requestDtos, products);
+        // 5. 트랜잭션 성공 유무 상관 없이 트랜잭션 종료 시점 무조건 락 해제
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                releaseLocks(locks);
+            }
+        });
+        // 6. 응답 Dto 변환
+        return responseDtos;
+    }
+
+    private Product fetctProductByIdAndValidate(Long productId) {
         return productRepository.findById(productId)
                 .orElseThrow(() -> {
                     log.debug("요청된 상품이 존재하지 않습니다. productId = {}", productId);
@@ -49,9 +144,8 @@ public class ProductApiService {
                 });
     }
 
-    // products 조회, 검증
-    private List<Product> fetchProductsAndValidate(List<Long> productIds) {
-        // productIds 정렬 (DB 조회시 IN절 약간의 성능 향상)
+    private List<Product> fetchProductsByIdsAndValidate(List<Long> productIds) {
+        // productIds 정렬
         Collections.sort(productIds);
         // product 조회
         List<Product> products = productRepository.findByIds(productIds);
@@ -68,85 +162,6 @@ public class ProductApiService {
         }
         return products;
     }
-
-
-    public List<ProductStockDto> getProductsWithStock(List<Long> productIds){
-        // productIds 정렬
-        List<Long> sortedProductIds = productIds.stream()
-                .sorted()
-                .distinct()
-                .collect(Collectors.toList());
-
-        Map<Long, ProductCacheDto> cacheMap = new HashMap<>();
-        List<Long> missedProductIds = new ArrayList<>();
-        // Redis 캐싱된 데이터 조회 및 정리
-        fetchCachedProductData(sortedProductIds, cacheMap, missedProductIds);
-
-        // CacheMiss 존재 하면 DB 조회 후 Redis 에 MultiSet
-        if(!missedProductIds.isEmpty()){
-            fetchAndCacheMissedProducts(missedProductIds, cacheMap);
-        }
-
-        // Stock DB 조회
-        Map<Long, Integer> stockMap = fetchProductStock(sortedProductIds);
-
-        // ProductStockDto 변환
-        return convertProductStockResponse(sortedProductIds, cacheMap, stockMap);
-    }
-
-    // products 조회, 재고 확인
-    public List<ProductStockCheckResponseDto> fetchProductAndValidateStock(List<ProductStockCheckRequestDto> requestDtos) {
-        // productId 추출
-        List<Long> productIds = extractProductIdsFromCheckDto(requestDtos);
-        // product 조회, 검증
-        List<ProductStockDto> productStocks = getProductsWithStock(productIds);
-        // dto 변환
-        return validateRequestAndConvertDto(requestDtos, productStocks);
-    }
-
-    // product 재고 감소
-    @Transactional
-    public List<ProductStockUpdateResponseDto> decreaseStock(List<ProductStockUpdateRequestDto> requestDtos) {
-        // productIds 추출
-        List<Long> productIds = extractProductIdsFromUpdateDto(requestDtos);
-        // 락 획득
-        List<RLock> locks = acquireLocks(productIds);
-        // proudcts 조회, 검증
-        List<Product> products = fetchProductsAndValidate(productIds);
-        // 재고 감소
-        List<ProductStockUpdateResponseDto> responseDtos = decreaseStockAndConvertResponseDtos(requestDtos, products);
-        // 트랜잭션 commit 후 락 해제
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                releaseLocks(locks);
-            }
-        });
-        return responseDtos;
-    }
-
-    // product 재고 증가
-    @Transactional
-    public List<ProductStockUpdateResponseDto> increaseStock(List<ProductStockUpdateRequestDto> requestDtos) {
-        // productIds 추출
-        List<Long> productIds = extractProductIdsFromUpdateDto(requestDtos);
-        // 락 획득
-        List<RLock> locks = acquireLocks(productIds);
-        // proudcts 조회, 검증
-        List<Product> products = fetchProductsAndValidate(productIds);
-        // 재고 감소
-        List<ProductStockUpdateResponseDto> responseDtos = increaseStockAndConvertDtos(requestDtos, products);
-        // 트랜잭션 commit 후 락 해제
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                releaseLocks(locks);
-            }
-        });
-
-        return responseDtos;
-    }
-
 
     // products 요청 검증 Dto 변환
     private List<ProductStockCheckResponseDto> validateRequestAndConvertDto(List<ProductStockCheckRequestDto> requestDtos,
@@ -188,36 +203,41 @@ public class ProductApiService {
     // Redis 에서 캐싱된 데이터 조회
     private void fetchCachedProductData(List<Long> productIds,
                                         Map<Long, ProductCacheDto> cacheMap,
-                                        List<Long> missedProductIds) {
+                                        List<Long> cacheMissProductIds,
+                                        List<Long> cacheHitProductIds) {
         // Redis 조회 key 생성
         List<String> keys = productIds.stream()
                 .map(id -> "getProduct::products:" + id)
                 .collect(Collectors.toList());
 
-        // 캐싱된 데이터 조회
+        // Redis 조회
         List<Object> cachedProductStockDtos = redisTemplate.opsForValue().multiGet(keys);
 
         // cacheHit, cacheMiss 데이터 정리
         for (int i = 0; i < productIds.size(); i++) {
             ProductCacheDto cachedData = (ProductCacheDto) cachedProductStockDtos.get(i);
+            // cacheHit
             if (cachedData != null) {
                 cacheMap.put(productIds.get(i), cachedData);
-            } else {
-                missedProductIds.add(productIds.get(i));
+                cacheHitProductIds.add(productIds.get(i));
+            }
+            // cacheMiss
+            else {
+                cacheMissProductIds.add(productIds.get(i));
             }
         }
     }
 
     // CacheMiss DB 조회, Redis MultiSet
-    private void fetchAndCacheMissedProducts(List<Long> missedProductIds,
-                                             Map<Long, ProductCacheDto> cacheMap) {
-        // DB 조회
-        List<Product> missedProducts = productRepository.findByIdsWithCategory(missedProductIds);
+    private List<Product> fetchAndCacheMissedProducts(List<Long> missedProductIds,
+                                             Map<Long, ProductCacheDto> ProductMap) {
+        // cacheMiss Product DB 조회
+        List<Product> cacheMissedProducts = productRepository.findByIdsWithCategory(missedProductIds);
 
         // DB 에도 존재하지 않는 ID 예외 처리
-        if (missedProducts.size() != missedProductIds.size()) {
+        if (cacheMissedProducts.size() != missedProductIds.size()) {
             List<Long> noneMatchedIds = missedProductIds.stream()
-                    .filter(id -> missedProducts.stream().noneMatch(product -> product.getId().equals(id)))
+                    .filter(id -> cacheMissedProducts.stream().noneMatch(product -> product.getId().equals(id)))
                     .collect(Collectors.toList());
             log.debug("요청된 상품이 존재하지 않습니다. productIds = {}", noneMatchedIds);
             throw new ProductException(ErrorCode.PRODUCT_NOT_FOUND, noneMatchedIds);
@@ -226,7 +246,7 @@ public class ProductApiService {
         Map<String, ProductCacheDto> newCacheEntries = new HashMap<>();
 
         // Redis에 저장할 데이터 정리
-        for (Product product : missedProducts) {
+        for (Product product : cacheMissedProducts) {
             ProductCacheDto productCacheDto = new ProductCacheDto(
                     product.getId(),
                     product.getTitle(),
@@ -236,7 +256,7 @@ public class ProductApiService {
                             .collect(Collectors.toList())
             );
 
-            cacheMap.put(product.getId(), productCacheDto);
+            ProductMap.put(product.getId(), productCacheDto);
             newCacheEntries.put("getProduct::products:" + product.getId(), productCacheDto);
         }
 
@@ -251,21 +271,54 @@ public class ProductApiService {
             }
             return null;
         });
+        return cacheMissedProducts;
     }
+
     // Stock DB 조회
-    private Map<Long, Integer> fetchProductStock(List<Long> productIds) {
-        return productRepository.findStockByProductIds(productIds)
-                .stream()
-                .collect(Collectors.toMap(ProductStockProjection::getGetId, ProductStockProjection::getGetStock));
+    private Map<Long, Integer> fetchProductStock(List<Long> cacheHitProductIds,
+                                                 List<Product> cacheMissProducts) {
+
+        // cacheHit Products 조회 (cacheMiss Products 는 조회 됨)
+        List<ProductStockProjection> StockProjections = new ArrayList<>();
+        if (!cacheHitProductIds.isEmpty()){
+            // DB 조회
+            StockProjections.addAll(productRepository.findStockByProductIds(cacheHitProductIds));
+        }
+
+        Set<Long> retrievedIds = StockProjections.stream()
+                .map(ProductStockProjection::getGetId)
+                .collect(Collectors.toSet());
+
+        // DB 에서 조회 되지 않은 ids 추출
+        List<Long> missingIds = cacheHitProductIds.stream()
+                .filter(id -> !retrievedIds.contains(id))
+                .toList();
+
+        // DB 에서 조회 되지 않은 product 예외 처리
+        if (!missingIds.isEmpty()) {
+            log.debug("요청된 상품이 존재하지 않습니다. productId = {}", missingIds);
+            throw new ProductException(ErrorCode.PRODUCT_NOT_FOUND, missingIds);
+        }
+
+        // stockMap 변환
+        Map<Long, Integer> stockMap = new HashMap<>();
+        for (ProductStockProjection projection : StockProjections) {
+            stockMap.put(projection.getGetId(), projection.getGetStock());
+        }
+        for (Product product : cacheMissProducts) {
+            stockMap.put(product.getId(), product.getStock());
+        }
+
+        return stockMap;
     }
 
     // ProductStockDto 변환
     private List<ProductStockDto> convertProductStockResponse(List<Long> productIds,
-                                                              Map<Long, ProductCacheDto> cacheMap,
+                                                              Map<Long, ProductCacheDto> productMap,
                                                               Map<Long, Integer> stockMap) {
         List<ProductStockDto> responseDtos = new ArrayList<>();
         for (Long id : productIds) {
-            ProductCacheDto info = cacheMap.get(id);
+            ProductCacheDto info = productMap.get(id);
             Integer stock = stockMap.get(id);
             responseDtos.add(new ProductStockDto(info.getId(), info.getTitle(), info.getPrice(), stock));
         }
@@ -297,9 +350,7 @@ public class ProductApiService {
                     product.getId(),
                     product.getTitle(),
                     product.getPrice(),
-                    requestedStock,
-                    originalStock,
-                    remainingStock
+                    requestedStock
             ));
         }
         return responseDtos;
@@ -331,9 +382,7 @@ public class ProductApiService {
                     product.getId(),
                     product.getTitle(),
                     product.getPrice(),
-                    requestedStock,
-                    originalStock,
-                    remainingStock
+                    requestedStock
             ));
         }
         return responseDtos;

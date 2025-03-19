@@ -16,5 +16,5 @@ public class ProductPagingResponseDto {
 
     private Long nextCursor;
     @JsonProperty("products")
-    private List<ProductResponseDto> productResponseDtos;
+    private List<ProductResponseDto> products;
 }
