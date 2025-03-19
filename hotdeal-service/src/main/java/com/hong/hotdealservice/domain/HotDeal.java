@@ -81,6 +81,7 @@ public class HotDeal extends TimeEntity {
     // == HotDeal softDelete 처리
     public void softDelete(){
         this.deleted = true;
+        this.status = HotDealStatus.EXPIRED;
     }
 
     //== HotDeal 이 현재 시각 기준으로 주문 처리가 가능한지 판단 ==
