@@ -1,6 +1,6 @@
 package com.hong.hotdealservice.web.dto;
 
-import com.hong.hotdealservice.Enum;
+import com.hong.hotdealservice.validator.Enum;
 import com.hong.hotdealservice.domain.status.HotDealStatus;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;

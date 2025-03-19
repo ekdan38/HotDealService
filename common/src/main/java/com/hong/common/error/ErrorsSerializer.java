@@ -14,6 +14,7 @@ public class ErrorsSerializer extends JsonSerializer<Errors> {
     public void serialize(Errors errors, JsonGenerator gen, SerializerProvider serializers) throws IOException {
         // 객체를 시작
         gen.writeStartObject();
+        gen.writeStringField("message", "입력 값에 대한 검증을 실패했습니다.");
 
         // 에러를 배열로 작성
         gen.writeArrayFieldStart("errors");

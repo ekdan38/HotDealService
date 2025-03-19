@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 public class ProductStockCheckResponseDto {
     private Long productId;
     private String title;
-    private Integer quantity;
+    private Integer requestedQuantity;
     private Integer price;
 
 }

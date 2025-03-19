@@ -9,11 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class HotDealProductStockUpdateResponseDto {
 
-    private Long hotDealId;
     private Long hotDealProductId;
     private String title;
     private Integer requestedQuantity;
-    private Integer originalStock;
-    private Integer remainingStock;
-
 }

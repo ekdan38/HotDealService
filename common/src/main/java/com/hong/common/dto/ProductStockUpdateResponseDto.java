@@ -13,6 +13,4 @@ public class ProductStockUpdateResponseDto {
     private String title;
     private Integer price;
     private Integer requestedQuantity;
-    private Integer originalStock;
-    private Integer remainingStock;
 }

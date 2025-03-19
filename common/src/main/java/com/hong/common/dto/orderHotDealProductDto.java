@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class orderHotDealProductDto {
 
-    private Long hotDealId;
     private Long hotDealProductId;
     private Integer quantity;
 }

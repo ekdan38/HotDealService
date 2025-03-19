@@ -8,7 +8,7 @@ public enum ErrorCode {
 
     // hotDealProduct
     HOTDEAL_PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "HOTDEAL_PRODUCT_00",
-            "요청된 핫딜 상품이 존재하지 않습니다. hotDealProductId = %s"),
+            "요청된 핫딜 상품이 존재 하지 않습니다. hotDealProductIds = %s"),
 
     HOTDEAL_PRODUCT_INSUFFICIENT_STOCK(HttpStatus.BAD_REQUEST, "HOTDEAL_PRODUCT_01",
             "요청 수량보다 재고가 부족합니다. hotDealProductId = %s, 요청 수량 = %s, 재고 수량 = %s"),
