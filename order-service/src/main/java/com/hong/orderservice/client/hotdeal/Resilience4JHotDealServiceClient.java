@@ -24,8 +24,8 @@ public class Resilience4JHotDealServiceClient {
     // HotDealProduct 조회
     @CircuitBreaker(name = "default", fallbackMethod = "fallBackForCircuitBreakerFetchProducts")
     @Retry(name = "default", fallbackMethod = "fallbackForRetryFetchProducts")
-    public List<HotDealProductStockCheckResponseDto> fetchProducts(List<HotDealProductStockCheckRequestDto> requestDtos) {
-        return hotDealServiceClient.fetchProducts(requestDtos);
+    public List<HotDealProductStockCheckResponseDto> fetchProductsAndValidateStock(List<HotDealProductStockCheckRequestDto> requestDtos) {
+        return hotDealServiceClient.fetchProductsAndValidateStock(requestDtos);
     }
 
     // HotDealProduct 재고 감소

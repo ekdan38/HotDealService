@@ -10,6 +10,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class OrderPagingResponseDto {
-    private Long nextCursor;
-    private List<OrderResponseDto> orderResponseDtos;
+    private Long cursor;
+    private List<OrderResponseDto> orders;
+
 }
