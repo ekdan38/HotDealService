@@ -1,11 +1,12 @@
-package com.hong.hotdealservice.service;
+package com.hong.hotdealservice.service.integration;
 
-import com.hong.common.dto.HotDealProductDto;
+import com.hong.common.dto.HotDealProductStockUpdateRequestDto;
 import com.hong.hotdealservice.domain.HotDeal;
 import com.hong.hotdealservice.domain.HotDealProduct;
 import com.hong.hotdealservice.domain.status.HotDealStatus;
 import com.hong.hotdealservice.repository.HotDealProductRepository;
 import com.hong.hotdealservice.repository.HotDealRepository;
+import com.hong.hotdealservice.service.HotDealApiService;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,7 +23,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @SpringBootTest
-class HotDealApiServiceTest {
+class HotDealApiConcurrencyIntegrationTest {
 
     @Autowired
     HotDealApiService hotDealApiService;
@@ -61,13 +62,13 @@ class HotDealApiServiceTest {
     }
 
     @Test
-    @DisplayName("멀티 스레드 HotDeal 조회, 상품 재고 감소_성공")
-    public void fetchAndDecreaseStock_Success() throws InterruptedException {
+    @DisplayName("hotDealProduct 재고 감소_동시성 테스트_성공")
+    public void decreaseStock_success() throws InterruptedException {
         //given
-        List<HotDealProductDto> hotDealProductDtos = new ArrayList<>();
+        List<HotDealProductStockUpdateRequestDto> hotDealProductStockUpdateRequestDto = new ArrayList<>();
         for (HotDeal hotDeal : hotDeals) {
             for (HotDealProduct hotDealProduct : hotDeal.getHotDealProducts()) {
-                hotDealProductDtos.add(new HotDealProductDto(hotDeal.getId(), hotDealProduct.getId(), 1));
+                hotDealProductStockUpdateRequestDto.add(new HotDealProductStockUpdateRequestDto(hotDealProduct.getId(), 1));
             }
         }
 
@@ -80,7 +81,7 @@ class HotDealApiServiceTest {
         for(int i = 0; i < numberOfThreads; i++){
             executorService.submit(() -> {
                 try{
-                    hotDealApiService.fetchAndDecreaseStock(hotDealProductDtos);
+                    hotDealApiService.decreaseStock(hotDealProductStockUpdateRequestDto);
                 }
                 finally {
                     latch.countDown();
@@ -89,24 +90,24 @@ class HotDealApiServiceTest {
         }
         latch.await();
 
+
         //then
         for (HotDeal hotDeal : hotDeals) {
             for (HotDealProduct hotDealProduct : hotDeal.getHotDealProducts()) {
                 HotDealProduct foundHotDealProduct = hotDealProductRepository.findById(hotDealProduct.getId()).orElseThrow();
                 Assertions.assertThat(foundHotDealProduct.getStock()).isEqualTo(0);
-
             }
         }
     }
 
     @Test
-    @DisplayName("멀티 스레드 HotDeal 조회, 상품 재고 증가_성공")
-    public void fetchAndIncreaseStock_Success() throws InterruptedException {
+    @DisplayName("hotDealProduct 재고 증가_동시성 테스트_성공")
+    public void increaseStock_Success() throws InterruptedException {
         //given
-        List<HotDealProductDto> hotDealProductDtos = new ArrayList<>();
+        List<HotDealProductStockUpdateRequestDto> hotDealProductStockUpdateRequestDtos = new ArrayList<>();
         for (HotDeal hotDeal : hotDeals) {
             for (HotDealProduct hotDealProduct : hotDeal.getHotDealProducts()) {
-                hotDealProductDtos.add(new HotDealProductDto(hotDeal.getId(), hotDealProduct.getId(), 1));
+                hotDealProductStockUpdateRequestDtos.add(new HotDealProductStockUpdateRequestDto(hotDealProduct.getId(), 1));
             }
         }
 
@@ -119,7 +120,7 @@ class HotDealApiServiceTest {
         for(int i = 0; i < numberOfThreads; i++){
             executorService.submit(() -> {
                 try{
-                    hotDealApiService.fetchAndIncreaseStock(hotDealProductDtos);
+                    hotDealApiService.increaseStock(hotDealProductStockUpdateRequestDtos);
                 }
                 finally {
                     latch.countDown();

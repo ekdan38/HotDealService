@@ -90,8 +90,8 @@ class HotDealProductRepositoryUnitTest {
         assertThat(stockDtos).hasSize(3);
         for (int i = 1; i <= 3; i++) {
             HotDealProductStockProjection stockDto = stockDtos.get(i - 1);
-            assertThat(stockDto.getGetId()).isNotNull();
-            assertThat(stockDto.getGetStock()).isEqualTo(1000 * i);
+            assertThat(stockDto.getId()).isNotNull();
+            assertThat(stockDto.getStock()).isEqualTo(1000 * i);
         }
     }
 
