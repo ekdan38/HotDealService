@@ -1,101 +1,58 @@
 # HotDeal - 선착순 구매 이커머스
-***
-## 📌프로젝트 소개
-<br>
-HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정 된 수량의 상품을 "핫 딜 가격"으로 선착순 판매하는 온라인 플랫폼의 MSA 아키텍처 백엔드 API 서버 입니다.
-사용자 인증, 위시리스트 관리, 상품 관리, 핫딜, 주문, 결제 기능을 제공합니다.
+## 📌 프로젝트 소개
 
+HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정된 수량의 상품을 "핫 딜 가격"으로 판매하는 온라인 플랫폼의 MSA 아키텍처 백엔드 API 서버 입니다.
 
-##### 프로젝트 진행 기간
-2024.12 ~ 2025.01
+프로젝트 진행 기간
+2024.12 ~ 2025.05
 
-## 💻기술 스택
+## 💻 사용한 기술 스택
 
-[//]: # (#### 프로그래밍 언어 및 프레임워크)
-<div style="text-align: left;">
-  <img src="https://img.shields.io/badge/java21-007396?style=for-the-badge&logo=OpenJDK&logoColor=white" alt="Java 21">
-  <img src="https://img.shields.io/badge/Spring Boot3.4.0-6DB33F?style=for-the-badge&logo=Spring Boot&logoColor=white" alt="Spring Boot 3.4.0">
-  <img src="https://img.shields.io/badge/Spring Security-6DB33F?style=for-the-badge&logo=Spring Security&logoColor=white" alt="Spring Security">
-  <img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=MySQL&logoColor=white" alt="MySQL">
-  <img src="https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=Redis&logoColor=white" alt="Redis">
-  <img src="https://img.shields.io/badge/RabbitMQ-FF6600?style=for-the-badge&logo=RabbitMQ&logoColor=white" alt="RabbitMQ">
-  <img src="https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
-  <img src="https://img.shields.io/badge/Hibernate-59666C?style=for-the-badge&logo=Hibernate&logoColor=white" alt="Hibernate">
-  <img src="https://img.shields.io/badge/PostMan-FF6C37?style=for-the-badge&logo=Postman&logoColor=white" alt="Postman">
-  <img src="https://img.shields.io/badge/JUnit5-25A162?style=for-the-badge&logo=JUnit5&logoColor=white" alt="JUnit 5">
-  <img src="https://img.shields.io/badge/Spring Cloud Gateway-25A162?style=for-the-badge&logo=Spring&logoColor=white" alt="Spring Cloud Gateway">
-  <img src="https://img.shields.io/badge/Spring Cloud Eureka-25A162?style=for-the-badge&logo=Spring&logoColor=white" alt="Spring Cloud Eureka">
-  <img src="https://img.shields.io/badge/Resilience4J-59666C?style=for-the-badge&&logoColor=white" alt="Resilience4J">
- <img src="https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=Git&logoColor=white" alt="Spring Cloud Eureka">
- <img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=GitHub&logoColor=white" alt="Spring Cloud Eureka">
-</div>
-
+JAVA21, SpringBoot, Spring Security, MySql, Redis, RabbitMQ, JPA, JUnit5, Spring Cloud Gateway, Spring Cloud Eureka, Resilience4J, Git, Github, Docker
 
 ## 🛠 ERD
-![Image](https://github.com/user-attachments/assets/54f9acd0-f17c-4cde-a2b3-1dc9371e72f5)
+
+![Image](https://github.com/user-attachments/assets/42211a45-98d1-4207-9aa7-f7359941af4d)
 
 ## 🛠 아키텍처
-![Image](https://github.com/user-attachments/assets/eca2262b-aef1-4c26-82bd-7f0d52af181a)
+![Image](https://github.com/user-attachments/assets/9c4cb2f6-e11c-4788-b0f2-5f101613ac4a)
 
-## 🎨주요 기능
-### 상품 관리
-- 재고에 대한 동시성 처리로 안정적인 상품 재고 관리
-- 카테고리별 상품 분류
-- 위시리스트 기능
-### 핫딜 관리
-- 핫딜 상품, 할인률, 기간 설정
-### 주문, 결제 관리
-- 주문 : 동시성 제어로 안전한 수량 제한된 핫딜 상품 구매
-- 취소 : 미배송 상태, 주문 후 하루 까지 가능
-- 반품 : 배송 완료 후 하루 까지 가능
+## Flow Diagram
+![Image](https://github.com/user-attachments/assets/221c07a9-5503-4ad9-8532-7671ad3107d7)
 
+##  🎨 주요 구현 내용
+- MSA 적용
+  -  모놀리식 구조를 MSA로 리팩토링
+- Eureka, API Gateway 적용
+  - 각 서비스 관리 및 라우팅
+- 동시성 처리를 통한 상품 재고 관리
+- Outbox 패턴 + OpenFeign을 통한 MS 간 통신
+- ErrorDecoder로 MS 통신간 발생하는 예외 처리
+- Resilience4J의 CircuitBreaker, Retry를 통한 회복 탄력성
 
-## 🚨 트러블 슈팅
-- 예외 상황 응답 일관성 및 코드 중복을 줄이기 위해 에러코드 관리
-  - 글 따로 빼면서, 왜 에러코드 썻는지랑 에러 코드 정리해서 올리자
+## 성능 최적화 사례
+간단한것만 가져오자.
+주문 전체 흐름으로 가져오자...
 
+##  🎨 트러블 슈팅 및 의사결정
+- [모놀로직 구조에서 MSA 구조로 전환시 인증 인가 처리](<https://github.com/ekdan38/HotDealService/wiki/MSA-%EC%97%90%EC%84%9C%EC%9D%98-%EC%9D%B8%EC%A6%9D-%EC%9D%B8%EA%B0%80-%EC%B2%98%EB%A6%AC>)
+  - 모놀로직 구조에서는 SpringSecurity 로 전체적인 인증 인가 필요한 엔드포인트 관리
+  - MSA 구조로 변환 하면서 기존 인증 인가 방식 사용 불가
+  - ApiGateway의 Filter에서 Jwt Token 검증, 결과에 따라 각 서비스 라우팅시 인증 인가 Filter 처리
+    -  @authenticationprincipal 사용 불가능, ApiGateway 에서 요청 헤더에 User 에대한 필요 정보 전달
 
-- 이메일 인증 코드 발송 비동기 처리
-  - 이메일 인증 코드 발송 시에 응답 까지 약 10초 시간 소요 => 비동기 처리
+- [재고 관리 방식 및 동시성 제어](<https://github.com/ekdan38/HotDealService/wiki/%EC%9E%AC%EA%B3%A0-%EC%B2%98%EB%A6%AC-%EB%B0%A9%EB%B2%95(%EB%B0%A9%EC%8B%9D-%EB%B0%8F-%EB%8F%99%EC%8B%9C%EC%84%B1-%EC%A0%9C%EC%96%B4)>)
+  - Redis + 점유 테이블 사용으로 안정적인 재고 관리
+  - 동시성 제어를 위해 MSA 환경에 적합한 Redis 분산락 사용
 
+- [MS 간 통신 방법 고민](<https://github.com/ekdan38/HotDealService/wiki/MS-%EA%B0%84-%ED%86%B5%EC%8B%A0-%EB%B0%A9%EC%8B%9D-%EA%B3%A0%EB%AF%BC>)
+  - RestTemplate vs FeignClient 중 인터페이스 기반인 FeignClient 선택
+  - 비동기 처리시 Kafka vs FeignClient 중 FeignClient 선택
+  - "Outbox + FeignClient + 이벤트" 방식 사용
 
-- 마이크로서비스 간 FeignClient 호출 시 서비스 장애 상황 처리 위한 회복 탄력성 도입
-  - Resilience4J CircuitBreaker, Retry 적용
-    - Retry 과정에서 로그를 남기고 Fallback 메서드를 통해 서비스 장애시 안정적 처리(예외 응답 처리)
+- [회복 탄력성을 위한 CircuitBreaker, Retry 도입](<https://github.com/ekdan38/HotDealService/wiki/%ED%9A%8C%EB%B3%B5-%ED%83%84%EB%A0%A5%EC%84%B1%EC%9D%84-%EC%9C%84%ED%95%9C-CircuitBreakek,-Retry-%EB%8F%84%EC%9E%85>)
+  - MSA 구조에서 MS를 호출할때 서비스의 장애가 연쇄 장애로 확산 될 수 있음
+  - Resilience4J의 CircuitBreaker, Retry 도입으로 회복 탄력성 적용
 
-
-- 모놀로직 구조에서 MSA 구조로 전환시 인증 인가 처리 전략
-  - 기존 모놀로직 구조에서는 SpringSecurity 로 인증, 권한이 필요한 엔드포인트 관리
-  - MSA 구조로 전환 하면서 기존 인증 인가 방식 사용 불가능
-  - ApiGateway 에서 Filter를 통해 Jwt Token 검증, User 조회, 각 서비스 라우팅시 권한 확인
-    - @authenticationprincipal 사용 불가능, ApiGateway 에서 요청 헤더에 User 에대한 필요 정보 전달
-  - <a href = "https://www.notion.so/MSA-16d87a78a3688021a66bedc854d1b358"> MSA 인증 인가 처리 </a>
-
-
-## 🙉기술적 의사 결정
-- 각 마이크로서비스 포트 번호 랜덤 포트 적용
-  - 현재는 각각 1개의 마이크로서비스를 사용하지만 동일 서비스 확장시 포트 관리, 지정 어려움
-  - Eureka 를 통한 인스턴스 관리, 로드밸런싱 적용
-
-
-- MSA 환경에서 Config 변경 관리 문제 처리
-  - MSA 구조에서 동일 서비스 확상시 Config 변경 관리 어려움 해결을 위해 Spring Cloud Coifng Server
-    중심으로 Spring Cloud Bus와 RabbitMQ를 활용해 실시간 전파
-  - <a href = "https://www.notion.so/Config-Server-SpringCloudBus-RabbitMQ-16d87a78a3688018bdf0d183fae13fa4"> MSA 환경 Config 관리 </a>
-
-
-- 상품 조회, 재고 변경시 동시성 처리 전략 선정
-  - 주문, 주문 취소, 환불시 상황에 따라 재고 조회, 재고 변경에 대한 동시성 제어 필요
-  - 여러 동시성 제어 방법 중 Redisson 분산 락 적용
-  - <a href = "https://www.notion.so/17687a78a36880d9b70cc7a5c0ca1b79">동시성 제어 전략 선정 </a>
-
-## ❗ 에러 코드
-업데이트 예정
-## 📑API 문서
-업데이트 예정
-## 📁프로젝트 구조
-업데이트 예정
-
-
-
-
+- [스케쥴러 작동시, 인스턴스가 N개라면 동일한 스케쥴러가 N개의 인스턴스에서 실행](<https://github.com/ekdan38/HotDealService/wiki/%EC%84%9C%EB%B9%84%EC%8A%A4%EC%9D%98-%EC%9D%B8%EC%8A%A4%ED%84%B4%EC%8A%A4%EC%97%90-%EB%94%B0%EB%A5%B8-%EC%8A%A4%EC%BC%80%EC%A5%B4%EB%9F%AC-%EC%A4%91%EB%B3%B5-%EC%8B%A4%ED%96%89>)
+  - shedLock을 사용하여 한개의 인스턴스만 스케쥴러를 실행하도록 수정
