@@ -7,8 +7,24 @@ HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정된 수량의 상
 2024.12 ~ 2025.05
 
 ## 💻 사용한 기술 스택
+<div style="text-align: left;">
+  <img src="https://img.shields.io/badge/java21-007396?style=for-the-badge&logo=OpenJDK&logoColor=white" alt="Java 21">
+  <img src="https://img.shields.io/badge/Spring Boot3.4.0-6DB33F?style=for-the-badge&logo=Spring Boot&logoColor=white" alt="Spring Boot 3.4.0">
+  <img src="https://img.shields.io/badge/Spring Security-6DB33F?style=for-the-badge&logo=Spring Security&logoColor=white" alt="Spring Security">
+  <img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=MySQL&logoColor=white" alt="MySQL">
+  <img src="https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=Redis&logoColor=white" alt="Redis">
+  <img src="https://img.shields.io/badge/RabbitMQ-FF6600?style=for-the-badge&logo=RabbitMQ&logoColor=white" alt="RabbitMQ">
+  <img src="https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
+  <img src="https://img.shields.io/badge/Hibernate-59666C?style=for-the-badge&logo=Hibernate&logoColor=white" alt="Hibernate">
+  <img src="https://img.shields.io/badge/PostMan-FF6C37?style=for-the-badge&logo=Postman&logoColor=white" alt="Postman">
+  <img src="https://img.shields.io/badge/JUnit5-25A162?style=for-the-badge&logo=JUnit5&logoColor=white" alt="JUnit 5">
+  <img src="https://img.shields.io/badge/Spring Cloud Gateway-25A162?style=for-the-badge&logo=Spring&logoColor=white" alt="Spring Cloud Gateway">
+  <img src="https://img.shields.io/badge/Spring Cloud Eureka-25A162?style=for-the-badge&logo=Spring&logoColor=white" alt="Spring Cloud Eureka">
+  <img src="https://img.shields.io/badge/Resilience4J-59666C?style=for-the-badge&&logoColor=white" alt="Resilience4J">
+ <img src="https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=Git&logoColor=white" alt="Spring Cloud Eureka">
+ <img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=GitHub&logoColor=white" alt="Spring Cloud Eureka">
+</div>
 
-JAVA21, SpringBoot, Spring Security, MySql, Redis, RabbitMQ, JPA, JUnit5, Spring Cloud Gateway, Spring Cloud Eureka, Resilience4J, Git, Github, Docker
 
 ## 🛠 ERD
 
@@ -17,7 +33,7 @@ JAVA21, SpringBoot, Spring Security, MySql, Redis, RabbitMQ, JPA, JUnit5, Spring
 ## 🛠 아키텍처
 ![Image](https://github.com/user-attachments/assets/9c4cb2f6-e11c-4788-b0f2-5f101613ac4a)
 
-## Flow Diagram
+## 🔍️Flow Diagram
 ![Image](https://github.com/user-attachments/assets/221c07a9-5503-4ad9-8532-7671ad3107d7)
 
 ##  🎨 주요 구현 내용
@@ -34,7 +50,7 @@ JAVA21, SpringBoot, Spring Security, MySql, Redis, RabbitMQ, JPA, JUnit5, Spring
 간단한것만 가져오자.
 주문 전체 흐름으로 가져오자...
 
-##  🎨 트러블 슈팅 및 의사결정
+##  🧑‍💻 트러블 슈팅 및 의사결정
 - [모놀로직 구조에서 MSA 구조로 전환시 인증 인가 처리](<https://github.com/ekdan38/HotDealService/wiki/MSA-%EC%97%90%EC%84%9C%EC%9D%98-%EC%9D%B8%EC%A6%9D-%EC%9D%B8%EA%B0%80-%EC%B2%98%EB%A6%AC>)
   - 모놀로직 구조에서는 SpringSecurity 로 전체적인 인증 인가 필요한 엔드포인트 관리
   - MSA 구조로 변환 하면서 기존 인증 인가 방식 사용 불가
