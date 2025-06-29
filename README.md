@@ -39,14 +39,15 @@ HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정된 수량의 상
 ## 🔍️Flow Diagram
 ![Image](https://github.com/user-attachments/assets/221c07a9-5503-4ad9-8532-7671ad3107d7)
 
+
 ##  🎨 주요 구현 내용
 - MSA 적용
   -  모놀리식 구조를 MSA로 리팩토링
 - Eureka, API Gateway 적용
   - 각 서비스 관리 및 라우팅
 - 동시성 처리를 통한 상품 재고 관리
-- Outbox 패턴 + OpenFeign을 통한 MS 간 통신
-- ErrorDecoder로 MS 통신간 발생하는 예외 처리
+- "Outbox + FeignClient + 이벤트" 를 통한 서비스간 통신
+- ErrorDecoder로 서비스 통신간 발생하는 예외 처리
 - Resilience4J의 CircuitBreaker, Retry를 통한 회복 탄력성
 
 ## 성능 최적화 사례
@@ -54,24 +55,27 @@ HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정된 수량의 상
 주문 전체 흐름으로 가져오자...
 
 ##  🧑‍💻 트러블 슈팅 및 의사결정
-- [모놀로직 구조에서 MSA 구조로 전환시 인증 인가 처리](<https://github.com/ekdan38/HotDealService/wiki/MSA-%EC%97%90%EC%84%9C%EC%9D%98-%EC%9D%B8%EC%A6%9D-%EC%9D%B8%EA%B0%80-%EC%B2%98%EB%A6%AC>)
+- [모놀로직 구조에서 MSA 구조로 전환시 인증/인가 처리](<https://github.com/ekdan38/HotDealService/wiki/MSA-%EC%97%90%EC%84%9C%EC%9D%98-%EC%9D%B8%EC%A6%9D-%EC%9D%B8%EA%B0%80-%EC%B2%98%EB%A6%AC>)
   - 모놀로직 구조에서는 SpringSecurity 로 전체적인 인증 인가 필요한 엔드포인트 관리
-  - MSA 구조로 변환 하면서 기존 인증 인가 방식 사용 불가
+  - MSA 구조로 변환 하면서 기존 인증/인가 방식 사용 불가
   - ApiGateway의 Filter에서 Jwt Token 검증, 결과에 따라 각 서비스 라우팅시 인증 인가 Filter 처리
-    -  @authenticationprincipal 사용 불가능, ApiGateway 에서 요청 헤더에 User 에대한 필요 정보 전달
+    -  @`authenticationprincipal `
+       사용 불가능, ApiGateway 에서 요청 헤더에 User 에대한 필요 정보 전달
 
 - [재고 관리 방식 및 동시성 제어](<https://github.com/ekdan38/HotDealService/wiki/%EC%9E%AC%EA%B3%A0-%EC%B2%98%EB%A6%AC-%EB%B0%A9%EB%B2%95(%EB%B0%A9%EC%8B%9D-%EB%B0%8F-%EB%8F%99%EC%8B%9C%EC%84%B1-%EC%A0%9C%EC%96%B4)>)
+  - 결제 처리 결과에 따른 재고 반영 처리
   - Redis + 점유 테이블 사용으로 안정적인 재고 관리
   - 동시성 제어를 위해 MSA 환경에 적합한 Redis 분산락 사용
 
-- [MS 간 통신 방법 고민](<https://github.com/ekdan38/HotDealService/wiki/MS-%EA%B0%84-%ED%86%B5%EC%8B%A0-%EB%B0%A9%EC%8B%9D-%EA%B3%A0%EB%AF%BC>)
+- [서비스 간 통신 방법 고민](<https://github.com/ekdan38/HotDealService/wiki/MS-%EA%B0%84-%ED%86%B5%EC%8B%A0-%EB%B0%A9%EC%8B%9D-%EA%B3%A0%EB%AF%BC>)
   - RestTemplate vs FeignClient 중 인터페이스 기반인 FeignClient 선택
   - 비동기 처리시 Kafka vs FeignClient 중 FeignClient 선택
-  - "Outbox + FeignClient + 이벤트" 방식 사용
+    - "Outbox + FeignClient + 이벤트" 방식 사용
+    -  실패건에 대한 재시도 환경 구성
 
 - [회복 탄력성을 위한 CircuitBreaker, Retry 도입](<https://github.com/ekdan38/HotDealService/wiki/%ED%9A%8C%EB%B3%B5-%ED%83%84%EB%A0%A5%EC%84%B1%EC%9D%84-%EC%9C%84%ED%95%9C-CircuitBreakek,-Retry-%EB%8F%84%EC%9E%85>)
-  - MSA 구조에서 MS를 호출할때 서비스의 장애가 연쇄 장애로 확산 될 수 있음
+  - MSA 구조에서 서비스간 서비스의 장애가 연쇄 장애로 확산 될 수 있음
   - Resilience4J의 CircuitBreaker, Retry 도입으로 회복 탄력성 적용
 
 - [스케쥴러 작동시, 인스턴스가 N개라면 동일한 스케쥴러가 N개의 인스턴스에서 실행](<https://github.com/ekdan38/HotDealService/wiki/%EC%84%9C%EB%B9%84%EC%8A%A4%EC%9D%98-%EC%9D%B8%EC%8A%A4%ED%84%B4%EC%8A%A4%EC%97%90-%EB%94%B0%EB%A5%B8-%EC%8A%A4%EC%BC%80%EC%A5%B4%EB%9F%AC-%EC%A4%91%EB%B3%B5-%EC%8B%A4%ED%96%89>)
-  - shedLock을 사용하여 한개의 인스턴스만 스케쥴러를 실행하도록 수정
+  - shedLock을 사용하여 한개의 인스턴스만 스케쥴러를 실행
