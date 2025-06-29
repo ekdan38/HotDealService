@@ -36,7 +36,7 @@ HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정된 수량의 상
 ## 🛠 아키텍처
 ![Image](https://github.com/user-attachments/assets/9c4cb2f6-e11c-4788-b0f2-5f101613ac4a)
 
-## 🔍️Flow Diagram
+## 🔍️ Flow Diagram
 ![Image](https://github.com/user-attachments/assets/221c07a9-5503-4ad9-8532-7671ad3107d7)
 
 
@@ -50,8 +50,7 @@ HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정된 수량의 상
 - ErrorDecoder로 서비스 통신간 발생하는 예외 처리
 - Resilience4J의 CircuitBreaker, Retry를 통한 회복 탄력성
 
-## 성능 최적화 사례
-간단한것만 가져오자.
+## 성능 개선 사례
 주문 전체 흐름으로 가져오자...
 
 ##  🧑‍💻 트러블 슈팅 및 의사결정
@@ -78,4 +77,7 @@ HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정된 수량의 상
   - Resilience4J의 CircuitBreaker, Retry 도입으로 회복 탄력성 적용
 
 - [스케쥴러 작동시, 인스턴스가 N개라면 동일한 스케쥴러가 N개의 인스턴스에서 실행](<https://github.com/ekdan38/HotDealService/wiki/%EC%84%9C%EB%B9%84%EC%8A%A4%EC%9D%98-%EC%9D%B8%EC%8A%A4%ED%84%B4%EC%8A%A4%EC%97%90-%EB%94%B0%EB%A5%B8-%EC%8A%A4%EC%BC%80%EC%A5%B4%EB%9F%AC-%EC%A4%91%EB%B3%B5-%EC%8B%A4%ED%96%89>)
-  - shedLock을 사용하여 한개의 인스턴스만 스케쥴러를 실행
+  - ShedLock을 사용하여 한개의 인스턴스만 스케쥴러를 실행
+
+##  📕  API 명세서
+수정한거 반영해서 업데이트...
