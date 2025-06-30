@@ -31,10 +31,10 @@ HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정된 수량의 상
 
 ## 🛠 ERD
 
-![Image](https://github.com/user-attachments/assets/42211a45-98d1-4207-9aa7-f7359941af4d)
+![Image](https://github.com/user-attachments/assets/8169c851-18d6-459b-8546-97a030ac21f6)
 
 ## 🛠 아키텍처
-![Image](https://github.com/user-attachments/assets/9c4cb2f6-e11c-4788-b0f2-5f101613ac4a)
+![Image](https://github.com/user-attachments/assets/8ea83dcb-7f00-4f4c-84ff-c144263c56ac)
 
 ## 🔍️ Flow Diagram
 ![Image](https://github.com/user-attachments/assets/221c07a9-5503-4ad9-8532-7671ad3107d7)
