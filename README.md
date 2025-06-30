@@ -42,7 +42,7 @@ HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정된 수량의 상
 
 ##  🎨 주요 구현 내용
 - MSA 적용
-- 
+-
   -  모놀리식 구조를 MSA로 리팩토링
 - Eureka, API Gateway 적용
   - 각 서비스 관리 및 라우팅
@@ -52,7 +52,25 @@ HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정된 수량의 상
 - Resilience4J의 CircuitBreaker, Retry를 통한 회복 탄력성
 
 ## 성능 개선 사례
-주문 전체 흐름으로 가져오자...
+[성능 개선 사례 바로가기](<https://github.com/ekdan38/HotDealService/wiki/%EC%84%B1%EB%8A%A5-%EA%B0%9C%EC%84%A0-%EC%82%AC%EB%A1%80-%EB%AA%A9%EB%A1%9D>)
+
+- 핫딜 조회
+
+1. DTO Projection : 불필요한 필드 조회를 줄여 소폭 성능 향상
+2. 인덱스 : 별도 인덱스 생성 결과 옵티마이저는 PK 클러스터링 인덱스 선택
+3. Redis 캐싱 : 캐싱 적용으로 DB 부하와 Latency 및 TPS 큰 개선
+
+성능 개선 결과 -> [핫딜 조회 성능 개선]
+
+| **항목** | **DTO Projection** | **캐싱 적용** |
+| --- | --- | --- |
+| 평균 Latency 감소율 | 약 **14~17%** | 약 **65~68%** |
+| TPS 증가율 | 약 **16~20%** | 약 **176~217%** |
+
+- 주문 성능 개선
+1. 재고 점유API 개선
+2. 결제 생성 비동기 처리
+
 
 ##  🧑‍💻 트러블 슈팅 및 의사결정
 - [모놀로직 구조에서 MSA 구조로 전환시 인증/인가 처리](<https://github.com/ekdan38/HotDealService/wiki/MSA-%EC%97%90%EC%84%9C%EC%9D%98-%EC%9D%B8%EC%A6%9D-%EC%9D%B8%EA%B0%80-%EC%B2%98%EB%A6%AC>)
