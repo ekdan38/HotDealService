@@ -1,6 +1,5 @@
 package com.hong.paymentservice.config;
 
-import com.hong.common.exception.custom.OrderException;
 import com.hong.common.exception.custom.PaymentException;
 import feign.FeignException;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
@@ -42,25 +41,26 @@ public class Resilience4JConfig {
     public CircuitBreakerRegistry circuitBreakerRegistry(){
         CircuitBreakerConfig circuitBreakerConfig = CircuitBreakerConfig.custom()
                 //  50% 실패 시 OPEN
-                .failureRateThreshold(30)
-                // OPEN 상태에서 10초 후 HALF_OPEN 으로 전환
+                .failureRateThreshold(50)
+                // OPEN 상태에서 5초 후 HALF_OPEN 으로 전환
                 .waitDurationInOpenState(Duration.ofSeconds(5))
                 // 카운트 기반의 슬라이딩 윈도우, 20회 호출 기록으로 실패율 계산
                 .slidingWindowType(CircuitBreakerConfig.SlidingWindowType.COUNT_BASED)
-                .slidingWindowSize(10)
-                // 최소 10건의 호출이 쌓여야 실패율 계산
+                .slidingWindowSize(20)
+                // 최소 20건의 호출이 쌓여야 실패율 계산
                 .minimumNumberOfCalls(20)
                 // HALF_OPEN 상태에서 3건 연속 성공이면 CLOSED 로 전환
                 .permittedNumberOfCallsInHalfOpenState(3)
                 // 3초 이상 걸린 호출을 느린 호출 로 간주
                 .slowCallDurationThreshold(Duration.ofSeconds(3))
-                // 느린 호출이 50% 이상이면 실패로 간주
-                .slowCallRateThreshold(80)
+                // 느린 호출이 70% 이상이면 실패로 간주
+                .slowCallRateThreshold(70)
                 // 제외할 예외(errorDecoder 처리)
                 .ignoreExceptions(PaymentException.class)
                 .build();
-        return CircuitBreakerRegistry.of(circuitBreakerConfig);
-
+        CircuitBreakerRegistry registry = CircuitBreakerRegistry.of(circuitBreakerConfig);
+        registry.circuitBreaker("default", circuitBreakerConfig);
+        return registry;
     }
 
     @Bean
@@ -92,8 +92,8 @@ public class Resilience4JConfig {
                 .onIgnoredError(event -> log.info("[Retry] 무시된 오류: {}, Error: {}",
                         event.getName(),
                         event.getLastThrowable() != null ? event.getLastThrowable().getMessage() : "N/A"));
+        retryRegistry.retry("default", retryConfig);
         return retryRegistry;
-
     }
 
 }
