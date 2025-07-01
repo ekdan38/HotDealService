@@ -3,7 +3,6 @@ package com.hong.paymentservice.client;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hong.common.exception.ErrorCode;
-import com.hong.common.exception.custom.OrderException;
 import com.hong.common.exception.custom.PaymentException;
 import feign.FeignException;
 import feign.Response;
@@ -22,33 +21,42 @@ public class FeignErrorDecoder implements ErrorDecoder {
 
     @Override
     public Exception decode(String methodKey, Response response) {
-        String errorMessage;
+        String errorMessage = "null";
         try {
-            String responseBody = new String(response.body().asInputStream().readAllBytes());
-            Map<String, String> errorMap = objectMapper.readValue(responseBody,
-                    new TypeReference<>() {
-                    });
-            errorMessage = errorMap.get("errorMessage");
-
+            if (response.body() != null) {
+                byte[] bodyBytes = response.body().asInputStream().readAllBytes();
+                String responseBody = new String(bodyBytes);
+                Map<String, String> errorMap = objectMapper.readValue(responseBody, new TypeReference<>() {
+                });
+                errorMessage = errorMap.getOrDefault("errorMessage", "Unknown ErrorMessage");
+            } else {
+                // body가 없는 경우
+                errorMessage = String.format("Feign 호출 실패: 응답 body 없음 (methodKey: %s, status: %d)", methodKey, response.status());
+            }
         } catch (IOException e) {
-            log.debug("feign Client 에러 응답 파싱 실패 했습니다. errorMessage = {}", e.getMessage());
-            throw new PaymentException(ErrorCode.PAYMENT_PARSE_RESPONSE_FAILED);
+            log.info("Feign Client 응답 파싱 실패");
         }
 
-        if (methodKey.contains("HotDealServiceClient#decreaseStock") ||
-                methodKey.contains("HotDealServiceClient#increaseStock")){
-            throw new PaymentException(ErrorCode.PAYMENT_ORDER_SERVICE_FAILED, errorMessage);
+        int status = response.status();
+
+        if (methodKey.contains("OrderServiceClient#fetchOrder")){
+            if(status == 503){
+                return FeignException.errorStatus(methodKey, response);
+            }
+            else{
+                throw new PaymentException(ErrorCode.PAYMENT_ORDER_SERVICE_FAILED, errorMessage);
+            }
         }
-        else if (methodKey.contains("ProductServiceClient#decreaseStock") ||
-                methodKey.contains("ProductServiceClient#increaseStock")) {
-            throw new PaymentException(ErrorCode.PAYMENT_ORDER_SERVICE_FAILED, errorMessage);
+
+        else if (methodKey.contains("OrderServiceClient#updateOrderStatus")){
+            if(status == 503){
+                return FeignException.errorStatus(methodKey, response);
+            }
+            else {
+                throw new PaymentException(ErrorCode.PAYMENT_ORDER_SERVICE_FAILED, errorMessage);
+            }
         }
-        else if (methodKey.contains("OrderServiceClient#fetchOrder") ||
-                methodKey.contains("OrderServiceClient#updateOrderStatus")) {
-            throw new PaymentException(ErrorCode.PAYMENT_ORDER_SERVICE_FAILED, errorMessage);
-        }
-        else{
-            return FeignException.errorStatus(methodKey, response, null, null);
-        }
+
+        return FeignException.errorStatus(methodKey, response, null, null);
     }
 }
