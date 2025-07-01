@@ -2,11 +2,12 @@ package com.hong.hotdealservice.service;
 
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.HotDealProductException;
-import com.hong.hotdealservice.domain.HotDealProduct;
-import com.hong.hotdealservice.dto.HotDealProductCacheDto;
-import com.hong.hotdealservice.dto.HotDealProductPagingResponseDto;
-import com.hong.hotdealservice.dto.HotDealProductResponseDto;
+import com.hong.hotdealservice.dto.ProductCacheDto;
+import com.hong.hotdealservice.dto.ProductResponseDto;
+import com.hong.hotdealservice.dto.ProductPagingResponseDto;
+import com.hong.hotdealservice.dto.projection.ProductSimpleDto;
 import com.hong.hotdealservice.repository.HotDealProductRepository;
+import com.hong.hotdealservice.repository.ProductRedisRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
@@ -24,36 +25,33 @@ import java.util.stream.Collectors;
 public class HotDealProductServiceImpl implements HotDealProductService {
 
     private final HotDealProductRepository hotDealProductRepository;
-
+    private final ProductRedisRepository productRedisRepository;
 
     // HotDealProduct 페이징 조회
     @Override
-    @Cacheable(cacheNames = "getHotDealProducts"
-            , key = "'hotdeal:' + #hotDealId + 'hotdeal_products:cursor:' +" +
+    @Cacheable(cacheNames = "getProducts"
+            , key = "'hotdeal:' + #hotDealId + ':products:cursor:' +" +
             " (#cursor == null ? '' : #cursor) + ':size:' + #size + ':search:' + (#search == null ? '' : #search)"
             , cacheManager = "HotDealCacheManager")
-    public HotDealProductPagingResponseDto getHotDealProducts(Long hotDealId, String search, Long cursor, int size) {
+    public ProductPagingResponseDto getProducts(Long hotDealId, String search, Long cursor, int size) {
         // 1. hotDealProducts 커서 기반 페이징 조회
-        List<HotDealProduct> page = fetchHotDealProductsByCursor(hotDealId, search, cursor, size);
+        List<ProductSimpleDto> page = getProductsByCursor(hotDealId, search, cursor, size);
 
         // 2. cursor 지정 및 응답 Dto 변환
-        return convertToHotDealProductPagingResponse(hotDealId, page);
+        return convertToProductPagingResponse(hotDealId, page);
     }
-
 
     // HotDealProduct 단건 조회
     @Override
-    @Cacheable(cacheNames = "getHotDealProduct"
-            , key = "'hotdeal_products:' + #hotDealProductId", cacheManager = "HotDealCacheManager")
-    public HotDealProductCacheDto getHotDealProduct(Long hotDealProductId) {
+    public ProductResponseDto getProduct(Long productId) {
         // 1. hotDealProduct 조회 및 검증
-        HotDealProduct hotDealProduct = fetchByIdAndValidate(hotDealProductId);
+        ProductSimpleDto product = getProductAndValidate(productId);
 
         // 2. 응답 dto 변환
-        return convertHotDealCacheDtoWithoutStock(hotDealProduct);
+        return convertProductCacheDtoWithoutStock(product);
     }
 
-    private HotDealProductPagingResponseDto convertToHotDealProductPagingResponse(Long hotDealId, List<HotDealProduct> page) {
+    private ProductPagingResponseDto convertToProductPagingResponse(Long hotDealId, List<ProductSimpleDto> page) {
         // nextCursor 지정
         Long nextCursor = page.isEmpty() ? 0 : page.get(page.size() - 1).getId();
 
@@ -61,7 +59,7 @@ public class HotDealProductServiceImpl implements HotDealProductService {
         return convertToHotDealPagingResponseDto(hotDealId, nextCursor, page);
     }
 
-    private List<HotDealProduct> fetchHotDealProductsByCursor(Long hotDealId, String search, Long cursor, int size) {
+    private List<ProductSimpleDto> getProductsByCursor(Long hotDealId, String search, Long cursor, int size) {
         // cursor 가 null 이면 가장 최근 데이터 조회 처리
         if (cursor == null) cursor = Long.MAX_VALUE;
 
@@ -69,30 +67,44 @@ public class HotDealProductServiceImpl implements HotDealProductService {
         PageRequest pageRequest = PageRequest.of(0, size);
 
         // 페이징 조회
-        List<HotDealProduct> page = hotDealProductRepository.findByCursorAndSearchAndSizeHotDealProducts(hotDealId, cursor, search, pageRequest);
-        return page;
+        return hotDealProductRepository
+                .findByCursorAndSearchAndSizeHotDealProducts(hotDealId, cursor, search, pageRequest);
     }
 
-    // hotDealProduct 단건 조회, 검증
-    private HotDealProduct fetchByIdAndValidate(Long hotDealProductId) {
-        return hotDealProductRepository.findById(hotDealProductId).orElseThrow(() -> {
-            log.debug("요청된 핫딜 상품이 존재하지 않습니다. hotDealProductId = {}", hotDealProductId);
-            return new HotDealProductException(ErrorCode.HOTDEAL_PRODUCT_NOT_FOUND, hotDealProductId);
+    //hotDealProduct 단건 조회, 검증
+    private ProductSimpleDto getProductAndValidate(Long productId) {
+
+        // 1. Redis 캐시 조회
+        ProductCacheDto cachedData = productRedisRepository.getProductById(productId);
+        if(cachedData != null){
+            return new ProductSimpleDto(cachedData);
+        }
+
+        // 2. CacheMiss -> DB 조회
+        ProductSimpleDto product = hotDealProductRepository.findActiveProductById(productId).orElseThrow(() -> {
+            log.debug("요청된 핫딜 상품이 존재하지 않습니다. hotDealProductId = {}", productId);
+            return new HotDealProductException(ErrorCode.HOTDEAL_PRODUCT_NOT_FOUND, productId);
         });
+
+        // 3. Redis 에 캐시 저장
+        ProductCacheDto cacheDto = new ProductCacheDto(product);
+        productRedisRepository.saveWithTTL(cacheDto);
+
+        return product;
     }
 
     // hotDealProductResponseDto 변환
-    private HotDealProductCacheDto convertHotDealCacheDtoWithoutStock(HotDealProduct hotDealProduct) {
-        return new HotDealProductCacheDto(hotDealProduct);
+    private ProductResponseDto convertProductCacheDtoWithoutStock(ProductSimpleDto product) {
+        return new ProductResponseDto(product, product.getHotDealId());
     }
 
     // hotDealProductResponseDto 변환
-    private HotDealProductPagingResponseDto convertToHotDealPagingResponseDto(Long hotDealId, Long nextCursor, List<HotDealProduct> page) {
-        return new HotDealProductPagingResponseDto(
+    private ProductPagingResponseDto convertToHotDealPagingResponseDto(Long hotDealId, Long nextCursor, List<ProductSimpleDto> page) {
+        return new ProductPagingResponseDto(
                 nextCursor,
                 hotDealId,
                 page.stream()
-                        .map(HotDealProductResponseDto::new)
+                        .map(ProductResponseDto::new)
                         .collect(Collectors.toList()));
     }
 }
