@@ -1,4 +1,4 @@
-package com.hong.productservice.dto.wishlist;
+package com.hong.common.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,10 +7,8 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class WishlistResponseDto {
+public class StockRestoreRequestDto {
 
-    private Long id;
+    private String orderId;
     private Long userId;
-    private Long productId;
-    private Integer quantity;
 }

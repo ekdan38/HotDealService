@@ -1,4 +1,4 @@
-package com.hong.paymentservice.dto;
+package com.hong.common.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class PaymentProcessRequestDto {
-
-    private Integer userPaymentAmount;
+public class ProductReservationDto {
+    private Long productId;
+    private Integer quantity;
 }

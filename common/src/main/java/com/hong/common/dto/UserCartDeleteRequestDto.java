@@ -1,4 +1,4 @@
-package com.hong.productservice.dto.wishlist;
+package com.hong.common.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -9,9 +9,8 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class WishlistUpdateResponseDto {
+public class UserCartDeleteRequestDto {
 
-    private Long id;
     private Long userId;
-    private List<WishlistProductDto> updates;
+    private List<Long> productIds;
 }
