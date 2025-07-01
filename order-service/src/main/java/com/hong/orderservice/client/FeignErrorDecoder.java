@@ -4,9 +4,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.OrderException;
+import com.hong.common.exception.custom.PaymentException;
 import feign.FeignException;
 import feign.Response;
 import feign.codec.ErrorDecoder;
+import jakarta.ws.rs.ServiceUnavailableException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -21,31 +23,99 @@ public class FeignErrorDecoder implements ErrorDecoder {
 
     @Override
     public Exception decode(String methodKey, Response response) {
-        String errorMessage;
+        String errorMessage = "null";
         try {
-            String responseBody = new String(response.body().asInputStream().readAllBytes());
-            Map<String, String> errorMap = objectMapper.readValue(responseBody,
-                    new TypeReference<>() {
-                    });
-            errorMessage = errorMap.get("errorMessage");
-
+            if (response.body() != null) {
+                byte[] bodyBytes = response.body().asInputStream().readAllBytes();
+                String responseBody = new String(bodyBytes);
+                Map<String, String> errorMap = objectMapper.readValue(responseBody, new TypeReference<>() {
+                });
+                errorMessage = errorMap.getOrDefault("errorMessage", "Unknown ErrorMessage");
+            } else {
+                // body가 없는 경우
+                errorMessage = String.format("Feign 호출 실패: 응답 body 없음 (methodKey: %s, status: %d)", methodKey, response.status());
+            }
         } catch (IOException e) {
-            log.debug("feign Client 에러 응답 파싱 실패 했습니다. errorMessage = {}", e.getMessage());
-            throw new OrderException(ErrorCode.ORDER_PRODUCT_PARSE_RESPONSE_FAILED);
+            log.info("Feign Client 응답 파싱 실패");
         }
 
-        if (methodKey.contains("HotDealServiceClient#fetchProducts")
-                || methodKey.contains("HotDealServiceClient#decreaseStock")
-                || methodKey.contains("HotDealServiceClient#increaseStock")){
-            throw new OrderException(ErrorCode.ORDER_HOTDEAL_PRODUCT_SERVICE_FAILED, errorMessage);
+        int status = response.status();
+        /**
+         * userService
+         */
+        if (methodKey.contains("UserServiceClient#deleteUserCart")){
+            if (status == 503) {
+                return FeignException.errorStatus(methodKey, response);
+            }
+            else{
+                throw new OrderException(ErrorCode.ORDER_USER_SERVICE_FAILED, errorMessage);
+            }
         }
-        else if (methodKey.contains("ProductServiceClient#fetchProducts")
-                || methodKey.contains("ProductServiceClient#decreaseStock")
-                || methodKey.contains("ProductServiceClient#increaseStock")) {
-            throw new OrderException(ErrorCode.ORDER_PRODUCT_SERVICE_FAILED, errorMessage);
+
+        /**
+         * hotdealService
+         */
+        // 재고 점유 요청
+        else if (methodKey.contains("HotDealServiceClient#reserveStock")){
+            if (status == 503) {
+                return FeignException.errorStatus(methodKey, response);
+            }
+            else{
+                throw new OrderException(ErrorCode.ORDER_HOTDEAL_SERVICE_FAILED, errorMessage);
+            }
         }
-        else{
-            return FeignException.errorStatus(methodKey, response, null, null);
+
+        // 재고 최종 반영 요청
+        else if(methodKey.contains("HotDealServiceClient#finalizeStockReservation")){
+            if(status == 503){
+                return FeignException.errorStatus(methodKey, response);
+            }
+            else{
+                throw new OrderException(ErrorCode.ORDER_HOTDEAL_SERVICE_FAILED, errorMessage);
+            }
         }
+
+        // 재고 점유 해제 요청
+        else if(methodKey.contains("HotDealServiceClient#releaseReservedStocks")){
+            if(status == 503){
+                return FeignException.errorStatus(methodKey, response);
+            }
+            else{
+                throw new OrderException(ErrorCode.ORDER_HOTDEAL_SERVICE_FAILED, errorMessage);
+            }
+        }
+
+        /**
+         * paymentService
+         */
+        // 주문 생성시 결제 생성 요청
+        else if (methodKey.contains("PaymentServiceClient#createPayment")) {
+            if (status == 503) {
+                return FeignException.errorStatus(methodKey, response);
+            }
+            else{
+                throw new OrderException(ErrorCode.ORDER_PAYMENT_SERVICE_FAILED, errorMessage);
+            }
+        }
+
+        // 미결제 주문 만료 처리 => 결제 만료 처리 요청
+        else if(methodKey.contains("PaymentServiceClient#expirePayment")){
+            if(status == 503){
+                return FeignException.errorStatus(methodKey, response);
+            }
+            else{
+                throw new OrderException(ErrorCode.ORDER_PAYMENT_SERVICE_FAILED, errorMessage);
+            }
+        }
+
+        else if(methodKey.contains("PaymentServiceClient#cancelPayment")){
+            if(status == 503){
+                return FeignException.errorStatus(methodKey, response);
+            }
+            else{
+                throw new OrderException(ErrorCode.ORDER_PAYMENT_SERVICE_FAILED, errorMessage);
+            }
+        }
+        return FeignException.errorStatus(methodKey, response);
     }
 }
