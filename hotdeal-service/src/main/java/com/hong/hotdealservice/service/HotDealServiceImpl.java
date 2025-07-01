@@ -1,35 +1,34 @@
 package com.hong.hotdealservice.service;
 
-import com.hong.common.dto.ProductStockUpdateRequestDto;
-import com.hong.common.dto.ProductStockUpdateResponseDto;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.HotDealException;
 import com.hong.common.exception.custom.HotDealProductException;
-import com.hong.hotdealservice.client.Resilience4JProductServiceClient;
 import com.hong.hotdealservice.domain.HotDeal;
 import com.hong.hotdealservice.domain.HotDealProduct;
 import com.hong.hotdealservice.domain.status.HotDealStatus;
-import com.hong.hotdealservice.dto.HotDealPagingCacheDto;
-import com.hong.hotdealservice.dto.HotDealProductResponseDto;
-import com.hong.hotdealservice.dto.HotDealCacheDto;
-import com.hong.hotdealservice.repository.HotDealProductRedisRepository;
+import com.hong.hotdealservice.dto.*;
+import com.hong.hotdealservice.dto.projection.HotDealSimpleDto;
+import com.hong.hotdealservice.event.HotDealStockEvent;
+import com.hong.hotdealservice.repository.HotDealRedisRepository;
+import com.hong.hotdealservice.repository.ProductRedisRepository;
+import com.hong.hotdealservice.repository.HotDealProductRepository;
 import com.hong.hotdealservice.repository.HotDealRepository;
 import com.hong.hotdealservice.web.dto.HotDealProductRequestDto;
+import com.hong.hotdealservice.web.dto.HotDealCreateRequestDto;
 import com.hong.hotdealservice.web.dto.HotDealProductUpdateRequestDto;
-import com.hong.hotdealservice.web.dto.HotDealRequestDto;
 import com.hong.hotdealservice.web.dto.HotDealUpdateRequestDto;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,41 +38,44 @@ import java.util.stream.Collectors;
 public class HotDealServiceImpl implements HotDealService {
 
     private final HotDealRepository hotDealRepository;
-    private final HotDealProductRedisRepository hotDealProductRedisRepository;
-    private final Resilience4JProductServiceClient resilience4JProductServiceClient;
+    private final HotDealProductRepository hotDealProductRepository;
+    private final HotDealRedisRepository hotDealRedisRepository;
+    private final ProductRedisRepository productRedisRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     // HotDeal 생성
     @Override
     @Transactional
     @CacheEvict(cacheNames = "getHotDeals", allEntries = true)
-    public HotDealCacheDto createHotDeal(Long adminId, HotDealRequestDto requestDto) {
+    public HotDealResponseDto createHotDeal(Long adminId, HotDealCreateRequestDto requestDto) {
         // 1. 같은 title 로 HotDeal 이 존재 하는지 검증
-        existsByTitleAndValidate(requestDto);
+        validateDuplicateHotDealTitle(requestDto);
 
-        // 2. HotDeal 시작 시간, 종료 시간 검증
-        validateHotDealDate(requestDto.getStartTime(), requestDto.getEndTime());
+        // 2. hotDeal 시작 시간, 종료 시간 검증
+        validateHotDealTime(requestDto.getStartTime(), requestDto.getEndTime());
 
-        // 3. 원본 product 에 재고 감소 요청
-        //핫딜 상품 등록하고자 하는 정보 Dto 변환
-        List<ProductStockUpdateRequestDto> productStockUpdateRequestDtos = convertToProductUpdateStockDtos(requestDto.getProductInfos());
-        List<ProductStockUpdateResponseDto> productStockUpdateResponseDtos = decreaseOriginalProductStockAndValidate(productStockUpdateRequestDtos);
+        // 3. 같은 title 로 product 가 존재 하는지 검증
+        validateDuplicateProductTitle(requestDto.getProducts());
 
-        // 4. HotDeal 생성, 저장
-        HotDeal savedHotDeal = createHotDealAndSave(adminId, productStockUpdateResponseDtos, requestDto);
+        // 4. hotDeal 생성, 저장
+        HotDeal savedHotDeal = createHotDealAndSave(adminId, requestDto);
 
-        // 5. 응답 dto 변환
-        return convertHotDealResponseDtoWithHotDealProducts(savedHotDeal);
+        // 5. 트랜잭션 commit 이후 비동기로 hotDealProduct stock Redis 에 저장
+        eventPublisher.publishEvent(new HotDealStockEvent(savedHotDeal));
+
+        // 6. 응답 dto 변환
+        return convertHotDealResponseDtoWithProducts(savedHotDeal);
     }
 
     // HotDeal 페이징 조회 (hotDealProduct 미포함)
     @Override
     @Cacheable(cacheNames = "getHotDeals"
-            , key = "'hot_deals:cursor:' + (#cursor == null ? '' : #cursor) + ':size:' + #size + ':search:' + (#search == null ? '' : #search)"
+            , key = "'hotdeals:cursor:' + (#cursor == null ? '' : #cursor) + ':size:' + #size + ':search:' + (#search == null ? '' : #search)"
             , cacheManager = "HotDealCacheManager")
     public HotDealPagingCacheDto getHotDeals(String search, Long cursor, int size) {
 
         // 1. hotDeal 페이징 조회(cursor 기반)
-        List<HotDeal> page = fetchHotDealsByCusor(search, cursor, size);
+        List<HotDealSimpleDto> page = fetchHotDealsByCursor(search, cursor, size);
 
         // 2. cursor 지정 및 응답 Dto 변환
         return convertToHotDealPagingResponse(page);
@@ -81,10 +83,9 @@ public class HotDealServiceImpl implements HotDealService {
 
     // HotDeal 단건 조회
     @Override
-    @Cacheable(cacheNames = "getHotDeal", key = "'hot_deals:' + #hotDealId", cacheManager = "HotDealCacheManager")
     public HotDealCacheDto getHotDeal(Long hotDealId) {
         // 1. hotDeal 조회 및 검증
-        HotDeal hotDeal = fetchHotDealAndValidate(hotDealId);
+        HotDealSimpleDto hotDeal = getHotDealAndValidate(hotDealId);
 
         // 2. 응답 Dto 변환
         return convertHotDealResponseDto(hotDeal);
@@ -93,109 +94,84 @@ public class HotDealServiceImpl implements HotDealService {
     // HotDeal 수정
     @Transactional
     @Override
-    @Caching(evict = {
-            @CacheEvict(cacheNames = "getHotDeals", allEntries = true),
-            @CacheEvict(cacheNames = "getHotDeal", key = "'hot_deals:' + #hotDealId")
-    })
-    public HotDealCacheDto updateHotDeal(Long hotDealId, HotDealUpdateRequestDto requestDto) {
+    @CacheEvict(cacheNames = "getHotDeals", allEntries = true)
+    public HotDealResponseDto updateHotDeal(Long hotDealId, HotDealUpdateRequestDto requestDto) {
         // 1. hotDeal 조회 및 검증
-        HotDeal hotDeal = fetchHotDealByIdWithHotDealProductsAndValidate(hotDealId);
+        HotDeal hotDeal = fetchHotDealWithProductsAndValidate(hotDealId);
+
         // 2. title 검증
         validateNewTitle(requestDto, hotDeal);
+
         // 3. 날짜 검증
-        validateHotDealDate(requestDto.getStartTime(), requestDto.getEndTime());
+        validateHotDealTime(requestDto.getStartTime(), requestDto.getEndTime());
 
         // 4. HotDeal 필드 업데이트
-        hotDeal.updateFields(
-                requestDto.getTitle(),
-                requestDto.getDescription(),
-                requestDto.getStartTime(),
-                requestDto.getEndTime(),
-                HotDealStatus.valueOf(requestDto.getStatus()));
+        updateHotDealFields(requestDto, hotDeal);
 
-        // 원본 상품에 대한 재고 감소, 증가 위한 리스트
-        List<ProductStockUpdateRequestDto> increaseProductStockRequestDtos = new ArrayList<>();
-        List<ProductStockUpdateRequestDto> decreaseProductStockRequestDtos = new ArrayList<>();
-        // 삭제, 수정 된 HotDealProductId 에 대한 캐시 부분 무효화를 위한 리스트
-        List<Long> hotDealProductIdsToEvict = new ArrayList<>();
+        AtomicBoolean isStockUpdated = new AtomicBoolean(false);
+        // hotDealProducts 에 대한 캐시 무효화 위한 list
+        List<Long> productIdsToEvict = new ArrayList<>();
 
-        // 5. 삭제 대상 hotDealProduct 삭제 처리
-        deleteHotDealProductsFromUpdateRequest(requestDto, hotDeal, increaseProductStockRequestDtos, hotDealProductIdsToEvict);
+        // 5. 삭제 대상 상품 제거 (삭제)
+        deleteProductsFromUpdateRequest(productIdsToEvict, requestDto, hotDeal, isStockUpdated);
 
-        // 6. 수정 대상 stock increase, decrease, discountRate Update 처리
-        updateHotDealProducts(requestDto, hotDeal, increaseProductStockRequestDtos, decreaseProductStockRequestDtos, hotDealProductIdsToEvict);
+        // 6. 기존 상품 필드 업데이트 (수정)
+        updateProductsFormUpdateRequest(productIdsToEvict, requestDto, hotDeal, isStockUpdated);
 
-        // 7. 새로 생성 요청 받은 hotDealProduct 생성, product-service 재고 감소 호출
-        createNewHotDealProductsAndDecreaseOriginalProductStock(requestDto, hotDeal, decreaseProductStockRequestDtos);
+        // 6. 신규 상품 추가 (추가)
+        createNewProductsFromUpdateRequest(requestDto, hotDeal, isStockUpdated);
 
-        // 8. product-service 재고 증가 호출
-        // (decreaseStock 은 성공 했지만, increaseStock 이 실패 하면 decreaseStock 처리 된 데이터 increaseStock 처리)
-        try{
-            increaseOriginalProductStockAndValidate(increaseProductStockRequestDtos);
-        }catch (HotDealProductException e){
-            increaseOriginalProductStockAndValidate(decreaseProductStockRequestDtos);
-            throw e;
-        }
-        // 7. 삭제, 수정 된 HotDealProductId 에 대한 캐시 부분, 전면 무효화
-        hotDealProductRedisRepository.deleteAllHotDealProductByIds(hotDealProductIdsToEvict);
-        hotDealProductRedisRepository.deleteAllGetHotDealProductsKeys();
+        // 7. 삭제, 수정 된 product 에 대한 캐시 부분(단건 조회), 전면(페이징 조회) 무효화
+        hotDealRedisRepository.deleteById(hotDealId);
+        productRedisRepository.deleteAllProductByIds(productIdsToEvict);
+        productRedisRepository.deleteAllGetProductsKeys();
+
+        // 5. 트랜잭션 commit 이후 비동기로 product 변경된 stock Redis 에 저장
+        // stock 변경이 있었을 경우만 작동
+        if(isStockUpdated.get()) eventPublisher.publishEvent(new HotDealStockEvent(hotDeal));
 
         // 8. 응답 Dto 변환
-        return convertHotDealResponseDtoWithHotDealProducts(hotDeal);
+        return convertHotDealResponseDtoWithProducts(hotDeal);
     }
 
     // hotDeal 삭제
     @Transactional
     @Override
-    @Caching(evict = {
-            @CacheEvict(cacheNames = "getHotDeals", allEntries = true),
-            @CacheEvict(cacheNames = "getHotDeal", key = "'hot_deals:' + #hotDealId")
-    })
-    public HotDealCacheDto deleteHotDeal(Long hotDealId) {
+    @CacheEvict(cacheNames = "getHotDeals", allEntries = true)
+    public HotDealResponseDto deleteHotDeal(Long hotDealId) {
         // 1. hotDeal 조회 (hotDealProducts fetch join) 및 검증
-        HotDeal hotDeal = fetchHotDealByIdWithHotDealProductsAndValidate(hotDealId);
+        HotDeal hotDeal = fetchHotDealWithProductsAndValidate(hotDealId);
 
-        // 2. hotDeal 삭제 (softDelete)
-        // 핫딜 상품 남은 재고 원본 상품에 반영 및 핫딜 상품 재고 0으로 변경
-        // hotDealProducts 에 남은 재고 원본 상품에 재고 증가 요청
-        hotDealsoftDelete(hotDeal);
+        // 2. 남은 stock 0개로 처리
+        hotDeal.getHotDealProducts().forEach(product -> product.decreaseStock(product.getStock()));
 
-        // 3. 삭제, 수정 된 hotDealProductId 에 대한 캐시 부분, 전면 무효화
+        // 3. softDelete 처리
+        hotDeal.softDelete();
+
+        // 4. 삭제, 수정 된 hotDeal, hotDealProductId 에 대한 캐시 부분, 전면 무효화
         // hotDealProducts 캐시 무효화 처리
-        cacheEvictToHotDealProducts(hotDeal);
+        hotDealRedisRepository.deleteById(hotDealId);
+        cacheEvictToProducts(hotDeal);
 
-        // 4. 응답 Dto 변환
-        return convertHotDealResponseDtoWithHotDealProducts(hotDeal);
+        // 5. 트랜잭션 commit 이후 비동기로 hotDealProduct 변경된 stock Redis 에 저장
+        eventPublisher.publishEvent(new HotDealStockEvent(hotDeal));
+
+        // 6. 응답 Dto 변환
+        return convertHotDealResponseDtoWithProducts(hotDeal);
     }
 
-    private void cacheEvictToHotDealProducts(HotDeal hotDeal) {
-        List<Long> hotDealProductIdsToEvict = hotDeal.getHotDealProducts()
+    private void cacheEvictToProducts(HotDeal hotDeal) {
+        List<Long> productIdsToEvict = hotDeal.getHotDealProducts()
                 .stream()
                 .map(HotDealProduct::getId)
                 .toList();
-        hotDealProductRedisRepository.deleteAllHotDealProductByIds(hotDealProductIdsToEvict);
-        hotDealProductRedisRepository.deleteAllGetHotDealProductsKeys();
+        productRedisRepository.deleteAllProductByIds(productIdsToEvict);
+        productRedisRepository.deleteAllGetProductsKeys();
     }
 
-    private void hotDealsoftDelete(HotDeal hotDeal) {
-        // 핫딜 상품 남은 재고 원본 상품에 반영 및 핫딜 상품 재고 0으로 변경
-        List<ProductStockUpdateRequestDto> increaseProductStockRequestDtos = decreaseHotDealProductStock(hotDeal);
-        // hotDealProducts 에 남은 재고 원본 상품에 재고 증가 요청
-        increaseOriginalProductStockAndValidate(increaseProductStockRequestDtos);
-        hotDeal.softDelete();
-    }
-
-    private List<ProductStockUpdateRequestDto> decreaseHotDealProductStock(HotDeal hotDeal) {
-        List<ProductStockUpdateRequestDto> increaseProductStockRequestDtos = hotDeal.getHotDealProducts()
-                .stream()
-                .map(hp -> new ProductStockUpdateRequestDto(hp.getProductId(), hp.getStock()))
-                .collect(Collectors.toList());
-        hotDeal.getHotDealProducts().forEach(hp -> hp.decreaseStock(hp.getStock()));
-        return increaseProductStockRequestDtos;
-    }
 
     // 같은 title 로 HotDeal 이 존재 하는지 검증
-    private void existsByTitleAndValidate(HotDealRequestDto requestDto) {
+    private void validateDuplicateHotDealTitle(HotDealCreateRequestDto requestDto) {
         if (hotDealRepository.existsByTitle(requestDto.getTitle())) {
             log.debug("이미 존재하는 핫딜 Title 입니다. hotDealTitle = {}", requestDto.getTitle());
             throw new HotDealException(ErrorCode.HOTDEAL_TITLE_ALREADY_EXISTS, requestDto.getTitle());
@@ -203,7 +179,7 @@ public class HotDealServiceImpl implements HotDealService {
     }
 
     // HotDeal 시작 시간, 종료 시간 검증
-    private void validateHotDealDate(LocalDateTime startTime, LocalDateTime endTime) {
+    private void validateHotDealTime(LocalDateTime startTime, LocalDateTime endTime) {
         // 시작 시간이 종료 시간보다 늦으면
         if (startTime.isAfter(endTime)) {
             log.debug("시작 시간이 종료 시간보다 이후일 수 없습니다. startTime = {}, endTime = {}", startTime, endTime);
@@ -211,43 +187,34 @@ public class HotDealServiceImpl implements HotDealService {
         }
     }
 
-    // requestDto 에서 핫딜 상품 등록하고자 하는 정보 Dto 변환
-    private List<ProductStockUpdateRequestDto> convertToProductUpdateStockDtos(List<HotDealProductRequestDto> productInfos) {
-        return productInfos.stream()
-                .map(request -> new ProductStockUpdateRequestDto(
-                        request.getProductId(),
-                        request.getQuantity()))
-                .collect(Collectors.toList());
+    // 같은 title 로 hotDealProduct 가 존재 하는지 검증
+    private void validateDuplicateProductTitle(List<HotDealProductRequestDto> requestProducts) {
+        // 1. 같은 title 로 hotDealProduct 가 존재 하는지 검증
+        ArrayList<String> existsTitles = new ArrayList<>();
+        for (HotDealProductRequestDto product : requestProducts) {
+            boolean exists = hotDealProductRepository.existsByTitle(product.getTitle());
+            if(exists) existsTitles.add(product.getTitle());
+        }
+        // 2. 존재 한다면 모아서 예외 및 로그 처리
+        if(!existsTitles.isEmpty()){
+            log.info("이미 존재 하는 핫딜 상품 title 입니다. requestedTitle ={}", existsTitles);
+            throw new HotDealProductException(ErrorCode.HOTDEAL_PRODUCT_TITLE_ALREADY_EXISTS, existsTitles);
+        }
     }
 
     // HotDeal 생성, 저장
     private HotDeal createHotDealAndSave(Long adminId,
-                                         List<ProductStockUpdateResponseDto> productStockUpdateResponseDtos,
-                                         HotDealRequestDto requestDto) {
+                                         HotDealCreateRequestDto requestDto) {
+        // 1. hotDealProduct 생성
+        List<HotDealProduct> hotDealProducts = requestDto.getProducts()
+                .stream()
+                .map(dto -> HotDealProduct.create(
+                        dto.getTitle(),
+                        dto.getPrice(),
+                        dto.getStock()))
+                .collect(Collectors.toList());
 
-        // productStockUpdateResponseDtos Map 변환
-        Map<Long, ProductStockUpdateResponseDto> productMap = productStockUpdateResponseDtos.stream()
-                .collect(Collectors.toMap(ProductStockUpdateResponseDto::getProductId, product -> product));
-
-        // 핫딜 상품을 저장할 List
-        List<HotDealProduct> hotDealProducts = new ArrayList<>();
-
-        // HotDealProduct 생성
-        for (HotDealProductRequestDto productInfo : requestDto.getProductInfos()) {
-            Long productId = productInfo.getProductId();
-            ProductStockUpdateResponseDto responseDto = productMap.get(productId);
-
-            // HotDealProduct 생성, hotDealProducts 에 Add
-            hotDealProducts.add(HotDealProduct.create(
-                    responseDto.getProductId(),
-                    responseDto.getTitle(),
-                    responseDto.getPrice(),
-                    productInfo.getDiscountRate(),
-                    productInfo.getQuantity()
-            ));
-        }
-
-        // HotDeal 생성
+        // 2. hotDeal 생성
         HotDeal hotDeal = HotDeal.create(
                 adminId,
                 requestDto.getTitle(),
@@ -256,41 +223,37 @@ public class HotDealServiceImpl implements HotDealService {
                 requestDto.getEndTime(),
                 hotDealProducts);
 
-        // startTime 이 시작 시간 지나고, endTime 이전 이면 생성 시점 활성화
-        LocalDateTime now = LocalDateTime.now();
-        if (requestDto.getStartTime().isBefore(now) && requestDto.getEndTime().isAfter(now)) {
-            hotDeal.updateStatus(HotDealStatus.ACTIVE);
-        }
+        // 3. startTime 이 시작 시간 지나고, endTime 이전 이면 생성 시점 활성화
+        if (hotDeal.orderAble()) hotDeal.updateStatus(HotDealStatus.ACTIVE);
 
-        // HotDeal 저장
+        // 5. HotDeal 저장
         // cascade 로 인해 HotDealProduct 또한 저장 처리
         return hotDealRepository.save(hotDeal);
     }
 
-    private HotDealPagingCacheDto convertToHotDealPagingResponse(List<HotDeal> page) {
+    private HotDealPagingCacheDto convertToHotDealPagingResponse(List<HotDealSimpleDto> page) {
         // Dto 변환
         List<HotDealCacheDto> HotDealCacheDtos = page.stream().map(this::convertHotDealResponseDto)
                 .collect(Collectors.toList());
 
         // nextCursor 지정
-        Long nextCursor = HotDealCacheDtos.isEmpty() ? 0 : HotDealCacheDtos.get(HotDealCacheDtos.size() - 1).getHotDealId();
+        Long nextCursor = HotDealCacheDtos.isEmpty() ? 0 : HotDealCacheDtos.get(HotDealCacheDtos.size() - 1).getId();
 
         return new HotDealPagingCacheDto(nextCursor, HotDealCacheDtos);
     }
 
-    private List<HotDeal> fetchHotDealsByCusor(String search, Long cursor, int size) {
+    private List<HotDealSimpleDto> fetchHotDealsByCursor(String search, Long cursor, int size) {
         if (cursor == null) cursor = Long.MAX_VALUE;
 
         // PageRequest 객체로 조회 size 지정
         PageRequest pageRequest = PageRequest.of(0, size);
 
         // 페이징 조회
-        List<HotDeal> page = hotDealRepository.findByCursorAndSearchAndSizeHotDeals(cursor, search, pageRequest);
-        return page;
+        return hotDealRepository.findByCursorAndSearchAndSizeHotDeals(cursor, search, pageRequest);
     }
 
     // hotDealProducts Fetch Join 조회, 검증
-    private HotDeal fetchHotDealByIdWithHotDealProductsAndValidate(Long hotDealId) {
+    private HotDeal fetchHotDealWithProductsAndValidate(Long hotDealId) {
         return hotDealRepository.findByIdWithHotDealProducts(hotDealId).orElseThrow(() -> {
             log.debug("요청된 핫딜이 존재하지 않습니다. hotDealId = {}", hotDealId);
             return new HotDealException(ErrorCode.HOTDEAL_NOT_FOUND, hotDealId);
@@ -298,11 +261,24 @@ public class HotDealServiceImpl implements HotDealService {
     }
 
     // hotDeal 조회, 검증
-    private HotDeal fetchHotDealAndValidate(Long hotDealId){
-        return hotDealRepository.findById(hotDealId).orElseThrow(() -> {
+    private HotDealSimpleDto getHotDealAndValidate(Long hotDealId){
+        // 1. Redis 조회
+        HotDealCacheDto cachedData = hotDealRedisRepository.findById(hotDealId);
+        if(cachedData != null){
+            return new HotDealSimpleDto(cachedData);
+        }
+
+        // 2. cacheMiss -> DB 조회
+        HotDealSimpleDto hotDeal = hotDealRepository.findHotDealById(hotDealId).orElseThrow(() -> {
             log.debug("요청된 핫딜이 존재하지 않습니다. hotDealId = {}", hotDealId);
             return new HotDealException(ErrorCode.HOTDEAL_NOT_FOUND, hotDealId);
         });
+
+        // 3. Redis save
+        HotDealCacheDto cacheDto = new HotDealCacheDto(hotDeal);
+        hotDealRedisRepository.saveWithTTL(cacheDto);
+
+        return hotDeal;
     }
 
     private String validateNewTitle(HotDealUpdateRequestDto requestDto, HotDeal hotDeal) {
@@ -313,157 +289,96 @@ public class HotDealServiceImpl implements HotDealService {
         }
         return title;
     }
-    // 새로 생성 요청 받은 hotDealProduct 생성, product-service 재고 감소 호출
-    private void createNewHotDealProductsAndDecreaseOriginalProductStock(HotDealUpdateRequestDto requestDto,
-                                                                         HotDeal hotDeal,
-                                                                         List<ProductStockUpdateRequestDto> decreaseProductStockRequestDtos) {
-        // 생성 대상 hotDealProducts 추출
-        List<@Valid HotDealProductUpdateRequestDto> productsToCreate = requestDto.getProductInfos()
-                .stream()
-                .filter(rp -> rp.getHotDealProductId() == null)
+
+    // update 요청 에서 hotDalProduct 생성 대상 생성
+    private void createNewProductsFromUpdateRequest(HotDealUpdateRequestDto requestDto,
+                                                    HotDeal hotDeal,
+                                                    AtomicBoolean isStockUpdated) {
+        List<HotDealProduct> newProducts = requestDto.getProducts().stream()
+                .filter(r -> r.getProductId() == null)
+                .map(r -> HotDealProduct.create(r.getTitle(), r.getPrice(), r.getStock()))
                 .toList();
-
-        // 원본 상품에 대한 재고 감소 요청
-        decreaseProductStockRequestDtos.addAll(productsToCreate.stream()
-                .map(rp -> new ProductStockUpdateRequestDto(rp.getProductId(), rp.getQuantity()))
-                .toList());
-
-        // 재고 감소
-        List<ProductStockUpdateResponseDto> productStockUpdateResponseDtos = decreaseOriginalProductStockAndValidate(decreaseProductStockRequestDtos);
-        List<HotDealProduct> hotDealProductsToCreate = new ArrayList<>();
-        productsToCreate
-                .forEach(rp -> productStockUpdateResponseDtos.stream()
-                        .filter(product -> product.getProductId().equals(rp.getProductId()))
-                        .findFirst()
-                        .ifPresent(product -> {
-                            hotDealProductsToCreate.add(
-                                    HotDealProduct.create(
-                                            product.getProductId(),
-                                            product.getTitle(),
-                                            product.getPrice(),
-                                            rp.getDiscountRate(),
-                                            product.getRequestedQuantity()
-                                    ));
-                        }));
-
-        hotDeal.addHotDealProducts(hotDealProductsToCreate);
+        if(!newProducts.isEmpty()) isStockUpdated.set(true);
+        // 신규 상품 생성
+        hotDeal.addHotDealProducts(newProducts);
     }
 
-    // 수정 대상 stock increase, decrease, discountRate Update 처리
-    private void updateHotDealProducts(HotDealUpdateRequestDto requestDto,
-                                       HotDeal hotDeal,
-                                       List<ProductStockUpdateRequestDto> increaseStocks,
-                                       List<ProductStockUpdateRequestDto> decreaseStocks,
-                                       List<Long> hotDealProductIdsToEvict) {
-
-        // 업데이트 대상 hotDealProducts 추출
-        List<HotDealProduct> productsToUpdate = hotDeal.getHotDealProducts().stream()
-                .filter(hp -> requestDto.getProductInfos().stream()
-                        .filter(rp -> rp.getHotDealProductId() != null)
-                        .anyMatch(rp -> rp.getHotDealProductId().equals(hp.getId())))
-                .toList();
-
-
-        // 업데이트 대상 hotDealProductIds 캐싱 부분 무효화 대상에 add
-        hotDealProductIdsToEvict.addAll(
-                productsToUpdate.stream()
-                        .map(HotDealProduct::getId)
-                        .toList());
-
-        productsToUpdate
-                .forEach(hp -> requestDto.getProductInfos().stream()
-                        .filter(rp -> rp.getHotDealProductId() != null && rp.getHotDealProductId().equals(hp.getId()))
+    // update 요청 에서 hotDalProduct 수정 대상 수정
+    private void updateProductsFormUpdateRequest(List<Long> hotDealProductIdsToEvict,
+                                                 HotDealUpdateRequestDto requestDto,
+                                                 HotDeal hotDeal,
+                                                 AtomicBoolean isStockUpdated) {
+        // 요청에서 기존 상품 수정
+        hotDeal.getHotDealProducts().forEach(exists ->
+                requestDto.getProducts().stream()
+                        .filter(r -> r.getProductId() != null && r.getProductId().equals(exists.getId()))
                         .findFirst()
-                        .ifPresent(rp -> {
-                            Integer originalStock = hp.getStock();
-                            Integer requestedQuantity = rp.getQuantity();
-                            int diffAmount = originalStock - requestedQuantity;
+                        .ifPresent(r -> exists.updateFields(r.getTitle(), r.getPrice(), r.getStock()))
+        );
 
-                            // 재고 증가
-                            if (diffAmount > 0) increaseStocks.add(new ProductStockUpdateRequestDto(hp.getProductId(), diffAmount));
-                            // 재고 감소
-                            else if (diffAmount < 0) decreaseStocks.add(new ProductStockUpdateRequestDto(hp.getProductId(), Math.abs(diffAmount)));
-                            // hotDealProduct 에 update 처리
-                            hotDeal.updateHotDealProducts(hp.getProductId(), requestedQuantity, rp.getDiscountRate());
-                        }));
-    }
 
-    // 삭제 대상 hotDealProduct 삭제 처리
-    private void deleteHotDealProductsFromUpdateRequest(HotDealUpdateRequestDto requestDto,
-                                                        HotDeal hotDeal,
-                                                        List<ProductStockUpdateRequestDto> increaseStocks,
-                                                        List<Long> hotDealProductIdsToEvict) {
-        // 삭제 대상 hotDealProducts 추출
-        List<HotDealProduct> productsToDelete = hotDeal.getHotDealProducts().stream()
-                .filter(hp -> requestDto.getProductInfos().stream()
-                        .map(HotDealProductUpdateRequestDto::getHotDealProductId)
-                        .filter(Objects::nonNull)
-                        .noneMatch(id -> id.equals(hp.getId())))
-                .toList();
-
-        // 삭제 대상 hotDealProductIds 캐싱 부분 무효화 대상에 add
-        hotDealProductIdsToEvict.addAll(
-                productsToDelete.stream()
+        List<Long> updatedIds = hotDeal.getHotDealProducts().stream()
                 .map(HotDealProduct::getId)
-                .toList());
+                .filter(id -> requestDto.getProducts().stream()
+                        .anyMatch(r -> r.getProductId() != null && r.getProductId().equals(id)))
+                .toList();
 
-        // hotDeal 에서 삭제
+        if(!updatedIds.isEmpty()) isStockUpdated.set(true);
+        // hotDealProduct 캐싱 무효화 대상 처리
+        hotDealProductIdsToEvict.addAll(updatedIds);
+    }
+
+    // update 요청 에서 hotDealProduct 삭제 대상 삭제
+    private void deleteProductsFromUpdateRequest(List<Long> hotDealProductIdsToEvict,
+                                                 HotDealUpdateRequestDto requestDto,
+                                                 HotDeal hotDeal,
+                                                 AtomicBoolean isStockUpdated) {
+        // 요청에서 기존 상품 추출 (hotDealProductId 존재)
+        List<Long> incomingIds = requestDto.getProducts().stream()
+                .map(HotDealProductUpdateRequestDto::getProductId)
+                .filter(Objects::nonNull)
+                .toList();
+        // DB 값과 비교하여 삭제 대상 추출
+        List<HotDealProduct> productsToDelete = hotDeal.getHotDealProducts().stream()
+                .filter(exists -> !incomingIds.contains(exists.getId()))
+                .toList();
+
+        if(!productsToDelete.isEmpty()) isStockUpdated.set(true);
+
+        // 삭제 처리
         hotDeal.removeHotDealProducts(productsToDelete);
 
-        // increaseStocks 에 add (원본 product 의 stock 증가)
-        increaseStocks.addAll(productsToDelete.stream()
-                .map(hp -> new ProductStockUpdateRequestDto(hp.getProductId(), hp.getStock()))
-                .toList());
+        // hotDealProduct 캐싱 무효화 대상 처리
+        hotDealProductIdsToEvict.addAll(
+                productsToDelete.stream()
+                        .map(hp -> hp.getId())
+                        .toList());
     }
 
-    // Product 재고 감소 feignClient 호출, 검증
-    private List<ProductStockUpdateResponseDto> decreaseOriginalProductStockAndValidate(List<ProductStockUpdateRequestDto> productStockUpdateRequestDtos) {
-
-        // product 없으면 empty List 반환 => productService 로 요청 보낼 필요 없음
-        if(productStockUpdateRequestDtos.isEmpty()) return new ArrayList<>();
-        // Product 재고 감소 feignClient 호출
-        List<ProductStockUpdateResponseDto> responseDtos = resilience4JProductServiceClient.decreaseStock(productStockUpdateRequestDtos);
-
-        // circuitBreaker OPEN 
-        if (responseDtos.isEmpty()) {
-            log.debug("원본 상품 재고 감소 호출을 실패했습니다. request = {}", productStockUpdateRequestDtos);
-            throw new HotDealProductException(ErrorCode.HOTDEAL_PRODUCT_ORIGINAL_STOCK_DECREASE_FAILED, productStockUpdateRequestDtos);
-        }
-        return responseDtos;
-    }
-
-    // Product 재고 증가 feignClient 호출, 검증
-    private List<ProductStockUpdateResponseDto> increaseOriginalProductStockAndValidate(List<ProductStockUpdateRequestDto> productStockUpdateRequestDtos) {
-
-        // product 없으면 empty List 반환 => productService 로 요청 보낼 필요 없음
-        if (productStockUpdateRequestDtos.isEmpty()) return new ArrayList<>();
-
-        // Product 재고 증가 feignClient 호출
-        List<ProductStockUpdateResponseDto> responseDtos = resilience4JProductServiceClient.increaseStock(productStockUpdateRequestDtos);
-
-        // circuitBreaker OPEN
-        if (responseDtos.isEmpty()) {
-            log.debug("원본 상품 재고 증가 호출을 실패했습니다. request = {}", productStockUpdateRequestDtos);
-            throw new HotDealProductException(ErrorCode.HOTDEAL_PRODUCT_ORIGINAL_STOCK_INCREASE_FAILED, productStockUpdateRequestDtos);
-        }
-        return responseDtos;
+    private void updateHotDealFields(HotDealUpdateRequestDto requestDto, HotDeal hotDeal) {
+        hotDeal.updateFields(
+                requestDto.getTitle(),
+                requestDto.getDescription(),
+                requestDto.getStartTime(),
+                requestDto.getEndTime(),
+                HotDealStatus.valueOf(requestDto.getStatus()));
     }
 
     // 응답 Dto 변환
-    private HotDealCacheDto convertHotDealResponseDtoWithHotDealProducts(HotDeal hotDeal) {
-        List<HotDealProductResponseDto> hotDealProductResponseDtos = convertHotDealProductDto(hotDeal);
-        return new HotDealCacheDto(hotDeal, hotDealProductResponseDtos);
+    private HotDealResponseDto convertHotDealResponseDtoWithProducts(HotDeal hotDeal) {
+        List<ProductResponseDto> productResponseDtos = convertHotDealProductDto(hotDeal);
+        return new HotDealResponseDto(hotDeal, productResponseDtos);
     }
 
     // 응답 Dto 변환
-    private List<HotDealProductResponseDto> convertHotDealProductDto(HotDeal hotDeal) {
+    private List<ProductResponseDto> convertHotDealProductDto(HotDeal hotDeal) {
         return hotDeal.getHotDealProducts().stream()
-                .map(hp -> new HotDealProductResponseDto(hp, hp.getStock()))
+                .map(hp -> new ProductResponseDto(hp, hp.getStock()))
                 .collect(Collectors.toList());
     }
 
-    // 응답 Dto 변환
-    private HotDealCacheDto convertHotDealResponseDto(HotDeal hotDeal) {
+    // 단건 조회 응답 Dto 변환
+    private HotDealCacheDto convertHotDealResponseDto(HotDealSimpleDto hotDeal) {
         return new HotDealCacheDto(hotDeal);
     }
 }

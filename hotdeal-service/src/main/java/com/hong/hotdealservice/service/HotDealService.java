@@ -2,13 +2,14 @@ package com.hong.hotdealservice.service;
 
 import com.hong.hotdealservice.dto.HotDealPagingCacheDto;
 import com.hong.hotdealservice.dto.HotDealCacheDto;
-import com.hong.hotdealservice.web.dto.HotDealRequestDto;
+import com.hong.hotdealservice.dto.HotDealResponseDto;
+import com.hong.hotdealservice.web.dto.HotDealCreateRequestDto;
 import com.hong.hotdealservice.web.dto.HotDealUpdateRequestDto;
 
 public interface HotDealService {
 
     // HotDeal 생성
-    HotDealCacheDto createHotDeal(Long adminId, HotDealRequestDto requestDto);
+    HotDealResponseDto createHotDeal(Long adminId, HotDealCreateRequestDto requestDto);
 
     // HotDeal 페이징 조회
     HotDealPagingCacheDto getHotDeals(String search, Long cursor, int size);
@@ -17,8 +18,8 @@ public interface HotDealService {
     HotDealCacheDto getHotDeal(Long hotDealId);
 
     // HotDeal 수정
-    HotDealCacheDto updateHotDeal(Long hotDealId, HotDealUpdateRequestDto requestDto);
+    HotDealResponseDto updateHotDeal(Long hotDealId, HotDealUpdateRequestDto requestDto);
 
     // HotDeal 삭제
-    HotDealCacheDto deleteHotDeal(Long hotDealId);
+    HotDealResponseDto deleteHotDeal(Long hotDealId);
 }
