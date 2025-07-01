@@ -1,7 +1,7 @@
 package com.hong.userservice;
 
-import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
+import org.springframework.stereotype.Component;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -9,7 +9,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.util.Base64;
 
-@Configuration
+@Component
 public class AESUtil {
     private static final String ALGORITHM = "AES";
     private static final int KEY_SIZE = 128;
