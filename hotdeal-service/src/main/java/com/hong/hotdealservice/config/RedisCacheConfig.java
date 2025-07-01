@@ -8,7 +8,6 @@ import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -42,7 +41,7 @@ public class RedisCacheConfig {
                 // Redis 에 value 저장할 때 Json 으로 저장
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serializer))
                 // TTL 설정
-                .entryTtl(Duration.ofMinutes(5L));
+                .entryTtl(Duration.ofMinutes(30L));
 
         RedisCacheConfiguration getHotDealConfig = RedisCacheConfiguration.defaultCacheConfig()
                 // Redis 에 key 저장할 때 String 으로 저장
@@ -50,7 +49,7 @@ public class RedisCacheConfig {
                 // Redis 에 value 저장할 때 Json 으로 저장
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serializer))
                 // TTL 설정
-                .entryTtl(Duration.ofMinutes(5L));
+                .entryTtl(Duration.ofMinutes(30L));
 
         RedisCacheConfiguration getHotDealProductsConfig = RedisCacheConfiguration.defaultCacheConfig()
                 // Redis 에 key 저장할 때 String 으로 저장
@@ -58,7 +57,7 @@ public class RedisCacheConfig {
                 // Redis 에 value 저장할 때 Json 으로 저장
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serializer))
                 // TTL 설정
-                .entryTtl(Duration.ofMinutes(5L));
+                .entryTtl(Duration.ofMinutes(30L));
 
         RedisCacheConfiguration getHotDealProductConfig = RedisCacheConfiguration.defaultCacheConfig()
                 // Redis 에 key 저장할 때 String 으로 저장
@@ -66,15 +65,15 @@ public class RedisCacheConfig {
                 // Redis 에 value 저장할 때 Json 으로 저장
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serializer))
                 // TTL 설정
-                .entryTtl(Duration.ofMinutes(5L));
+                .entryTtl(Duration.ofMinutes(30L));
 
 
         // 캐시 이름별로 설정 구성
         Map<String, RedisCacheConfiguration> cacheConfigurations = new HashMap<>();
         cacheConfigurations.put("getHotDeals", getHotDealsConfig);
         cacheConfigurations.put("getHotDeal", getHotDealConfig);
-        cacheConfigurations.put("getHotDealProducts", getHotDealProductsConfig);
-        cacheConfigurations.put("getHotDealProduct", getHotDealProductConfig);
+        cacheConfigurations.put("getProducts", getHotDealProductsConfig);
+        cacheConfigurations.put("getProduct", getHotDealProductConfig);
 
         return RedisCacheManager.builder(redisConnectionFactory)
                 .withInitialCacheConfigurations(cacheConfigurations)
