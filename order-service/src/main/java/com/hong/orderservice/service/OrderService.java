@@ -10,14 +10,14 @@ public interface OrderService {
     OrderResponseDto createOrder(Long userId, OrderRequestDto requestDto);
 
     // 주문 내역 페이징
-    OrderPagingResponseDto getOrders(Long userId, Long cursor, int size);
+    OrderPagingResponseDto getOrders(Long userId, String cursor, int size);
 
     // 주문 조회
-    OrderResponseDto getOrder(Long userId, Long orderId);
+    OrderResponseDto getOrder(Long userId, String orderId);
 
     // 주문 취소
-    OrderResponseDto cancelOrder(Long userId, Long orderId);
+    OrderResponseDto cancelOrder(Long userId, String orderId);
 
     // 반품
-    OrderResponseDto returnOrder(Long userId, Long orderId);
+    OrderResponseDto refundOrder(Long userId, String orderId);
 }
