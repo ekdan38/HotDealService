@@ -31,7 +31,7 @@ public class Delivery {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private DeliveryStatus deliveryStatus;
+    private DeliveryStatus status;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
@@ -51,7 +51,7 @@ public class Delivery {
 
     private Delivery(Address address) {
         this.address = address;
-        this.deliveryStatus = DeliveryStatus.PENDING;
+        this.status = DeliveryStatus.PENDING;
     }
     // == 생성 메서드 ==
     public static Delivery create(Address address){
@@ -66,30 +66,40 @@ public class Delivery {
     // == 배송 상태 DELIVERING 으로 update 메서드 ==
     public void updateToDelivering(LocalDateTime startTime){
         this.startedAt = startTime;
-        this.deliveryStatus = DeliveryStatus.DELIVERING;
+        this.status = DeliveryStatus.DELIVERING;
     }
 
     // == 배송 상태 DELIVERED 으로 update 메서드 ==
     public void updateToDelivered(LocalDateTime completedTime){
         this.completedAt = completedTime;
-        this.deliveryStatus = DeliveryStatus.DELIVERED;
+        this.status = DeliveryStatus.DELIVERED;
+    }
+
+    // == 배송 상태 CANCEL 로 update 메서드 ==
+    public void updateToCancel(){
+        this.status = DeliveryStatus.CANCEL;
     }
 
     // == 배송 상태 RETURN_REQUESTED 으로 update 메서드 ==
     public void updateToReturnRequested(LocalDateTime startTime){
         this.returnStartedAt = startTime;
-        this.deliveryStatus = DeliveryStatus.RETURN_REQUESTED;
+        this.status = DeliveryStatus.RETURN_REQUESTED;
     }
 
     // == 배송 상태 RETURNED 으로 update 메서드 ==
     public void updateToReturned(LocalDateTime endTime){
         this.returnCompletedAt = endTime;
-        this.deliveryStatus = DeliveryStatus.RETURNED;
+        this.status = DeliveryStatus.RETURNED;
     }
 
     // == 배송 상태 update 메서드 ==
     public void updateStatus(DeliveryStatus status){
-        this.deliveryStatus = status;
+        this.status = status;
+    }
+
+    // == 만료된 주문에 의한 처리 메서드 ==
+    public void updateToExpired(){
+        this.status = DeliveryStatus.EXPIRED;
     }
 
     // == 배송 시작 날짜 update 메서드 ==

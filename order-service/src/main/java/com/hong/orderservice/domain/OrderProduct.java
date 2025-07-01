@@ -6,6 +6,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
@@ -23,33 +25,26 @@ public class OrderProduct extends TimeEntity {
     @Column(nullable = true)
     private Long productId;
 
-    @Column(nullable = true)
-    private Long hotDealProductId;
-
     // 응답 시에 productTitle 이 필요하다. => 반정규화
     @Column(nullable = false)
-    private String productTitle;
+    private String title;
 
     @Column(nullable = false)
     private Integer quantity;
 
     @Column(nullable = false)
-    private Integer price;
+    private BigDecimal price;
 
-    private OrderProduct(Long productId, Long hotDealProductId, String productTitle, Integer quantity, Integer price) {
+    public OrderProduct(Long productId, String title, Integer quantity, BigDecimal price) {
         this.productId = productId;
-        this.hotDealProductId = hotDealProductId;
-        this.productTitle = productTitle;
+        this.title = title;
         this.quantity = quantity;
         this.price = price;
     }
 
     // == 생성 메서드 ==
-    public static OrderProduct createProduct(Long productId, String productTitle, Integer quantity, Integer price){
-        return new OrderProduct(productId, null, productTitle, quantity, price);
-    }
-    public static OrderProduct createHotDealProduct(Long hotDealProductId, String productTitle, Integer quantity, Integer price){
-        return new OrderProduct(null, hotDealProductId, productTitle, quantity, price);
+    public static OrderProduct create(Long productId, String title, Integer quantity, BigDecimal price){
+        return new OrderProduct(productId, title, quantity, price);
     }
 
     // == Order 에서 사용할 연관 관계 관련 메서드 ==
@@ -57,9 +52,10 @@ public class OrderProduct extends TimeEntity {
         this.order = order;
     }
 
-    // == 해당 상품에 대한 총 가격 return 메서드 ==
-    protected Integer getTotalPrice(){
-        return quantity * price;
+    // == OrderProduct 의 price 구하는 메서드 ==
+    public BigDecimal extractTotalPrice(){
+        return this.price.multiply(BigDecimal.valueOf(this.quantity));
     }
+
 }
 
