@@ -1,12 +1,17 @@
 package com.hong.orderservice.service;
 
-import com.hong.common.dto.*;
+import com.hong.common.dto.OrderFetchRequestDto;
+import com.hong.common.dto.OrderFetchResponseDto;
+import com.hong.common.dto.OrderUpdateRequestDto;
+import com.hong.common.dto.OrderUpdateResponseDto;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.OrderException;
 import com.hong.orderservice.domain.Order;
-import com.hong.orderservice.domain.OrderProduct;
-import com.hong.orderservice.domain.status.OrderStatus;
+import com.hong.orderservice.domain.outbox.StockConfirmOutbox;
+import com.hong.orderservice.domain.outbox.UserCartOutbox;
 import com.hong.orderservice.repository.OrderRepository;
+import com.hong.orderservice.repository.outbox.StockConfirmOutboxRepository;
+import com.hong.orderservice.repository.outbox.UserCartOutboxEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -14,105 +19,68 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j(topic = "[OrderApiService]")
 @Transactional(readOnly = true)
+@Slf4j(topic = "[OrderApiService]")
 public class OrderApiService {
 
     private final OrderRepository orderRepository;
+    private final StockConfirmOutboxRepository stockConfirmOutboxRepository;
+    private final UserCartOutboxEventRepository userCartOutboxEventRepository;
 
     // Order 조회
     public OrderFetchResponseDto fetchOrder(OrderFetchRequestDto requestDto) {
         // 1. order 조회, 검증
         Order order = fetchOrderAndValidate(requestDto.getOrderId(), requestDto.getUserId());
-
-        // 2. 주문 상품 추출
-        // hotDealProduct
-        List<orderHotDealProductDto> hotDealProducts = extractHotDealProducts(order);
-        // product
-        List<OrderProductDto> products = extractProducts(order);
-
-        // 3. 응답 Dto 변환
-        return convertToOrderFetchResponse(requestDto, order, hotDealProducts, products);
+        // 2. 응답 Dto 변환
+        return convertToOrderFetchResponse(order);
     }
 
-    // payment 처리 기반 order, delivery update 처리
+    // 결제 성공 여부 기반 order, delivery status update, user Cart 정리
     @Transactional
-    public Boolean updateOrderAndDelivery(OrderUpdateRequestDto requestDto){
+    public OrderUpdateResponseDto updateOrderAndDelivery(OrderUpdateRequestDto requestDto) {
         // 1. order 조회 (delivery fetch join) 및 검증
-        Order order = fetchOrderWithDeliveryAndValidate(requestDto);
+        Order order = getOrderWithDeliveryAndValidate(requestDto);
 
         // 2. 결제 성공 실패 처리(requestDto 로 결제 성공 유무)
         // 결제 성공 처리
-        if(requestDto.getIsSuccess()) order.paymentSuccess(LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS));
-        // 결제 실패 처리
-        else order.paymentFailed();
+        if (requestDto.isSuccess()){
+            // order Status 변경
+            order.updateToPaymentSuccess(LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS));
 
-        return true;
-    }
-
-    // hotDealProducts 추출
-    private List<orderHotDealProductDto> extractHotDealProducts(Order order) {
-        return  order.getOrderProducts().stream()
-                .filter(op -> op.getHotDealProductId() != null && op.getProductId() == null)
-                .map(op -> new orderHotDealProductDto(
-                        op.getHotDealProductId(),
-                        op.getQuantity()))
-                .collect(Collectors.toList());
-    }
-
-    // products 추출
-    private List<OrderProductDto> extractProducts(Order order) {
-        return order.getOrderProducts().stream()
-                .filter(op -> op.getProductId() != null && op.getHotDealProductId() == null)
-                .map(op -> new OrderProductDto(
-                        op.getProductId(),
-                        op.getQuantity()))
-                .collect(Collectors.toList());
-    }
-
-    private OrderFetchResponseDto convertToOrderFetchResponse(OrderFetchRequestDto requestDto,
-                                                              Order order,
-                                                              List<orderHotDealProductDto> hotDealProducts,
-                                                              List<OrderProductDto> products) {
-        return new OrderFetchResponseDto(requestDto.getUserId(), requestDto.getOrderId(),
-                order.getAmount(), order.getStatus().name(), hotDealProducts, products);
-    }
-
-    private Order fetchOrderWithDeliveryAndValidate(OrderUpdateRequestDto requestDto) {
-        Order order = orderRepository.findByIdAndUserIdWithDelivery(requestDto.getOrderId(),  requestDto.getUserId()).orElseThrow(() -> {
-            log.debug("요청된 주문이 존재하지 않습니다. userId = {}, orderId = {}",  requestDto.getUserId(), requestDto.getOrderId());
-            return new OrderException(ErrorCode.ORDER_NOT_FOUND,  requestDto.getUserId(), requestDto.getOrderId());
-        });
-        return order;
-    }
-
-    // 결제 가격 연산
-    private int getAmount(Order order) {
-        List<OrderProduct> orderProducts = order.getOrderProducts();
-        int amount = 0;
-        for (OrderProduct orderProduct : orderProducts) {
-            amount += (orderProduct.getPrice() * orderProduct.getQuantity());
+            // user Cart 정리 outbox
+            UserCartOutbox userCartOutbox = UserCartOutbox.create(order.getId(), order.getUserId());
+            userCartOutboxEventRepository.save(userCartOutbox);
         }
-        return amount;
+        // 주문의 결제 실패 처리
+        else order.updateToPaymentFailed();
+
+        // 결제 처리 결과에 따른 재고 반영 outbox
+        StockConfirmOutbox stockConfirmOutbox = StockConfirmOutbox.create(order.getId(), order.getUserId(), order.getStatus());
+        stockConfirmOutboxRepository.save(stockConfirmOutbox);
+
+        return new OrderUpdateResponseDto(true, false);
     }
+
+    private OrderFetchResponseDto convertToOrderFetchResponse(Order order) {
+        return new OrderFetchResponseDto(order.getUserId(), order.getId(), order.getAmount(), order.getStatus().name());
+    }
+
+    private Order getOrderWithDeliveryAndValidate(OrderUpdateRequestDto requestDto) {
+        return orderRepository.findByIdAndUserIdWithDelivery(requestDto.getOrderId()).orElseThrow(() -> {
+            log.debug("요청된 주문이 존재하지 않습니다. orderId = {}", requestDto.getOrderId());
+            return new OrderException(ErrorCode.ORDER_NOT_FOUND, requestDto.getOrderId());
+        });
+    }
+
 
     // order 조회, 검증
-    private Order fetchOrderAndValidate(Long orderId, Long userId) {
-        Order order = orderRepository.findByOrderIdAndUserIdWithOp(userId, orderId).orElseThrow(() -> {
-            log.debug("요청된 주문이 존재하지 않습니다. userId = {}, orderId = {}", userId, orderId);
-            return new OrderException(ErrorCode.ORDER_NOT_FOUND, userId, orderId);
+    private Order fetchOrderAndValidate(String orderId, Long userId) {
+         return orderRepository.findByIdAndUserId(orderId, userId).orElseThrow(() -> {
+            log.debug("요청된 주문이 존재하지 않습니다. orderId = {}, userId = {}", orderId, userId);
+            return new OrderException(ErrorCode.ORDER_NOT_FOUND, orderId, userId);
         });
-
-        OrderStatus status = order.getStatus();
-        if (status != OrderStatus.PENDING_PAYMENT) {
-            log.debug("주문이 결제 대기 상태가 아닙니다. userId = {}, orderId = {}", userId, orderId);
-            throw new OrderException(ErrorCode.ORDER_NOT_PENDING_PAYMENT, userId, orderId);
-        }
-        return order;
     }
 }
