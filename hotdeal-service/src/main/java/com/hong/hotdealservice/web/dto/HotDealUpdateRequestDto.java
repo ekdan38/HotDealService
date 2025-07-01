@@ -31,6 +31,6 @@ public class HotDealUpdateRequestDto {
     // ACTIVE, EXPIRED, SCHEDULED
     private String status;
 
-    @NotEmpty(message = "productInfos 는 최소 1개 이상이어야 합니다.")
-    private List<@Valid HotDealProductUpdateRequestDto> productInfos;
+    @NotEmpty(message = "products 는 최소 1개 이상이어야 합니다.")
+    private List<@Valid HotDealProductUpdateRequestDto> products;
 }

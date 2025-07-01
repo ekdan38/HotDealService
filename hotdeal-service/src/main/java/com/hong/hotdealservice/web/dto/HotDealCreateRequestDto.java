@@ -13,8 +13,7 @@ import java.util.List;
 
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
-public class HotDealRequestDto {
+@AllArgsConstructor public class HotDealCreateRequestDto {
 
     @NotBlank(message = "title 은 필수입니다.")
     private String title;
@@ -28,8 +27,6 @@ public class HotDealRequestDto {
     @NotNull(message = "endTime 은 필수입니다.")
     private LocalDateTime endTime;
 
-    @NotEmpty(message = "productInfos 는 최소 1개 이상이어야 합니다.")
-    private List<@Valid HotDealProductRequestDto> productInfos;
-
-
+    @NotEmpty(message = "products 는 최소 1개 이상이어야 합니다.")
+    private List<@Valid HotDealProductRequestDto> products;
 }

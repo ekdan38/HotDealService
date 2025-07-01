@@ -1,29 +1,26 @@
 package com.hong.hotdealservice.web.dto;
 
-import jakarta.validation.constraints.DecimalMax;
-import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class HotDealProductRequestDto {
 
-    @NotNull(message = "productId 는 필수입니다.")
-    @Positive(message = "productId 는 양수여야 합니다.")
-    private Long productId;
+    @NotNull(message = "title 은 필수입니다.")
+    private String title;
 
-    @NotNull(message = "quantity 는 필수입니다.")
-    @Positive(message = "quantity 는 양수여야 합니다.")
-    private Integer quantity;
+    @NotNull(message = "price 는 필수입니다.")
+    @Positive(message = "price 는 양수만 허용됩니다.")
+    private BigDecimal price;
 
-    @NotNull(message = "discountRate 는 필수입니다.")
-    @DecimalMin(value = "0.0", message = "discountRate 는 0.0 이상이어야 합니다.")
-    @DecimalMax(value = "1.0", message = "discountRate 는 1.0 이하이어야 합니다.")
-    private Double discountRate;
-
+    @NotNull(message = "stock 은 필수입니다.")
+    @Positive(message = "stock 은 양수만 허용됩니다.")
+    private Integer stock;
 }
