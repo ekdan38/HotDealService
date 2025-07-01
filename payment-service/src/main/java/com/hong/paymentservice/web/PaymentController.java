@@ -1,13 +1,16 @@
 package com.hong.paymentservice.web;
 
 import com.hong.common.dto.ResponseDto;
-import com.hong.paymentservice.dto.PaymentEntryResponseDto;
-import com.hong.paymentservice.dto.PaymentProcessRequestDto;
-import com.hong.paymentservice.dto.PaymentProcessResponseDto;
+import com.hong.paymentservice.dto.PaymentPerformResponseDto;
+import com.hong.paymentservice.dto.PaymentPrepareResponseDto;
 import com.hong.paymentservice.service.PaymentService;
+import com.hong.paymentservice.web.dto.PaymentPerformRequestDto;
+import com.hong.paymentservice.web.dto.PaymentPrepareRequestDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,26 +21,30 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
-    @PostMapping("/entry/{orderId}")
-    public ResponseEntity<ResponseDto<PaymentEntryResponseDto>> paymentEntry(@RequestHeader("X-User-Id") Long userId,
-                                                                             @PathVariable("orderId") Long orderId) {
+    @PostMapping("/prepare")
+    public ResponseEntity<?> paymentEntry(@RequestHeader("X-User-Id") Long userId,
+                                          @RequestBody @Validated PaymentPrepareRequestDto requestDto,
+                                          BindingResult bindingResult) {
 
-        PaymentEntryResponseDto resultDto = paymentService.paymentEntry(userId, orderId);
+        // 요청 dto 오류 검사
+        if (bindingResult.hasErrors()) {
+            log.error("결제 진입 요청 검증 오류 = {}", bindingResult);
+            return ResponseEntity.badRequest().body(bindingResult);
+        }
+
+        PaymentPrepareResponseDto resultDto = paymentService.paymentPrepare(userId, requestDto);
 
         // 응답 설정
-        ResponseDto<PaymentEntryResponseDto> responseDto = new ResponseDto<>("결제 진입 완료", resultDto);
+        ResponseDto<PaymentPrepareResponseDto> responseDto = new ResponseDto<>("결제 진입 완료", resultDto);
         return ResponseEntity.ok().body(responseDto);
     }
 
-    @PostMapping("/process/{paymentId}")
-    public ResponseEntity<ResponseDto<PaymentProcessResponseDto>> paymentProcess(@RequestHeader("X-User-Id") Long userId,
-                                                                                 @PathVariable("paymentId") Long paymentId,
-                                                                                 @RequestBody PaymentProcessRequestDto requestDto) {
+    @PostMapping("/perform")
+    public ResponseEntity<ResponseDto<PaymentPerformResponseDto>> performPayment(@RequestHeader("X-User-Id") Long userId,
+                                                                                 @RequestBody PaymentPerformRequestDto request) {
+        PaymentPerformResponseDto resultDto = paymentService.performPayment(userId, request);
 
-        PaymentProcessResponseDto resultDto = paymentService.paymentProcess(userId, paymentId, requestDto.getUserPaymentAmount());
-
-        // 응답 설정
-        ResponseDto<PaymentProcessResponseDto> responseDto = new ResponseDto<>("결제 완료", resultDto);
+        ResponseDto<PaymentPerformResponseDto> responseDto = new ResponseDto<>("결제 완료", resultDto);
         return ResponseEntity.ok().body(responseDto);
     }
 
