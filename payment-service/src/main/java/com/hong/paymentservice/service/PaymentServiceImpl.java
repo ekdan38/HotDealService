@@ -1,325 +1,175 @@
 package com.hong.paymentservice.service;
 
-import com.hong.common.dto.*;
+import com.hong.common.dto.OrderFetchRequestDto;
+import com.hong.common.dto.OrderFetchResponseDto;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.PaymentException;
-import com.hong.paymentservice.client.hotDeal.Resilience4JHotDealServiceClient;
-import com.hong.paymentservice.client.order.Resilience4JOrderServiceClient;
-import com.hong.paymentservice.client.product.Resilience4JProductServiceClient;
+import com.hong.common.exception.custom.PaymentSessionException;
+import com.hong.paymentservice.client.Resilience4JOrderServiceClient;
 import com.hong.paymentservice.domain.Payment;
-import com.hong.paymentservice.domain.PaymentStatus;
-import com.hong.paymentservice.dto.PaymentEntryResponseDto;
-import com.hong.paymentservice.dto.PaymentProcessResponseDto;
+import com.hong.paymentservice.domain.PaymentSession;
+import com.hong.paymentservice.domain.outbox.OrderStatusOutbox;
+import com.hong.paymentservice.domain.status.PaymentSessionStatus;
+import com.hong.paymentservice.dto.PaymentPerformResponseDto;
+import com.hong.paymentservice.dto.PaymentPrepareResponseDto;
+import com.hong.paymentservice.repository.OrderStatusOutboxRepository;
 import com.hong.paymentservice.repository.PaymentRepository;
+import com.hong.paymentservice.repository.PaymentSessionRepository;
+import com.hong.paymentservice.web.dto.PaymentPerformRequestDto;
+import com.hong.paymentservice.web.dto.PaymentPrepareRequestDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j(topic = "[PaymentServiceImpl]")
 public class PaymentServiceImpl implements PaymentService {
 
-    private final FakePaymentGateway fakePaymentGateway;
+    private final PaymentSessionRepository paymentSessionRepository;
     private final PaymentRepository paymentRepository;
+    private final OrderStatusOutboxRepository orderStatusOutboxRepository;
     private final Resilience4JOrderServiceClient resilience4JOrderServiceClient;
-    private final Resilience4JHotDealServiceClient resilience4JHotDealServiceClient;
-    private final Resilience4JProductServiceClient resilience4JProductServiceClient;
-    private final RedisTemplate<String, Object> redisTemplate;
 
     // 결제 진입
     @Transactional
     @Override
-    public PaymentEntryResponseDto paymentEntry(Long userId, Long orderId) {
-        // 이미 생성된 결제 인지 확인
-        validateExistsPaymentByOrderId(orderId);
+    public PaymentPrepareResponseDto paymentPrepare(Long userId, PaymentPrepareRequestDto requestDto) {
+        // 1. orderId 기준 이미 생성된 paymentSession 존재 검증 및 상태 검증
+        validateDuplicatePaymentSession(userId, requestDto);
 
-        // order 조회
-        OrderFetchResponseDto orderFetchResponseDto = fetchOrderAndValidate(userId, orderId);
+        // 2. payment 조회 및 검증, IN_PROGRESS 변경
+        Payment payment = fetchPaymentAndValidateAndInProgress(userId, requestDto);
 
-        // hotDealProduct 재고 감소
-        decreaseHotDealProductStockAndValidate(userId, orderId, orderFetchResponseDto);
+        // 3. paymentSession 생성
+        PaymentSession session = createPaymentSessionAndSave(userId, requestDto, payment.getExpireAt());
 
-        // product 재고 감소
-        // 핫딜 상품에 대한 재고 감소는 성공 했지만, 일반 상품 재고 감소 호출이 실패 하면 성공한 핫딜 상품에 대한 재고 증가 처리
-        try{
-            decreaseProductStockAndValidate(userId, orderId, orderFetchResponseDto);
-        }catch (PaymentException e){
-            increaseHotDealProductStockAndValidate(userId, orderId, orderFetchResponseDto);
-            throw e;
-        }
-
-        // payment 생성, 응답 Dto 반환
-        Payment savedPayment = paymentRepository.save(Payment.create(orderId, orderFetchResponseDto.getAmount()));
-
-        log.info("결제 생성 완료. userId = {}, orderId = {}", userId, orderId);
-        return convertToPaymentEntryResponseDto(savedPayment);
+        // 4. 응답 Dto 변환
+        return convertToPrepareResponse(session.getId());
     }
 
     // 결제 수행
     @Transactional
     @Override
-    public PaymentProcessResponseDto paymentProcess(Long userId, Long paymentId, Integer userPaymentAmount) {
-        // payment 조회, 주문 가능 한지 검사
-        Payment payment = fetchPaymentAndValidate(userId, paymentId);
-        Long orderId = payment.getOrderId();
+    public PaymentPerformResponseDto performPayment(Long userId, PaymentPerformRequestDto requestDto) {
+        // 1. paymentSession 조회 및 존재 검증
+        PaymentSession session = fetchSessionAndValidate(userId, requestDto);
 
-        // 결제 진행 (fakePaymentGateway => 결제 가격 만큼 요청을 보냈는지 확인), 결과 처리
-        ProcessingPGAndValidateResult(userId, paymentId, userPaymentAmount, payment, orderId);
+        // 2. payment 조회 및 존재 검증
+        Payment payment = fetchPaymentAndValidate(userId, session);
 
-        return new PaymentProcessResponseDto(paymentId, payment.getStatus().name());
-    }
+        // 4. pg 사 결제 시뮬레이션 (80% 성공)
+        boolean paymentResult = simulatePayment(payment.getExpireAt(), requestDto.getAmount(), session);
 
-    // 이미 생성된 결제 인지 확인
-    private void validateExistsPaymentByOrderId(Long orderId) {
-        Optional<Payment> existingPayment = paymentRepository.findByOrderId(orderId);
-        if(existingPayment.isPresent()){
-            Payment payment = existingPayment.get();
-            log.debug("이미 존재 하는 결제 입니다. paymentId = {}, orderId = {}", payment.getId(), payment.getOrderId());
-            throw new PaymentException(ErrorCode.PAYMENT_EXISTS, payment.getId(), payment.getOrderId());
+        // 결제 처리
+        // 결제 성공 처리
+        if(paymentResult){
+            session.updateStatusToSuccess();
+            payment.updateToSuccess(session.getId());
         }
-    }
-
-
-    // 결제 진행 (fakePaymentGateway => 결제 가격 만큼 요청을 보냈는지 확인), 결과 처리
-    private void ProcessingPGAndValidateResult(Long userId, Long paymentId, Integer userPaymentAmount, Payment payment, Long orderId) {
-        // PG 호출
-        boolean paymentGatewayResult = fakePaymentGateway.processPayment(payment.getAmount(), userPaymentAmount);
-
-        // PG 실패 (결제 요청 잔액 부족으로 PG 실패 처리)
-        if(!paymentGatewayResult){
-            // order FeignClient 조회
-            OrderFetchResponseDto orderFetchResponseDto = fetchOrderAndValidate(userId, orderId);
-            // order, delivery field update FeignClient 호출
-            Boolean updateOrderStatusResult = resilience4JOrderServiceClient.updateOrderStatus(new OrderUpdateRequestDto(userId, orderId, false));
-            // CircuitBreaker OPEN
-            if(!updateOrderStatusResult){
-                log.debug("주문 상태 업데이트 호출을 실패했습니다. userId = {}, orderId = {}", userId, orderId);
-                throw  new PaymentException(ErrorCode.PAYMENT_UPDATE_ORDER_FAILED, userId, orderId);
-            }
-            // payment status 변경 (FAILED)
-            payment.updateStatus(PaymentStatus.FAILED);
-
-            // hotDealProduct 재고 증가
-            increaseHotDealProductStockAndValidate(userId, orderId, orderFetchResponseDto);
-
-            // product 재고 증가
-            // 핫딜 상품에 대한 재고 증가는 성공 했지만, 일반 상품 재고 증가 호출이 실패 하면 성공한 핫딜 상품에 대한 재고 감소 처리
-            try{
-                increaseProductStockAndValidate(userId, orderId, orderFetchResponseDto);
-            }catch (PaymentException e){
-                decreaseHotDealProductStockAndValidate(userId, orderId, orderFetchResponseDto);
-                throw e;
-            }
-            log.debug("결제 잔액이 부족합니다. userId = {}, orderId = {}", userId, orderId);
-            throw new PaymentException(ErrorCode.PAYMENT_PG_FAILED, userId, paymentId);
+        // 결제 실패 처리
+        else {
+            session.updateStatusToFail();
+            payment.updateToFail(session.getId());
         }
 
+        // 5. payment 결과에 따라 orderService 로 Feign 호출 이벤트 발행 및 비동기 처리
+        // Outbox 저장
+        OrderStatusOutbox outboxEvent = OrderStatusOutbox.create(payment.getOrderId(), userId, payment.getStatus());
+        orderStatusOutboxRepository.save(outboxEvent);
 
-        // PG 성공
-        // payment status 변경 (COMPLETED)
-        payment.updateStatus(PaymentStatus.COMPLETED);
-        log.info("결제 성공 userId = {}, orderId = {}, paymentId = {}", userId, orderId, paymentId);
+//        // 이벤트 기반 비동기 처리
+//        eventPublisher.publishEvent(outboxEvent);
 
-        // order, delivery 상태 변경 (PAID)
-        Boolean updateOrderStatusResult = resilience4JOrderServiceClient.updateOrderStatus(new OrderUpdateRequestDto(userId, orderId, true));
-        // CircuitBreaker OPEN
-        if(!updateOrderStatusResult){
-            log.debug("주문 상태 업데이트 호출을 실패했습니다. userId = {}, orderId = {}", userId, orderId);
-            throw  new PaymentException(ErrorCode.PAYMENT_UPDATE_ORDER_FAILED, userId, orderId);
-        }
+        // 6. 응답 Dto 반환
+        return new PaymentPerformResponseDto(session.getStatus().name(), payment.getTransactionId());
     }
 
-    // payment 조회, 주문 가능 한지 검사
-    private Payment fetchPaymentAndValidate(Long userId, Long paymentId) {
-        Payment payment = paymentRepository.findById(paymentId).orElseThrow(() -> {
-            log.debug("존재 하지 않는 결제입니다. userId = {}, paymentId = {}", userId, paymentId);
-            return new PaymentException(ErrorCode.PAYMENT_NOT_FOUND, userId, paymentId);
+    private Payment fetchPaymentAndValidate(Long userId, PaymentSession session) {
+       return paymentRepository.findByOrderIdAndUserId(session.getOrderId(), userId).orElseThrow(() -> {
+            log.error("존재 하지 않는 결제입니다. userId = {}, orderId = {}, paymentId = {}", session.getOrderId(), userId, null);
+            return new PaymentException(ErrorCode.PAYMENT_NOT_FOUND, userId, session.getOrderId(), null);
         });
-
-        // 결제 상태 체크
-        if(payment.getStatus() == PaymentStatus.COMPLETED) {
-            log.debug("이미 완료된 결제입니다. userId = {}, paymentId = {}", userId, paymentId);
-            throw new PaymentException(ErrorCode.PAYMENT_COMPLETED, userId, paymentId);
-        }
-
-        Long orderId = payment.getOrderId();
-        // payment 만료 여부 확인
-        // 만료 되었으면 재고 복구 처리
-        if(payment.expiredPay()) {
-            log.info("결제 진행 : 만료된 결제 입니다. payment = {}", payment);
-            log.warn("결제 진행 : 만료된 결제 입니다. payment = {}", payment);
-            // order FeignClient 조회
-            OrderFetchResponseDto orderFetchResponseDto = fetchOrderAndValidate(userId, orderId);
-            // order, delivery field update FeignClient 호출
-            Boolean updateOrderStatusResult = resilience4JOrderServiceClient.updateOrderStatus(new OrderUpdateRequestDto(userId, orderId, false));
-            // CircuitBreaker OPEN
-            if(!updateOrderStatusResult){
-                log.debug("주문 상태 업데이트 호출을 실패했습니다. userId = {}, orderId = {}", userId, orderId);
-                throw  new PaymentException(ErrorCode.PAYMENT_UPDATE_ORDER_FAILED, userId, orderId);
-            }
-
-            // payment status 변경 (EXPIRED)
-            payment.updateStatus(PaymentStatus.EXPIRED);
-
-            // hotDealProduct 재고 증가
-            increaseHotDealProductStockAndValidate(userId, orderId, orderFetchResponseDto);
-
-            // product 재고 증가
-            // 핫딜 상품에 대한 재고 증가는 성공 했지만, 일반 상품 재고 증가 호출이 실패 하면 성공한 핫딜 상품에 대한 재고 감소 처리
-            try{
-                increaseProductStockAndValidate(userId, orderId, orderFetchResponseDto);
-            }catch (PaymentException e){
-                decreaseHotDealProductStockAndValidate(userId, orderId, orderFetchResponseDto);
-                throw e;
-            }
-            log.debug("만료된 결제를 처리하려고 시도했습니다. userId = {}, paymentId = {}", userId, paymentId);
-            throw new PaymentException(ErrorCode.PAYMENT_EXPIRED, userId, paymentId);
-        }
+    }
+    private Payment fetchPaymentAndValidateAndInProgress(Long userId, PaymentPrepareRequestDto requestDto) {
+        Payment payment = paymentRepository.findByOrderIdAndUserId(requestDto.getOrderId(), userId).orElseThrow(() -> {
+            log.error("결제가 준비되지 않았습니다. 잠시 후 다시 시도해주세요. userI = {}, orderId = {}", userId, requestDto.getOrderId());
+            return new PaymentException(ErrorCode.PAYMENT_NOT_READY, userId, requestDto.getOrderId());
+        });
+        payment.updateToInProgress();
         return payment;
     }
 
-
-    // product 재고 감소
-    private List<ProductStockUpdateResponseDto> decreaseProductStockAndValidate(Long userId,
-                                                                                Long orderId,
-                                                                                OrderFetchResponseDto orderFetchResponseDto) {
-        // 요청 dto 에서 hotDealProduct 추출, feignClient 요청 dto 변환
-        List<ProductStockUpdateRequestDto> productStockUpdateRequestDtos = converToProductStockUpdateRequestDto(orderFetchResponseDto);
-
-        // productStockUpdateRequestDtos 가 empty 면 feignClient 호출 할 필요 없다.
-        if(productStockUpdateRequestDtos.isEmpty()) {
-            log.info("이거 product 없습니다요!!!!!=========================================");
-            return new ArrayList<>();
+    private PaymentSession fetchSessionAndValidate(Long userId, PaymentPerformRequestDto requestDto) {
+        PaymentSession session = paymentSessionRepository.findByIdAndUserId(requestDto.getSessionId(), userId)
+                .orElseThrow(() -> {
+                    log.error("결제 세션이 존재하지 않습니다. userId = {}, sessionId = {}", userId, requestDto.getSessionId());
+                    return new PaymentSessionException(ErrorCode.PAYMENT_SESSION_NOT_FOUND, userId, requestDto.getSessionId());
+                });
+        if (!session.getStatus().equals(PaymentSessionStatus.READY)) {
+            log.error("결제 수행 가능한 결제 세션이 아닙니다. userId = {}, sessionId = {}", userId, requestDto.getSessionId());
+            throw new PaymentSessionException(ErrorCode.PAYMENT_SESSION_INVALID_STATUS, userId, requestDto.getSessionId());
         }
+        return session;
+    }
 
-        // hotDealProduct 재고 감소 feignClient 호출
-        List<ProductStockUpdateResponseDto> productStockUpdateResponseDtos = resilience4JProductServiceClient.decreaseStock(productStockUpdateRequestDtos);
+    private void validateDuplicatePaymentSession(Long userId, PaymentPrepareRequestDto requestDto) {
+        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS);
+        paymentSessionRepository.findByOrderIdAndUserId(requestDto.getOrderId(), userId)
+                .ifPresent(existing -> {
+                    if (existing.getExpireAt().isAfter(now) && existing.getStatus().equals(PaymentSessionStatus.READY)) {
+                        log.error("이미 진행 중인 결제 세션이 존재합니다. userId = {}, sessionId = {}", userId, existing.getId());
+                        throw new PaymentSessionException(ErrorCode.PAYMENT_SESSION_ALREADY_EXISTS, userId, existing.getId());
+                    }
+                });
+    }
 
-        // CircuitBreaker OPEN
-        if(productStockUpdateResponseDtos.isEmpty()){
-            log.debug("상품 재고 감소 호출을 실패했습니다. userId = {}, orderId = {}, products = {}", userId, orderId, productStockUpdateRequestDtos);
-            throw new PaymentException(ErrorCode.PAYMENT_DECREASE__PRODUCT_FAILED, userId, orderId, productStockUpdateRequestDtos);
+    private boolean simulatePayment(LocalDateTime expireAt, BigDecimal amount, PaymentSession paymentSession){
+        // 금액 확인
+        if (amount.compareTo(paymentSession.getAmount()) < 0) {
+            log.warn("결제 금액 부족. expected = {}, actual = {}", paymentSession.getAmount(), amount);
+            return false;
         }
-        return productStockUpdateResponseDtos;
+        // 결제 완료 시점 expireAt 확인
+        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS);
+        return !now.isAfter(expireAt);
     }
 
-    // product 재고 증가
-    private List<ProductStockUpdateResponseDto> increaseProductStockAndValidate(Long userId,
-                                                                                Long orderId,
-                                                                                OrderFetchResponseDto orderFetchResponseDto) {
-        // 요청 dto 에서 hotDealProduct 추출, feignClient 요청 dto 변환
-        List<ProductStockUpdateRequestDto> productStockUpdateRequestDtos = converToProductStockUpdateRequestDto(orderFetchResponseDto);
+    private void fetchOrderAndValidate(Long userId, PaymentPrepareRequestDto requestDto) {
+        long start = System.currentTimeMillis();
+        log.info("order 조회 시작  ");
 
-        // productStockUpdateRequestDtos 가 empty 면 feignClient 호출 할 필요 없다.
-        if(productStockUpdateRequestDtos.isEmpty()) return new ArrayList<>();
+        OrderFetchResponseDto orderInfo = resilience4JOrderServiceClient.fetchOrder(new OrderFetchRequestDto(requestDto.getOrderId(), userId));
+        long end = System.currentTimeMillis();
+        log.info("order 조회 종료 ");
+        log.info("order 조회 시간 = {}ms", (end - start));
 
-        // hotDealProduct 재고 감소 feignClient 호출
-        List<ProductStockUpdateResponseDto> productStockUpdateResponseDtos = resilience4JProductServiceClient.increaseStock(productStockUpdateRequestDtos);
-
-        // CircuitBreaker OPEN
-        if(productStockUpdateResponseDtos.isEmpty()){
-            log.debug("상품 재고 증가 호출을 실패했습니다. userId = {}, orderId = {}, products = {}", userId, orderId, productStockUpdateRequestDtos);
-            throw new PaymentException(ErrorCode.PAYMENT_INCREASE_PRODUCT_FAILED, userId, orderId, productStockUpdateRequestDtos);
+        if (orderInfo.isFallback()) {
+            log.error("주문 조회 호출을 실패했습니다. userId = {}, orderId = {}", userId, requestDto.getOrderId());
+            throw new PaymentSessionException(ErrorCode.PAYMENT_SESSION_FETCH_ORDER_FAILED, userId, requestDto.getOrderId());
         }
-        return productStockUpdateResponseDtos;
-    }
-
-
-
-    // hotDealProduct 재고 감소
-    private List<HotDealProductStockUpdateResponseDto> decreaseHotDealProductStockAndValidate(Long userId,
-                                                        Long orderId,
-                                                        OrderFetchResponseDto orderFetchResponseDto) {
-        // 요청 dto 에서 product 추출, feignClient 요청 dto 변환
-        List<HotDealProductStockUpdateRequestDto> hotDealProductStockUpdateRequestDtos = convertToHotDealProductUpdateRequestDto(orderFetchResponseDto);
-
-        // hotDealProductStockUpdateRequestDtos 가 empty 면 feignClient 호출 할 필요 없다.
-        if(hotDealProductStockUpdateRequestDtos.isEmpty()) return new ArrayList<>();
-
-        // product 재고 감소 feignClient 호출
-        List<HotDealProductStockUpdateResponseDto> hotDealProductStockUpdateResponseDtos = resilience4JHotDealServiceClient.decreaseStock(hotDealProductStockUpdateRequestDtos);
-
-        // CircuitBreaker OPEN
-        if(hotDealProductStockUpdateResponseDtos.isEmpty()){
-            log.debug("핫딜 상품 재고 감소 호출을 실패했습니다. userId = {}, orderId = {}, hotDealProducts = {}", userId, orderId, hotDealProductStockUpdateRequestDtos);
-            throw new PaymentException(ErrorCode.PAYMENT_DECREASE_HOTDEAL_PRODUCT_FAILED, userId, orderId, hotDealProductStockUpdateRequestDtos);
+        if (!orderInfo.getOrderStatus().equals("PENDING_PAYMENT")) {
+            log.error("결제 대기 중인 주문이 아닙니다. userId = {}, orderId = {}", userId, requestDto.getOrderId());
+            throw new PaymentSessionException(ErrorCode.PAYMENT_SESSION_INVALID_ORDER_STATUS, userId, requestDto.getOrderId());
         }
-        return hotDealProductStockUpdateResponseDtos;
+//        if (!orderInfo.getAmount().equals(requestDto.getAmount())) {
+//            log.error("주문 금액과 결제 요청 금액이 일치하지 않습니다. userId = {}, orderId = {}", userId, requestDto.getOrderId());
+//            throw new PaymentSessionException(ErrorCode.PAYMENT_SESSION_INVALID_AMOUNT, userId, requestDto.getOrderId());
+//        }
     }
 
-    // hotDealProduct 재고 증가
-    private List<HotDealProductStockUpdateResponseDto> increaseHotDealProductStockAndValidate(Long userId,
-                                                                                              Long orderId,
-                                                                                              OrderFetchResponseDto orderFetchResponseDto) {
-        // 요청 dto 에서 product 추출, feignClient 요청 dto 변환
-        List<HotDealProductStockUpdateRequestDto> hotDealProductStockUpdateRequestDtos = convertToHotDealProductUpdateRequestDto(orderFetchResponseDto);
-
-        // hotDealProductStockUpdateRequestDtos 가 empty 면 feignClient 호출 할 필요 없다.
-        if(hotDealProductStockUpdateRequestDtos.isEmpty()) return new ArrayList<>();
-
-        // product 재고 감소 feignClient 호출
-        List<HotDealProductStockUpdateResponseDto> hotDealProductStockUpdateResponseDtos = resilience4JHotDealServiceClient.increaseStock(hotDealProductStockUpdateRequestDtos);
-
-        // CircuitBreaker OPEN
-        if(hotDealProductStockUpdateResponseDtos.isEmpty()){
-            log.debug("핫딜 상품 재고 증가 호출을 실패했습니다. userId = {}, orderId = {}, hotDealProducts = {}", userId, orderId, hotDealProductStockUpdateRequestDtos);
-            throw new PaymentException(ErrorCode.PAYMENT_INCREASE_HOTDEAL_PRODUCT_FAILED, userId, orderId, hotDealProductStockUpdateRequestDtos);
-        }
-        return hotDealProductStockUpdateResponseDtos;
+    private PaymentSession createPaymentSessionAndSave(Long userId, PaymentPrepareRequestDto requestDto, LocalDateTime expireAt) {
+        PaymentSession paymentSession = PaymentSession.create(requestDto.getOrderId(), userId, requestDto.getAmount(), expireAt);
+        paymentSessionRepository.save(paymentSession);
+        return paymentSession;
     }
 
-    // 요청 dto 에서 product 추출, feignClient 요청 dto 변환
-    private List<HotDealProductStockUpdateRequestDto> convertToHotDealProductUpdateRequestDto(OrderFetchResponseDto orderFetchResponseDto) {
-        List<HotDealProductStockUpdateRequestDto> hotDealProductStockUpdateRequestDtos =
-                orderFetchResponseDto.getHotDealProducts()
-                        .stream()
-                        .map(hp -> new HotDealProductStockUpdateRequestDto(
-                                hp.getHotDealId(),
-                                hp.getHotDealProductId(),
-                                hp.getQuantity()))
-                        .collect(Collectors.toList());
-        return hotDealProductStockUpdateRequestDtos;
-    }
-
-    // 요청 dto 에서 hotDealProduct 추출, feignClient 요청 dto 변환
-    private List<ProductStockUpdateRequestDto> converToProductStockUpdateRequestDto(OrderFetchResponseDto orderFetchResponseDto) {
-        List<ProductStockUpdateRequestDto> productStockUpdateRequestDtos =
-                orderFetchResponseDto.getProducts()
-                        .stream()
-                        .map(p -> new ProductStockUpdateRequestDto(
-                                p.getProductId(),
-                                p.getQuantity()))
-                        .collect(Collectors.toList());
-        return productStockUpdateRequestDtos;
-    }
-
-
-    private OrderFetchResponseDto fetchOrderAndValidate(Long userId, Long orderId) {
-        // order FeignClient 조회
-            OrderFetchResponseDto orderFetchResponseDto = resilience4JOrderServiceClient.fetchOrder(new OrderFetchRequestDto(userId, orderId));
-
-            // CircuitBreaker OPEN
-            if(orderFetchResponseDto.isEmpty()){
-                log.debug("주문 조회 호출을 실패했습니다. userId = {}, orderId = {}", userId, orderId);
-                throw new PaymentException(ErrorCode.PAYMENT_FETCH_ORDER_FAILED, userId, orderId);
-            }
-        return orderFetchResponseDto;
-    }
-
-    // paymentEntryResponse Dto 변환
-    private PaymentEntryResponseDto convertToPaymentEntryResponseDto(Payment savedPayment) {
-        return new PaymentEntryResponseDto(
-                savedPayment.getId(),
-                savedPayment.getOrderId(),
-                savedPayment.getAmount(),
-                savedPayment.getExpireAt());
+    private PaymentPrepareResponseDto convertToPrepareResponse(String sessionId) {
+        return new PaymentPrepareResponseDto(sessionId, "/payments/progress?sessionId=" + sessionId);
     }
 }

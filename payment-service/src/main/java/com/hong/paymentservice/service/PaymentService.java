@@ -1,13 +1,15 @@
 package com.hong.paymentservice.service;
 
-import com.hong.paymentservice.dto.PaymentEntryResponseDto;
-import com.hong.paymentservice.dto.PaymentProcessResponseDto;
+import com.hong.paymentservice.dto.PaymentPerformResponseDto;
+import com.hong.paymentservice.dto.PaymentPrepareResponseDto;
+import com.hong.paymentservice.web.dto.PaymentPerformRequestDto;
+import com.hong.paymentservice.web.dto.PaymentPrepareRequestDto;
 
 public interface PaymentService {
 
     // 결제 진입
-    PaymentEntryResponseDto paymentEntry(Long userId, Long orderId);
+    PaymentPrepareResponseDto paymentPrepare(Long userId, PaymentPrepareRequestDto requestDto);
 
     // 결제 수행
-    PaymentProcessResponseDto paymentProcess(Long userId, Long paymentId, Integer userPaymentAmount);
+    PaymentPerformResponseDto performPayment(Long userId, PaymentPerformRequestDto requestDto);
 }
