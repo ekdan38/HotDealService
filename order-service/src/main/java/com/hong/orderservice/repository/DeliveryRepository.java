@@ -1,7 +1,6 @@
 package com.hong.orderservice.repository;
 
 import com.hong.orderservice.domain.Delivery;
-import com.hong.orderservice.domain.status.DeliveryStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -15,8 +14,8 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
     // 벌크 업데이트
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Delivery d " +
-            "SET d.deliveryStatus = 'DELIVERING', d.startedAt = :startedAt " +
-            "WHERE d.deliveryStatus = 'DELIVERABLE' " +
+            "SET d.status = 'DELIVERING', d.startedAt = :startedAt " +
+            "WHERE d.status = 'DELIVERABLE' " +
             "AND d.id IN (" +
             "SELECT o.delivery.id " +
             "FROM Order o " +
@@ -29,8 +28,8 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
     // 벌크 업데이트
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Delivery d " +
-            "SET d.deliveryStatus = 'DELIVERED', d.completedAt = :completedAt " +
-            "WHERE d.deliveryStatus = 'DELIVERING' " +
+            "SET d.status = 'DELIVERED', d.completedAt = :completedAt " +
+            "WHERE d.status = 'DELIVERING' " +
             "AND d.startedAt <= :dayAgo " +
             "AND d.id IN (" +
             "SELECT o.delivery.id " +
@@ -42,9 +41,9 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
     // 주문 환불 처리 update 쿼리
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Delivery d " +
-            "SET d.deliveryStatus = 'RETURNED', " +
+            "SET d.status = 'RETURNED', " +
             "d.returnCompletedAt = :completedAt " +
-            "WHERE d.deliveryStatus = 'RETURN_REQUESTED' " +
+            "WHERE d.status = 'RETURN_REQUESTED' " +
             "AND d.returnStartedAt <= :dayAgo " +
             "AND d.id IN (" +
             "SELECT o.delivery.id " +
