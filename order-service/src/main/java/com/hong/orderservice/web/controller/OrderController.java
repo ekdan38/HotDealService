@@ -7,6 +7,7 @@ import com.hong.orderservice.service.OrderService;
 import com.hong.orderservice.web.dto.OrderRequestDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
@@ -35,13 +36,13 @@ public class OrderController {
 
         // 응답 설정
         ResponseDto<OrderResponseDto> responseDto = new ResponseDto<>("주문 생성 완료", resultDto);
-        return ResponseEntity.ok().body(responseDto);
+        return ResponseEntity.status(HttpStatus.SC_CREATED).body(responseDto);
     }
 
     // 주문 내역 페이징
     @GetMapping
     public ResponseEntity<ResponseDto<OrderPagingResponseDto>> getOrders(@RequestHeader("X-User-Id") Long userId,
-                                                                         @RequestParam(required = false) Long cursor,
+                                                                         @RequestParam(required = false) String cursor,
                                                                          @RequestParam(required = false, defaultValue = "10") int size) {
 
         OrderPagingResponseDto resultDto = orderService.getOrders(userId, cursor, size);
@@ -54,7 +55,7 @@ public class OrderController {
     // 주문 조회
     @GetMapping("/{orderId}")
     public ResponseEntity<ResponseDto<OrderResponseDto>> getOrder(@RequestHeader("X-User-Id") Long userId,
-                                                                  @PathVariable("orderId") Long orderId) {
+                                                                  @PathVariable("orderId") String orderId) {
         OrderResponseDto resultDto = orderService.getOrder(userId, orderId);
 
         // 응답 설정
@@ -65,7 +66,7 @@ public class OrderController {
     // 주문 취소
     @PatchMapping("/{orderId}/cancel")
     public ResponseEntity<ResponseDto<OrderResponseDto>> cancelOrder(@RequestHeader("X-User-Id") Long userId,
-                                         @PathVariable("orderId") Long orderId){
+                                         @PathVariable("orderId") String orderId){
 
         OrderResponseDto resultDto = orderService.cancelOrder(userId, orderId);
 
@@ -77,9 +78,9 @@ public class OrderController {
     // 반품
     @PatchMapping("{orderId}/return")
     public ResponseEntity<ResponseDto<OrderResponseDto>> returnOrder(@RequestHeader("X-User-Id") Long userId,
-                                                                     @PathVariable("orderId") Long orderId){
+                                                                     @PathVariable("orderId") String orderId){
 
-        OrderResponseDto resultDto = orderService.returnOrder(userId, orderId);
+        OrderResponseDto resultDto = orderService.refundOrder(userId, orderId);
 
         // 응답 설정
         ResponseDto<OrderResponseDto> responseDto = new ResponseDto<>("반품 완료", resultDto);
