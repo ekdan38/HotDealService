@@ -1,7 +1,6 @@
 package com.hong.apigatewayservice.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hong.apigatewayservice.client.UserServiceClient;
 import com.hong.common.dto.ResponseDto;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
@@ -31,7 +30,6 @@ import java.nio.charset.StandardCharsets;
 public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
     private final Environment env;
     private final ObjectMapper objectMapper;
-    private final UserServiceClient userServiceClient;
     private SecretKey secretKey;
 
     @Data
@@ -39,16 +37,14 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
         private String requiredRole;
     }
 
-    public JwtFilter(ObjectMapper objectMapper, Environment env, UserServiceClient userServiceClient) {
+    public JwtFilter(ObjectMapper objectMapper, Environment env) {
         super(Config.class);
         this.objectMapper = objectMapper;
         this.env = env;
-        this.userServiceClient = userServiceClient;
     }
 
     @Override
     public GatewayFilter apply(Config config) {
-
         secretKey = new SecretKeySpec(
                 env.getProperty("jwt.secret.key").getBytes(StandardCharsets.UTF_8),
                 Jwts.SIG.HS256.key().build().getAlgorithm()
@@ -58,62 +54,49 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
             ServerHttpRequest request = exchange.getRequest();
             ServerHttpResponse response = exchange.getResponse();
 
-            // Authorization 헤더 체크
             if (!request.getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
                 log.error("Authorization 헤더가 없습니다.");
                 return setResponse(response, "Authorization 헤더가 없습니다.", null, HttpStatus.UNAUTHORIZED);
             }
 
-            // 로컬 변수로 토큰 추출
             String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 log.error("잘못된 형식의 AccessToken 입니다. = {}", authHeader);
                 return setResponse(response, "잘못된 형식의 AccessToken 입니다.", authHeader, HttpStatus.UNAUTHORIZED);
             }
-            // "Bearer " 제거 후 토큰만 추출
+
             String token = authHeader.split(" ")[1];
             log.info("Extracted token: {}", token);
 
-            // 토큰 검증 (토큰을 로컬 변수 token로 처리)
             return validateAccessToken(token, response)
                     .flatMap(isValid -> {
                         if (!isValid) {
                             return response.setComplete();
                         }
 
-                        // token을 이용해 필요한 정보를 추출
                         String role = getRole(token);
                         log.info("Token role: {}", role);
+
                         if (!hasRequiredRole(config.requiredRole, role)) {
                             log.error("접근 권한이 없습니다. 필요 권한: {}, 사용자 권한: {}", config.requiredRole, role);
                             return setResponse(response, "접근 권한이 없습니다.",
                                     "필요 권한 : " + config.getRequiredRole() + " 사용자 권한 : " + role,
                                     HttpStatus.FORBIDDEN);
                         }
+
                         String username = getUsername(token);
                         String userId = String.valueOf(getUserId(token));
 
                         log.info("Token details - userId: {}, username: {}, role: {}", userId, username, role);
 
-                        // 비동기로 유저 검증
-                        return userServiceClient.validateUser(username)
-                                .flatMap(isValidUser -> {
-                                    if (!isValidUser) {
-                                        log.error("username과 일치하는 User가 없습니다. {}", username);
-                                        return setResponse(response, "username과 일치하는 User가 없습니다.", username, HttpStatus.UNAUTHORIZED);
-                                    }
+                        ServerHttpRequest modifiedRequest = request.mutate()
+                                .header("X-User-Id", userId)
+                                .header("X-User-Role", role)
+                                .build();
 
-                                    // 유효한 사용자라면, 추가 헤더(X-User-Id, X-User-Role)를 추가하여 체인으로 전달
-                                    ServerHttpRequest modifiedRequest = request.mutate()
-                                            .header("X-User-Id", userId)
-                                            .header("X-User-Role", role)
-                                            .build();
+                        log.info("Sending request with token: {}", token);
 
-                                    // 로그로 현재 사용중인 토큰도 출력
-                                    log.info("Sending request with token: {}", token);
-
-                                    return chain.filter(exchange.mutate().request(modifiedRequest).build());
-                                });
+                        return chain.filter(exchange.mutate().request(modifiedRequest).build());
                     });
         };
     }
