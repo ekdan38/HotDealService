@@ -9,6 +9,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class OrderFetchRequestDto {
 
+    private String orderId;
     private Long userId;
-    private Long orderId;
 }

@@ -10,6 +10,10 @@ import lombok.NoArgsConstructor;
 public class OrderUpdateRequestDto {
 
     private Long userId;
-    private Long orderId;
-    private Boolean isSuccess;
+    private String orderId;
+    private Boolean success;
+
+    public Boolean isSuccess() {
+        return success;
+    }
 }

@@ -1,27 +1,30 @@
 package com.hong.common.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
+import java.math.BigDecimal;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class OrderFetchResponseDto {
 
+    private boolean isFallback;
     private Long userId;
-    private Long orderId;
-    private Integer amount;
-    private String status;
-    private List<orderHotDealProductDto> hotDealProducts;
-    private List<OrderProductDto> products;
+    private String orderId;
+    private BigDecimal amount;
+    private String orderStatus;
 
-    @JsonIgnore
-    public boolean isEmpty(){
-        return (userId == null && orderId == null && amount == null
-                && status == null);
+    public OrderFetchResponseDto(boolean isFallback) {
+        this.isFallback = isFallback;
+    }
+
+    public OrderFetchResponseDto(Long userId, String orderId, BigDecimal amount, String orderStatus) {
+        this.userId = userId;
+        this.orderId = orderId;
+        this.amount = amount;
+        this.orderStatus = orderStatus;
     }
 }
