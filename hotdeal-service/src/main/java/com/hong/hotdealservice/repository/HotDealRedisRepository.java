@@ -7,6 +7,7 @@ import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,20 +21,26 @@ public class HotDealRedisRepository {
     private static final long TTL_SECONDS = 300L;
 
     private String createHotDealKey(Long hotDealId){
-        return "getHotDeal::hot_deals:" + hotDealId;
+        return "getHotDeal::hotdeals:" + hotDealId;
     }
 
     private String createHotDealPagingKey(Long cursor, int size, String search){
-        return "getHotDeals::hot_deals:cursor:" + (cursor == null ? "" : cursor)
+        return "getHotDeals::hotdeals:cursor:" + (cursor == null ? "" : cursor)
                 + ":size:" + size + ":search:" + (search == null ? "" : search);
     }
 
+    // hotDeal set
+    public void saveWithTTL(HotDealCacheDto hotDeal){
+        String key = createHotDealKey(hotDeal.getId());
+        redisTemplate.opsForValue().set(key, hotDeal, Duration.ofMinutes(30));
+    }
+
     // hotDeal multiSet
-    public void saveAllHotDealWithTTL(List<HotDealCacheDto> HotDealCacheDtos){
+    public void saveAllWithTTL(List<HotDealCacheDto> hotDeals){
         // 1. multiSet
         Map<String, Object> newCacheEntries = new HashMap<>();
-        for (HotDealCacheDto dto : HotDealCacheDtos) {
-            String key = createHotDealKey(dto.getHotDealId());
+        for (HotDealCacheDto dto : hotDeals) {
+            String key = createHotDealKey(dto.getId());
             newCacheEntries.put(key, dto);
         }
         redisTemplate.opsForValue().multiSet(newCacheEntries);
@@ -47,8 +54,15 @@ public class HotDealRedisRepository {
         });
     }
 
+    // hotDeal Get
+    public HotDealCacheDto findById(Long hotDealId){
+        String key = createHotDealKey(hotDealId);
+        Object cachedData = redisTemplate.opsForValue().get(key);
+        return (HotDealCacheDto) cachedData;
+    }
+
     // hotDeal multiGet
-    public List<HotDealCacheDto> findAllHotDealByIds(List<Long> hotDealIds){
+    public List<HotDealCacheDto> findAllByIds(List<Long> hotDealIds){
         List<String> keys = hotDealIds.stream()
                 .map(this::createHotDealKey)
                 .toList();
@@ -62,5 +76,11 @@ public class HotDealRedisRepository {
     public HotDealPagingCacheDto findPagingByCursorAndSizeAndSearch(Long cursor, int size, String search){
         String key = createHotDealPagingKey(cursor, size, search);
         return (HotDealPagingCacheDto)redisTemplate.opsForValue().get(key);
+    }
+
+    // hotDeal delete (부분 무효화)
+    public void deleteById(Long hotDealId){
+        String key = createHotDealKey(hotDealId);
+        redisTemplate.delete(key);
     }
 }
