@@ -1,14 +1,14 @@
 package com.hong.hotdealservice.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.hong.hotdealservice.domain.HotDeal;
+import com.hong.hotdealservice.domain.status.HotDealStatus;
+import com.hong.hotdealservice.dto.projection.HotDealSimpleDto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -16,40 +16,29 @@ import java.util.List;
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class HotDealCacheDto {
 
-    private Long hotDealId;
-    private Long adminId;
+    private Long id;
     private String title;
     private String description;
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
+    private HotDealStatus status;
     private LocalDateTime startTime;
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
     private LocalDateTime endTime;
-    private String status;
-    private Boolean deleted;
-    private List<HotDealProductResponseDto> hotDealProducts;
 
 
     public HotDealCacheDto(HotDeal hotDeal){
-        this.hotDealId = hotDeal.getId();
-        this.adminId = hotDeal.getUserId();
+        this.id = hotDeal.getId();
         this.title = hotDeal.getTitle();
         this.description = hotDeal.getDescription();
+        this.status = hotDeal.getStatus();
         this.startTime = hotDeal.getStartTime();
         this.endTime = hotDeal.getEndTime();
-        this.status = hotDeal.getStatus().name();
-        this.deleted = hotDeal.getDeleted();
     }
 
-    public HotDealCacheDto(HotDeal hotDeal, List<HotDealProductResponseDto> hotDealProducts){
-        this.hotDealId = hotDeal.getId();
-        this.adminId = hotDeal.getUserId();
+    public HotDealCacheDto(HotDealSimpleDto hotDeal){
+        this.id = hotDeal.getId();
         this.title = hotDeal.getTitle();
         this.description = hotDeal.getDescription();
+        this.status = hotDeal.getStatus();
         this.startTime = hotDeal.getStartTime();
         this.endTime = hotDeal.getEndTime();
-        this.status = hotDeal.getStatus().name();
-        this.deleted = hotDeal.getDeleted();
-        this.hotDealProducts = hotDealProducts;
     }
-
 }
