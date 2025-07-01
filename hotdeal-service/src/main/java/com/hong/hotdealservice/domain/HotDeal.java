@@ -6,7 +6,6 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.Where;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -14,7 +13,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Where(clause = "deleted = false")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 public class HotDeal extends TimeEntity {
@@ -22,9 +20,6 @@ public class HotDeal extends TimeEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "hotdeal_id")
     private Long id;
-
-    @Column(nullable = false)
-    private Boolean deleted;
 
     @Column(name = "admin_id", nullable = false)
     private Long userId;
@@ -45,8 +40,17 @@ public class HotDeal extends TimeEntity {
     @Enumerated(EnumType.STRING)
     private HotDealStatus status;
 
+    @Column(nullable = false)
+    private Boolean deleted;
+
     @Column(nullable = true)
-    private LocalDateTime expiredAt;
+    private LocalDateTime deletedAt;
+
+    @Column(nullable = false)
+    private Boolean isStockSynced = false;
+
+    @Column(nullable = true)
+    private LocalDateTime stockSyncedAt;
 
     @OneToMany(mappedBy = "hotDeal", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<HotDealProduct> hotDealProducts = new ArrayList<>();
@@ -81,12 +85,13 @@ public class HotDeal extends TimeEntity {
     // == HotDeal softDelete 처리
     public void softDelete(){
         this.deleted = true;
-        this.status = HotDealStatus.EXPIRED;
+        this.status = HotDealStatus.DELETED;
     }
 
     //== HotDeal 이 현재 시각 기준으로 주문 처리가 가능한지 판단 ==
-    public boolean canOrder(){
+    public boolean orderAble(){
         if(this.deleted) return false;
+        if(this.status == HotDealStatus.EXPIRED) return false;
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS);
         return now.isAfter(startTime) && now.isBefore(endTime);
     }
@@ -97,25 +102,23 @@ public class HotDeal extends TimeEntity {
         this.hotDealProducts.removeAll(hotDealProducts);
     }
 
-    //== HotDealProducts stock, quantity update 메서드 ==
-    public void updateHotDealProducts(Long hotDealProductId, Integer requestedQuantity, Double discountRate){
-        this.hotDealProducts.stream()
-                .filter(hp -> hp.getProductId().equals(hotDealProductId))
-                .findFirst()
-                .ifPresent(hp -> hp.updateQuantityAndDiscountRate(requestedQuantity, discountRate));
-    }
-
     // == Status 변경 메서드 ==
     public void updateStatus(HotDealStatus status){
         this.status = status;
     }
 
-    // == HotDeal Fiends update 메서드 ==
+    // == HotDeal Field update 메서드 ==
     public void updateFields(String title, String description, LocalDateTime startTime, LocalDateTime endTime, HotDealStatus status){
         this.title = title;
         this.description = description;
         this.startTime = startTime.truncatedTo(ChronoUnit.MILLIS);
         this.endTime = endTime.truncatedTo(ChronoUnit.MILLIS);
         updateStatus(status);
+    }
+
+    // == 핫딜 종료 후 Redis와 재고 동기화 처리 ==
+    public void syncRedisStock(LocalDateTime syncedAt){
+        this.isStockSynced = true;
+        this.stockSyncedAt = syncedAt;
     }
 }
