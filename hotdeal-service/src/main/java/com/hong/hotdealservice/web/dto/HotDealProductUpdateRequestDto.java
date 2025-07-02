@@ -13,7 +13,6 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class HotDealProductUpdateRequestDto {
-    @NotNull(message = "productId 는 필수입니다.")
     private Long productId;
 
     @NotNull(message = "title 은 필수입니다.")
