@@ -1,5 +1,6 @@
 package com.hong.userservice.jwt;
 
+import com.hong.userservice.AESUtil;
 import com.hong.userservice.dto.UserDto;
 import com.hong.userservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,11 +19,13 @@ import java.util.List;
 @Slf4j(topic = "[CustomUserDetailsService]")
 public class CustomUserDetailsService implements UserDetailsService {
     private final UserRepository userRepository;
+    private final AESUtil aesUtil;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         try {
-            UserDto userDto = userRepository.findDtoByUsername(username);
+            String encryptUsername = aesUtil.encrypt(username);
+            UserDto userDto = userRepository.findDtoByUsername(encryptUsername);
 
             if (userDto == null) {
                 log.error("error = {}", username);
