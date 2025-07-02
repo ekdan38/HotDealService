@@ -99,4 +99,4 @@ HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정된 수량의 상
   - ShedLock을 사용하여 한개의 인스턴스만 스케쥴러를 실행
 
 ##  📕  API 명세서
-수정한거 반영해서 업데이트...
+ 🔗 https://documenter.getpostman.com/view/33322261/2sB34bJhnz
