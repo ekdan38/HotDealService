@@ -69,7 +69,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public OrderPagingResponseDto getOrders(Long userId, String cursor, int size) {
         // 1. orders 페이징 조회(cursor 기반)
-        List<Order> page = fetchOrdersByCursor(userId, cursor, size);
+        List<Order> page = getOrdersByCursor(userId, cursor, size);
 
         // 2. 사용자 조회 시점에서 주문, 배송 상태 update
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS);
@@ -116,7 +116,7 @@ public class OrderServiceImpl implements OrderService {
         return convertToOrderResponse(order);
     }
 
-    // 환불
+    // 반품
     // 배송 완료 후 1일 이내 가능
     @Transactional
     @Override
@@ -132,12 +132,13 @@ public class OrderServiceImpl implements OrderService {
         return convertToOrderResponse(order);
     }
 
-
     // orders 페이징 조회(cursor 기반)
-    private List<Order> fetchOrdersByCursor(Long userId, String cursor, int size) {
+    private List<Order> getOrdersByCursor(Long userId, String cursor, int size) {
         LocalDateTime defaultCursor = LocalDateTime.of(9999, 12, 31, 23, 59, 59);
-        LocalDateTime cursorDateTime = (cursor != null) ? LocalDateTime.parse(cursor) : defaultCursor;
-
+        LocalDateTime cursorDateTime =
+                (cursor != null && !cursor.isBlank())
+                        ? LocalDateTime.parse(cursor)
+                        : defaultCursor;
         PageRequest pageRequest = PageRequest.of(0, size);
         return orderRepository.findOrdersByCursorAndUserIdAndSize(cursorDateTime, userId, pageRequest);
     }
@@ -187,7 +188,7 @@ public class OrderServiceImpl implements OrderService {
         // 주문 조회 (Fetch Join 으로 orderProducts, delivery 조회)
         return orderRepository.findOrderWithDeliveryAndOpById(orderId, userId).orElseThrow(() -> {
             log.debug("요청된 주문이 존재하지 않습니다. userId = {}, orderId = {}", userId, orderId);
-            return new OrderException(ErrorCode.ORDER_NOT_FOUND, userId, orderId);
+            return new OrderException(ErrorCode.ORDER_NOT_FOUND, orderId, userId);
         });
     }
 
@@ -241,11 +242,11 @@ public class OrderServiceImpl implements OrderService {
         // 2. hotdealService 로 feignClient 요청
         ProductReservationResponseDto reserveStockResponse = hotDealServiceClient.reserveStock(request);
 
-        // 3. 응답이 empty List 라면 circuitBreaker 작동, 예외 처리
+        // 3. circuitBreakerFallback 작동, 예외 처리
         if(reserveStockResponse.isFallback()){
             List<Long> failedProductIds = products.stream().map(OrderProductRequest::getProductId).toList();
             log.error("핫딜 상품 점유 요청을 실패했습니다. userId = {}, orderId = {}, products = {}", userId, orderId, failedProductIds);
-            throw new OrderException(ErrorCode.ORDER_HOTDEAL_SERVICE_FAILED);
+            throw new OrderException(ErrorCode.ORDER_HOTDEAL_SERVICE_FAILED, "핫딜 서비스에 오류가 생겼습니다.");
         }
         return reserveStockResponse;
     }
@@ -259,7 +260,7 @@ public class OrderServiceImpl implements OrderService {
         StockRestoreResponseDto stockRestoreResponseDto = hotDealServiceClient.restoreStock(stockRestoreRequestDto);
         if(!stockRestoreResponseDto.isSuccess()){
             log.error("재고 복구를 실패했습니다. userId ={}, orderId = {}", userId, orderId);
-            throw new OrderException(ErrorCode.ORDER_HOTDEAL_RESTORE_STOCK_FAILED, userId, orderId);
+            throw new OrderException(ErrorCode.ORDER_HOTDEAL_SERVICE_FAILED, "재고 복구를 실패했습니다. orderId = " + orderId);
         }
     }
 
@@ -268,7 +269,7 @@ public class OrderServiceImpl implements OrderService {
         PaymentCancelResponseDto responseDto = paymentServiceClient.cancelPayment(requestDto);
         if(!responseDto.isSuccess()){
             log.error("결제 취소를 실패했습니다. userId = {}, orderId = {}", userId, orderId);
-            throw new OrderException(ErrorCode.ORDER_PAYMENT_CANCEL_FAILED, userId, orderId);
+            throw new OrderException(ErrorCode.ORDER_HOTDEAL_SERVICE_FAILED, "결제 취소를 실패했습니다. orderId = "+ orderId);
         }
     }
 
