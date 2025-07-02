@@ -123,6 +123,7 @@ public class HotDealProductStockService {
      *  핫딜 상품의 핫딜이 끝나서 DB와 재고 동기화 했다면 DB에 반영
      *  동기화 되지 않았다면 Redis에 반영
      */
+    @Transactional
     public StockRestoreResponseDto restoreStock(StockRestoreRequestDto requestDto){
         String orderId = requestDto.getOrderId();
 
@@ -194,7 +195,7 @@ public class HotDealProductStockService {
         try{
             // 2. 최종 stock 반영
             // 결제 성공
-            List<Long> failedReservationIds = new ArrayList<>();
+            List<Long> successIds = new ArrayList<>();
             if(requestDto.isSuccess()){
                 for (StockReservation reservation : reservations) {
                     // Redis 재고 감소
@@ -205,15 +206,17 @@ public class HotDealProductStockService {
                                 orderId, reservation.getProductId(), reservation.getReservedQuantity());
                         // reserveStock ERROR 처리 => 추후 로깅, DB 데이터 추적으로 처리
                         reservation.updateToError();
-                        failedReservationIds.add(reservation.getId());
+                        successIds.add(reservation.getId());
                     }
                     else{
                         // reserveStock CONFIRMED 처리
                         reservation.updateToConfirmed();
                     }
                 }
-                if(!failedReservationIds.isEmpty()){
-                    throw new HotDealProductException(ErrorCode.HOTDEAL_PRODUCT_NOT_ENOUGH_STOCK_IN_REDIS, failedReservationIds);
+                // 재고 감소 실패건
+                if(!successIds.isEmpty()){
+                    log.error("재고 감소 실패가 존재합니다. productIds = {}", successIds);
+                    throw new HotDealProductException(ErrorCode.HOTDEAL_PRODUCT_FAIL_DECREASE_STOCK, successIds);
                 }
                 else {
                     log.info("결제 성공 건 Redis 재고 감소 및 ReserveStock CONFIRMED 처리 완료. orderId = {}", orderId);
@@ -254,6 +257,7 @@ public class HotDealProductStockService {
         List<StockReservation> reservations = stockReservationRepository.findAllByOrderId(orderId);
         if(reservations.isEmpty()){
             log.error("이미 처리된 주문이거나 존재 하지 않습니다. orderId = {}", orderId);
+            throw new HotDealProductException(ErrorCode.RESERVATION_NOT_FOUND, orderId);
         }
         return reservations;
     }
