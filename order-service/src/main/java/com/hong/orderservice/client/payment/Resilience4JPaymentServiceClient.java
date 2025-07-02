@@ -18,8 +18,8 @@ public class Resilience4JPaymentServiceClient {
     /**
      * paymentService payment 생성 요청
      */
-    @CircuitBreaker(name = "default", fallbackMethod = "fallBackForCircuitBreakerCreatePayment")
-    @Retry(name = "default", fallbackMethod = "fallbackForRetryCreatePayment")
+    @CircuitBreaker(name = "custom", fallbackMethod = "fallBackForCircuitBreakerCreatePayment")
+    @Retry(name = "custom", fallbackMethod = "fallbackForRetryCreatePayment")
     public PaymentCreateResponseDto createPayment(PaymentCreateRequestDto requestDto) {
         return paymentServiceClient.createPayment(requestDto);
     }
@@ -41,8 +41,8 @@ public class Resilience4JPaymentServiceClient {
     /**
      * paymentService payment Expire 요청
      */
-    @CircuitBreaker(name = "default", fallbackMethod = "fallBackForCircuitBreakerExpirePayment")
-    @Retry(name = "default", fallbackMethod = "fallbackForRetryExpirePayment")
+    @CircuitBreaker(name = "custom", fallbackMethod = "fallBackForCircuitBreakerExpirePayment")
+    @Retry(name = "custom", fallbackMethod = "fallbackForRetryExpirePayment")
     public ExpirePaymentResponseDto expirePayment(ExpirePaymentRequestDto requestDto) {
         return paymentServiceClient.expirePayment(requestDto);
     }
@@ -64,8 +64,8 @@ public class Resilience4JPaymentServiceClient {
     /**
      * paymentService payment 취소 요청
      */
-    @CircuitBreaker(name = "default", fallbackMethod = "fallBackForCircuitBreakerCancelPayment")
-    @Retry(name = "default", fallbackMethod = "fallbackForRetryCancelPayment")
+    @CircuitBreaker(name = "custom", fallbackMethod = "fallBackForCircuitBreakerCancelPayment")
+    @Retry(name = "custom", fallbackMethod = "fallbackForRetryCancelPayment")
     public PaymentCancelResponseDto cancelPayment(PaymentCancelRequestDto requestDto) {
         return paymentServiceClient.cancelPayment(requestDto);
     }

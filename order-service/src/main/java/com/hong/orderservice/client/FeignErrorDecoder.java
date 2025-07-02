@@ -59,9 +59,13 @@ public class FeignErrorDecoder implements ErrorDecoder {
                 log.error("HotDealServiceClient#reserveStock. 503 응답. StatusCode = {}, ErrorMessage = {}" ,status ,errorMessage);
                 return FeignException.errorStatus(methodKey, response);
             }
-            else if(status == 400 || status == 404){
-                log.error("HotDealServiceClient#reserveStock. {} 응답. ErrorMessage = {}" ,status ,errorMessage);
-                throw new OrderException(ErrorCode.ORDER_HOTDEAL_SERVICE_FAILED, errorMessage);
+            else if(status == 400){
+                log.error("HotDealServiceClient#reserveStock. 400 응답. ErrorMessage = {}" ,errorMessage);
+                throw new OrderException(ErrorCode.ORDER_RESERVE_STOCK_BAD_REQUEST, errorMessage);
+            }
+            else if(status == 404){
+                log.error("HotDealServiceClient#reserveStock. 404 응답. ErrorMessage = {}" ,errorMessage);
+                throw new OrderException(ErrorCode.ORDER_RESERVE_STOCK_NOT_FOUND, errorMessage);
             }
         }
 
@@ -70,8 +74,13 @@ public class FeignErrorDecoder implements ErrorDecoder {
             if(status == 503){
                 return FeignException.errorStatus(methodKey, response);
             }
-            else if(status == 400 || status == 404){
-                throw new OrderException(ErrorCode.ORDER_HOTDEAL_SERVICE_FAILED, errorMessage);
+            else if(status == 400){
+                log.error("HotDealServiceClient#reserveStock. 400 응답. ErrorMessage = {}" ,errorMessage);
+                throw new OrderException(ErrorCode.ORDER_CONFIRM_STOCK_BAD_REQUEST, errorMessage);
+            }
+            else if(status == 404){
+                log.error("HotDealServiceClient#reserveStock. 404 응답. ErrorMessage = {}" ,errorMessage);
+                throw new OrderException(ErrorCode.ORDER_CONFIRM_STOCK_NOT_FOUND, errorMessage);
             }
         }
 
@@ -80,7 +89,7 @@ public class FeignErrorDecoder implements ErrorDecoder {
             if(status == 503){
                 return FeignException.errorStatus(methodKey, response);
             }
-            else if(status == 400 || status == 404){
+            else {
                 throw new OrderException(ErrorCode.ORDER_HOTDEAL_SERVICE_FAILED, errorMessage);
             }
         }
@@ -93,7 +102,7 @@ public class FeignErrorDecoder implements ErrorDecoder {
             if (status == 503) {
                 return FeignException.errorStatus(methodKey, response);
             }
-            else if(status == 400 || status == 404){
+            else {
                 throw new OrderException(ErrorCode.ORDER_PAYMENT_SERVICE_FAILED, errorMessage);
             }
         }
@@ -103,7 +112,10 @@ public class FeignErrorDecoder implements ErrorDecoder {
             if(status == 503){
                 return FeignException.errorStatus(methodKey, response);
             }
-            else if(status == 400 || status == 404){
+            else if(status == 404){
+                throw new OrderException(ErrorCode.ORDER_PAYMENT_SERVICE_FAILED, errorMessage);
+            }
+            else {
                 throw new OrderException(ErrorCode.ORDER_PAYMENT_SERVICE_FAILED, errorMessage);
             }
         }
@@ -112,7 +124,10 @@ public class FeignErrorDecoder implements ErrorDecoder {
             if(status == 503){
                 return FeignException.errorStatus(methodKey, response);
             }
-            else if(status == 400 || status == 404){
+            else if(status == 404){
+                throw new OrderException(ErrorCode.ORDER_PAYMENT_SERVICE_FAILED, errorMessage);
+            }
+            else {
                 throw new OrderException(ErrorCode.ORDER_PAYMENT_SERVICE_FAILED, errorMessage);
             }
         }

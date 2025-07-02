@@ -19,8 +19,8 @@ public class Resilience4JUserServiceClient {
     /**
      * userService userCart 삭제 요청
      */
-    @CircuitBreaker(name = "default", fallbackMethod = "fallbackForCircuitBreaker")
-    @Retry(name = "default", fallbackMethod = "fallbackForRetry")
+    @CircuitBreaker(name = "custom", fallbackMethod = "fallbackForCircuitBreaker")
+    @Retry(name = "custom", fallbackMethod = "fallbackForRetry")
     public UserCartDeleteResponseDto deleteUserCart(UserCartDeleteRequestDto requestDto) {
         return userServiceClient.deleteUserCart(requestDto);
     }
@@ -36,7 +36,7 @@ public class Resilience4JUserServiceClient {
     private UserCartDeleteResponseDto fallbackForRetry(UserCartDeleteRequestDto requestDto, Throwable t) {
         log.error("[RETRY Fallback] user-service 호출 최종 재시도 실패. userId = {}, error = {}", requestDto.getUserId(), t.getMessage());
         if(t instanceof OrderException ex) throw ex;
-        return new UserCartDeleteResponseDto(false, true);
+        throw new RuntimeException();
     }
 
 }
