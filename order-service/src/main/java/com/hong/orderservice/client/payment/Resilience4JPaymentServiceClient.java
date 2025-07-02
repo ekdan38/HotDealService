@@ -25,15 +25,17 @@ public class Resilience4JPaymentServiceClient {
     }
 
     // createPayment CircuitBreaker Fallback
-    private PaymentCreateResponseDto fallBackForCircuitBreakerCreatePayment(PaymentCreateRequestDto requestDto, Throwable t) {
-        log.error("[CircuitBreaker OPEN] payment-service 호출 차단. orderId={}, error={}", requestDto.getOrderId(), t.getMessage());
+    private PaymentCreateResponseDto fallBackForCircuitBreakerCreatePayment(PaymentCreateRequestDto requestDto, Throwable throwable) {
+        log.error("[CircuitBreaker Fallback] payment-service 호출 실패. orderId={}, error={}", requestDto.getOrderId(), throwable.getMessage());
+        if(throwable instanceof OrderException) throw (OrderException) throwable;
         return new PaymentCreateResponseDto(true);
     }
 
     // createPayment Retry Fallback
-    private PaymentCreateResponseDto fallbackForRetryCreatePayment(PaymentCreateRequestDto requestDto, Throwable t) {
-        log.error("[RETRY FAIL] payment-service 호출 최종 재시도 실패. orderId={}, error={}", requestDto.getOrderId(), t.getMessage());
-        return new PaymentCreateResponseDto(true);
+    private PaymentCreateResponseDto fallbackForRetryCreatePayment(PaymentCreateRequestDto requestDto, Throwable throwable) {
+        log.error("[RETRY Fallback] payment-service 호출 최종 재시도 실패. orderId={}, error={}", requestDto.getOrderId(), throwable.getMessage());
+        if(throwable instanceof OrderException) throw (OrderException) throwable;
+        throw new RuntimeException();
     }
 
     /**
@@ -46,15 +48,17 @@ public class Resilience4JPaymentServiceClient {
     }
 
     // expirePayment CircuitBreaker Fallback
-    private ExpirePaymentResponseDto fallBackForCircuitBreakerExpirePayment(ExpirePaymentRequestDto requestDto, Throwable t) {
-        log.error("[CircuitBreaker OPEN] payment-service 호출 차단. orderIds = {}, error = {}", requestDto.getOrderId(), t.getMessage());
+    private ExpirePaymentResponseDto fallBackForCircuitBreakerExpirePayment(ExpirePaymentRequestDto requestDto, Throwable throwable) {
+        log.error("[CircuitBreaker Fallback] payment-service 호출 실패. orderIds = {}, error = {}", requestDto.getOrderId(), throwable.getMessage());
+        if(throwable instanceof OrderException) throw (OrderException) throwable;
         return new ExpirePaymentResponseDto(false, true);
     }
 
     // expirePayment Retry Fallback
-    private ExpirePaymentResponseDto fallbackForRetryExpirePayment(ExpirePaymentRequestDto requestDto, Throwable t) {
-        log.error("[RETRY FAIL] payment-service 호출 최종 재시도 실패. orderIds = {}, error = {}", requestDto.getOrderId(), t.getMessage());
-        return new ExpirePaymentResponseDto(false, true);
+    private ExpirePaymentResponseDto fallbackForRetryExpirePayment(ExpirePaymentRequestDto requestDto, Throwable throwable) {
+        log.error("[RETRY Fallback] payment-service 호출 최종 재시도 실패. orderIds = {}, error = {}", requestDto.getOrderId(), throwable.getMessage());
+        if(throwable instanceof OrderException) throw (OrderException) throwable;
+        throw new RuntimeException();
     }
 
     /**
@@ -67,14 +71,16 @@ public class Resilience4JPaymentServiceClient {
     }
 
     // cancelPayment CircuitBreaker Fallback
-    private PaymentCancelResponseDto fallBackForCircuitBreakerCancelPayment(PaymentCancelRequestDto requestDto, Throwable t) {
-        log.error("[CircuitBreaker OPEN] payment-service 호출 차단. orderId = {}, error = {}", requestDto.getOrderId(), t.getMessage());
+    private PaymentCancelResponseDto fallBackForCircuitBreakerCancelPayment(PaymentCancelRequestDto requestDto, Throwable throwable) {
+        log.error("[CircuitBreaker Fallback] payment-service 호출 실패. orderId = {}, error = {}", requestDto.getOrderId(), throwable.getMessage());
+        if(throwable instanceof OrderException) throw (OrderException) throwable;
         return new PaymentCancelResponseDto(false, true);
     }
 
     // cancelPayment Retry Fallback
-    private PaymentCancelResponseDto fallbackForRetryCancelPayment(PaymentCancelRequestDto requestDto, Throwable t) {
-        log.error("[RETRY FAIL] payment-service 호출 최종 재시도 실패. orderId = {}, error = {}", requestDto.getOrderId(), t.getMessage());
-        return new PaymentCancelResponseDto(false, true);
+    private PaymentCancelResponseDto fallbackForRetryCancelPayment(PaymentCancelRequestDto requestDto, Throwable throwable) {
+        log.error("[RETRY Fallback] payment-service 호출 최종 재시도 실패. orderId = {}, error = {}", requestDto.getOrderId(), throwable.getMessage());
+        if(throwable instanceof OrderException) throw (OrderException) throwable;
+        throw new RuntimeException();
     }
 }
