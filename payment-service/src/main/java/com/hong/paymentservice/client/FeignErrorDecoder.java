@@ -3,6 +3,7 @@ package com.hong.paymentservice.client;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hong.common.exception.ErrorCode;
+import com.hong.common.exception.custom.OrderException;
 import com.hong.common.exception.custom.PaymentException;
 import feign.FeignException;
 import feign.Response;
@@ -43,8 +44,9 @@ public class FeignErrorDecoder implements ErrorDecoder {
             if(status == 503){
                 return FeignException.errorStatus(methodKey, response);
             }
-            else{
-                throw new PaymentException(ErrorCode.PAYMENT_ORDER_SERVICE_FAILED, errorMessage);
+            else if(status == 404){
+                log.error("OrderServiceClient#fetchOrder. 404 응답. ErrorMessage = {}" ,errorMessage);
+                throw new PaymentException(ErrorCode.PAYMENT_FETCH_ORDER_NOT_FOUND, errorMessage);
             }
         }
 
@@ -52,8 +54,9 @@ public class FeignErrorDecoder implements ErrorDecoder {
             if(status == 503){
                 return FeignException.errorStatus(methodKey, response);
             }
-            else {
-                throw new PaymentException(ErrorCode.PAYMENT_ORDER_SERVICE_FAILED, errorMessage);
+            else if(status == 404){
+                log.error("OrderServiceClient#updateOrderStatus. 404 응답. ErrorMessage = {}" ,errorMessage);
+                throw new PaymentException(ErrorCode.PAYMENT_UPDATE_ORDER_NOT_FOUND, errorMessage);
             }
         }
 
