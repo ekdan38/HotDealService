@@ -1,7 +1,5 @@
 package com.hong.paymentservice.service;
 
-import com.hong.common.dto.OrderFetchRequestDto;
-import com.hong.common.dto.OrderFetchResponseDto;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.PaymentException;
 import com.hong.common.exception.custom.PaymentSessionException;
@@ -58,10 +56,10 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     public PaymentPerformResponseDto performPayment(Long userId, PaymentPerformRequestDto requestDto) {
         // 1. paymentSession 조회 및 존재 검증
-        PaymentSession session = fetchSessionAndValidate(userId, requestDto);
+        PaymentSession session = getSessionAndValidate(userId, requestDto);
 
         // 2. payment 조회 및 존재 검증
-        Payment payment = fetchPaymentAndValidate(userId, session);
+        Payment payment = getPaymentAndValidate(userId, session);
 
         // 4. pg 사 결제 시뮬레이션 (80% 성공)
         boolean paymentResult = simulatePayment(payment.getExpireAt(), requestDto.getAmount(), session);
@@ -83,14 +81,11 @@ public class PaymentServiceImpl implements PaymentService {
         OrderStatusOutbox outboxEvent = OrderStatusOutbox.create(payment.getOrderId(), userId, payment.getStatus());
         orderStatusOutboxRepository.save(outboxEvent);
 
-//        // 이벤트 기반 비동기 처리
-//        eventPublisher.publishEvent(outboxEvent);
-
         // 6. 응답 Dto 반환
         return new PaymentPerformResponseDto(session.getStatus().name(), payment.getTransactionId());
     }
 
-    private Payment fetchPaymentAndValidate(Long userId, PaymentSession session) {
+    private Payment getPaymentAndValidate(Long userId, PaymentSession session) {
        return paymentRepository.findByOrderIdAndUserId(session.getOrderId(), userId).orElseThrow(() -> {
             log.error("존재 하지 않는 결제입니다. userId = {}, orderId = {}, paymentId = {}", session.getOrderId(), userId, null);
             return new PaymentException(ErrorCode.PAYMENT_NOT_FOUND, userId, session.getOrderId(), null);
@@ -105,7 +100,7 @@ public class PaymentServiceImpl implements PaymentService {
         return payment;
     }
 
-    private PaymentSession fetchSessionAndValidate(Long userId, PaymentPerformRequestDto requestDto) {
+    private PaymentSession getSessionAndValidate(Long userId, PaymentPerformRequestDto requestDto) {
         PaymentSession session = paymentSessionRepository.findByIdAndUserId(requestDto.getSessionId(), userId)
                 .orElseThrow(() -> {
                     log.error("결제 세션이 존재하지 않습니다. userId = {}, sessionId = {}", userId, requestDto.getSessionId());
@@ -138,29 +133,6 @@ public class PaymentServiceImpl implements PaymentService {
         // 결제 완료 시점 expireAt 확인
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS);
         return !now.isAfter(expireAt);
-    }
-
-    private void fetchOrderAndValidate(Long userId, PaymentPrepareRequestDto requestDto) {
-        long start = System.currentTimeMillis();
-        log.info("order 조회 시작  ");
-
-        OrderFetchResponseDto orderInfo = resilience4JOrderServiceClient.fetchOrder(new OrderFetchRequestDto(requestDto.getOrderId(), userId));
-        long end = System.currentTimeMillis();
-        log.info("order 조회 종료 ");
-        log.info("order 조회 시간 = {}ms", (end - start));
-
-        if (orderInfo.isFallback()) {
-            log.error("주문 조회 호출을 실패했습니다. userId = {}, orderId = {}", userId, requestDto.getOrderId());
-            throw new PaymentSessionException(ErrorCode.PAYMENT_SESSION_FETCH_ORDER_FAILED, userId, requestDto.getOrderId());
-        }
-        if (!orderInfo.getOrderStatus().equals("PENDING_PAYMENT")) {
-            log.error("결제 대기 중인 주문이 아닙니다. userId = {}, orderId = {}", userId, requestDto.getOrderId());
-            throw new PaymentSessionException(ErrorCode.PAYMENT_SESSION_INVALID_ORDER_STATUS, userId, requestDto.getOrderId());
-        }
-//        if (!orderInfo.getAmount().equals(requestDto.getAmount())) {
-//            log.error("주문 금액과 결제 요청 금액이 일치하지 않습니다. userId = {}, orderId = {}", userId, requestDto.getOrderId());
-//            throw new PaymentSessionException(ErrorCode.PAYMENT_SESSION_INVALID_AMOUNT, userId, requestDto.getOrderId());
-//        }
     }
 
     private PaymentSession createPaymentSessionAndSave(Long userId, PaymentPrepareRequestDto requestDto, LocalDateTime expireAt) {
