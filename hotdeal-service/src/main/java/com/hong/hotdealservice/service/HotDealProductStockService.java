@@ -275,7 +275,6 @@ public class HotDealProductStockService {
 
             // 2. 재고 점유 상태 기준 DB 조회
             ReserveStatus reserveStatus = ReserveStatus.RESERVED;
-            // todo
             List<ProductReservedQuantityDto> reservedStocks =
                     stockReservationRepository.sumReservedQuantityByProductId(productIds, reserveStatus);
 
@@ -500,8 +499,6 @@ public class HotDealProductStockService {
                 cacheMissProducts.add(productIds.get(i));
             }
         }
-//        // TODO 이거 위에 대체 코드임 Redis 비활성화
-//        cacheMissProducts.addAll(productIds);
 
         // 3. cacheMiss 존재 하면 DB 조회 후 cache save
         if (!cacheMissProducts.isEmpty()){
@@ -525,9 +522,8 @@ public class HotDealProductStockService {
                 productsToCache.add(productCacheDto);
                 productMap.put(hp.getId(), productCacheDto);
             });
-            // TODO 이것도 비활성화
-//             4. Redis Save
-            productRedisRepository.saveAllWithTTL(productsToCache);
+           // 4. Redis Save
+           productRedisRepository.saveAllWithTTL(productsToCache);
         }
         return productMap;
     }
@@ -551,16 +547,13 @@ public class HotDealProductStockService {
             HotDealCacheDto hotDealCacheDto = cachedHotDeals.get(i);
             // cacheHit
             if(hotDealCacheDto != null){
-//                log.info("CacheMissHit, hotDeal = {}", hotDealIds.get(i));
                 hotDealMap.put(hotDealIds.get(i), hotDealCacheDto);
             }
             // cacheMiss
             else {
-//                log.info("CacheMiss, hotDeal = {}", hotDealIds.get(i));
                 cacheMissIds.add(hotDealIds.get(i));
             }
         }
-//        cacheMissIds.addAll(hotDealIds);
 
         // 4. cacheMiss 존재 하면 DB 조회 후 cache save
         if (!cacheMissIds.isEmpty()){

@@ -97,7 +97,7 @@ public class HotDealServiceImpl implements HotDealService {
     @CacheEvict(cacheNames = "getHotDeals", allEntries = true)
     public HotDealResponseDto updateHotDeal(Long hotDealId, HotDealUpdateRequestDto requestDto) {
         // 1. hotDeal 조회 및 검증
-        HotDeal hotDeal = fetchHotDealWithProductsAndValidate(hotDealId);
+        HotDeal hotDeal = getHotDealWithProductsAndValidate(hotDealId);
 
         // 2. title 검증
         validateNewTitle(requestDto, hotDeal);
@@ -140,7 +140,7 @@ public class HotDealServiceImpl implements HotDealService {
     @CacheEvict(cacheNames = "getHotDeals", allEntries = true)
     public HotDealResponseDto deleteHotDeal(Long hotDealId) {
         // 1. hotDeal 조회 (hotDealProducts fetch join) 및 검증
-        HotDeal hotDeal = fetchHotDealWithProductsAndValidate(hotDealId);
+        HotDeal hotDeal = getHotDealWithProductsAndValidate(hotDealId);
 
         // 2. 남은 stock 0개로 처리
         hotDeal.getHotDealProducts().forEach(product -> product.decreaseStock(product.getStock()));
@@ -253,7 +253,7 @@ public class HotDealServiceImpl implements HotDealService {
     }
 
     // hotDealProducts Fetch Join 조회, 검증
-    private HotDeal fetchHotDealWithProductsAndValidate(Long hotDealId) {
+    private HotDeal getHotDealWithProductsAndValidate(Long hotDealId) {
         return hotDealRepository.findByIdWithHotDealProducts(hotDealId).orElseThrow(() -> {
             log.debug("요청된 핫딜이 존재하지 않습니다. hotDealId = {}", hotDealId);
             return new HotDealException(ErrorCode.HOTDEAL_NOT_FOUND, hotDealId);
