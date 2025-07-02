@@ -41,7 +41,7 @@ public class PaymentController {
 
     @PostMapping("/perform")
     public ResponseEntity<ResponseDto<PaymentPerformResponseDto>> performPayment(@RequestHeader("X-User-Id") Long userId,
-                                                                                 @RequestBody PaymentPerformRequestDto request) {
+                                                                                 @RequestBody @Validated PaymentPerformRequestDto request) {
         PaymentPerformResponseDto resultDto = paymentService.performPayment(userId, request);
 
         ResponseDto<PaymentPerformResponseDto> responseDto = new ResponseDto<>("결제 완료", resultDto);
