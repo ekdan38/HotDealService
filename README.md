@@ -6,38 +6,67 @@ HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정된 수량의 상
 프로젝트 진행 기간
 2024.12 ~ 2025.05
 
+##  📕  API 명세서
+🔗 [API 명세서 보기](<https://documenter.getpostman.com/view/33322261/2sB34bJhnz>)
+<br>
+
+
 ## 💻 사용한 기술 스택
-<div style="text-align: left;">
-  <img src="https://img.shields.io/badge/java21-007396?style=for-the-badge&logo=OpenJDK&logoColor=white" alt="Java 21">
+**Framework & Library**
+<div>
 
-
+<img src="https://img.shields.io/badge/java21-007396?style=for-the-badge&logo=OpenJDK&logoColor=white" alt="Java 21">
   <img src="https://img.shields.io/badge/Spring Boot3.4.0-6DB33F?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot 3.4.0">
-
   <img src="https://img.shields.io/badge/Spring Security-6DB33F?style=for-the-badge&logo=springsecurity&logoColor=white" alt="Spring Security">
-  <img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=MySQL&logoColor=white" alt="MySQL">
-  <img src="https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=Redis&logoColor=white" alt="Redis">
-  <img src="https://img.shields.io/badge/RabbitMQ-FF6600?style=for-the-badge&logo=RabbitMQ&logoColor=white" alt="RabbitMQ">
-  <img src="https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
-  <img src="https://img.shields.io/badge/Hibernate-59666C?style=for-the-badge&logo=Hibernate&logoColor=white" alt="Hibernate">
-  <img src="https://img.shields.io/badge/PostMan-FF6C37?style=for-the-badge&logo=Postman&logoColor=white" alt="Postman">
-  <img src="https://img.shields.io/badge/JUnit5-25A162?style=for-the-badge&logo=JUnit5&logoColor=white" alt="JUnit 5">
   <img src="https://img.shields.io/badge/Spring Cloud Gateway-25A162?style=for-the-badge&logo=Spring&logoColor=white" alt="Spring Cloud Gateway">
   <img src="https://img.shields.io/badge/Spring Cloud Eureka-25A162?style=for-the-badge&logo=Spring&logoColor=white" alt="Spring Cloud Eureka">
+  <br>
+  <img src="https://img.shields.io/badge/Hibernate-59666C?style=for-the-badge&logo=Hibernate&logoColor=white" alt="Hibernate">
+  <img src="https://img.shields.io/badge/RabbitMQ-FF6600?style=for-the-badge&logo=RabbitMQ&logoColor=white" alt="RabbitMQ">
   <img src="https://img.shields.io/badge/Resilience4J-59666C?style=for-the-badge&&logoColor=white" alt="Resilience4J">
- <img src="https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=Git&logoColor=white" alt="Spring Cloud Eureka">
- <img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=GitHub&logoColor=white" alt="Spring Cloud Eureka">
+</div>
+<br>
+
+**Database**
+<div>
+  <img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=MySQL&logoColor=white" alt="MySQL">
+  <img src="https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=Redis&logoColor=white" alt="Redis">
+
 </div>
 
+<br>
+
+**Test Tool**
+<div>
+  <img src="https://img.shields.io/badge/PostMan-FF6C37?style=for-the-badge&logo=Postman&logoColor=white" alt="Postman">
+  <img src="https://img.shields.io/badge/JUnit5-25A162?style=for-the-badge&logo=JUnit5&logoColor=white" alt="JUnit 5">
+  <img src="https://img.shields.io/badge/k6-7D64FF?style=for-the-badge&logo=k6&logoColor=white" alt="k6">
+
+</div>
+
+<br>
+
+**DevOps**
+<div>
+   <img src="https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=Git&logoColor=white" alt="GIT">
+ <img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=GitHub&logoColor=white" alt="GITHUB">
+  <img src="https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
+</div>
+
+<br>
 
 ## 🛠 ERD
 
 ![Image](https://github.com/user-attachments/assets/8169c851-18d6-459b-8546-97a030ac21f6)
 
+<br>
+
+
 ## 🛠 아키텍처
 ![Image](https://github.com/user-attachments/assets/3e58876f-1f05-46be-a0e1-653bcb95311d)
 
 ## 🔍️ Flow Diagram
-![Image](https://github.com/user-attachments/assets/221c07a9-5503-4ad9-8532-7671ad3107d7)
+![Image](https://github.com/user-attachments/assets/1f66ccff-0f0e-45e7-9266-dd538193f5c0)
 
 
 ##  🎨 주요 구현 내용
@@ -51,26 +80,53 @@ HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정된 수량의 상
 - ErrorDecoder로 서비스 통신간 발생하는 예외 처리
 - Resilience4J의 CircuitBreaker, Retry를 통한 회복 탄력성
 
+
 ## 성능 개선 사례
-[성능 개선 사례 바로가기](<https://github.com/ekdan38/HotDealService/wiki/%EC%84%B1%EB%8A%A5-%EA%B0%9C%EC%84%A0-%EC%82%AC%EB%A1%80-%EB%AA%A9%EB%A1%9D>)
+>[성능 개선 사례 바로가기](<https://github.com/ekdan38/HotDealService/wiki/%EC%84%B1%EB%8A%A5-%EA%B0%9C%EC%84%A0-%EC%82%AC%EB%A1%80-%EB%AA%A9%EB%A1%9D>)
 
-- 핫딜 조회
+### 테스트 환경
+- CPU : Intel i5-8250U 1.6GHz
+- RAM : 8GB
+- OS : Window10
+- Databse : MySQL 8.0
+- Test Tool : K6
 
-1. DTO Projection : 불필요한 필드 조회를 줄여 소폭 성능 향상
-2. 인덱스 : 별도 인덱스 생성 결과 옵티마이저는 PK 클러스터링 인덱스 선택
-3. Redis 캐싱 : 캐싱 적용으로 DB 부하와 Latency 및 TPS 큰 개선
+### 주문 API 성능 개선 요약
 
-성능 개선 결과 -> [핫딜 조회 성능 개선]
+**1. 재고 점유 API 내부 최적화**
+> 주문 API에서 재고 점유 API를 동기 호출하여, 주문 상품에 대한 재고 점유를 보장.  
+> -> 재고 점유 API 성능을 개선하여 전체적인 Latency, TPS 개선 효과를 얻음.
 
-| **항목** | **DTO Projection** | **캐싱 적용** |
-| --- | --- | --- |
-| 평균 Latency 감소율 | 약 **14~17%** | 약 **65~68%** |
-| TPS 증가율 | 약 **16~20%** | 약 **176~217%** |
+- **1.1   재고 점유 쿼리 최적화 및 인덱싱**
+  - N개의 상품에 대해 **N번 발생하던 재고 점유 조회 쿼리**를 IN + GROUP BY로 **1회로 개선**
+  - **복합 인덱스(커버링)** 적용으로 쿼리 실행 시간 약 **47ms → 27ms (42%)** 단축
+  - **TPS 약 6%, 평균 Latency 약 6% 개선**
 
-- 주문 성능 개선
-1. 재고 점유API 개선
-2. 결제 생성 비동기 처리
+- **2.2.  캐싱 적용**
+  - 상품/핫딜 조회에 **Redis 캐싱** 적용
+  - 주문 흐름 내 불필요한 DB 접근 최소화
+  - **TPS 약 20%, 평균 Latency 약 16%  개선**
 
+
+**재고 점유 API 테스트 시나리오**<br>
+더미 데이터 : 1만개의 핫딜, 10만개의 상품<br>
+시나리오 : 50개의 상품중 **1~ 3 개 랜덤** 주문
+
+<img src="https://github.com/user-attachments/assets/ce123995-d20b-4672-b395-da51d5cad122" alt="image" width="700" />
+
+<br>
+<br>
+
+**2. 결제 생성 호출 구조 개선**
+> 재고 점유 완료 후, 주문, 주문 상품을 생성하고 결제 생성 요청.  
+> 기존 Feign 동기 요청에서 Outbox + 이벤트 기반 비동기 처리.  
+> -> 통신 병목 제거로 Latency, TPS 개선 효과를 얻음.
+
+
+
+3. 결제 생성 비동기화
+- 기존 **Feign 기반 동기 통신 → Outbox + 이벤트 기반 비동기 처리**로 전환
+- 주문 처리 시 **통신 병목 제거 및 시스템 부하 감소**
 
 ##  🧑‍💻 트러블 슈팅 및 의사결정
 - [모놀로직 구조에서 MSA 구조로 전환시 인증/인가 처리](<https://github.com/ekdan38/HotDealService/wiki/MSA-%EC%97%90%EC%84%9C%EC%9D%98-%EC%9D%B8%EC%A6%9D-%EC%9D%B8%EA%B0%80-%EC%B2%98%EB%A6%AC>)
@@ -91,12 +147,10 @@ HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정된 수량의 상
     - "Outbox + FeignClient + 이벤트" 방식 사용
     -  실패건에 대한 재시도 환경 구성
 
-- [회복 탄력성을 위한 CircuitBreaker, Retry 도입](<https://github.com/ekdan38/HotDealService/wiki/%ED%9A%8C%EB%B3%B5-%ED%83%84%EB%A0%A5%EC%84%B1%EC%9D%84-%EC%9C%84%ED%95%9C-CircuitBreakek,-Retry-%EB%8F%84%EC%9E%85>)
+- [회복 탄력성을 위한 CircuitBreaker, Retry 도입](<https://github.com/ekdan38/HotDealService/wiki/%ED%9A%8C%EB%B3%B5-%ED%83%84%EB%A0%A5%EC%84%B1%EC%9D%84-%EC%9C%84%ED%95%9C-CuircuitBreaker,-Retry-%EB%8F%84%EC%9E%85>)
   - MSA 구조에서 서비스간 서비스의 장애가 연쇄 장애로 확산 될 수 있음
   - Resilience4J의 CircuitBreaker, Retry 도입으로 회복 탄력성 적용
 
 - [스케쥴러 작동시, 인스턴스가 N개라면 동일한 스케쥴러가 N개의 인스턴스에서 실행](<https://github.com/ekdan38/HotDealService/wiki/%EC%84%9C%EB%B9%84%EC%8A%A4%EC%9D%98-%EC%9D%B8%EC%8A%A4%ED%84%B4%EC%8A%A4%EC%97%90-%EB%94%B0%EB%A5%B8-%EC%8A%A4%EC%BC%80%EC%A5%B4%EB%9F%AC-%EC%A4%91%EB%B3%B5-%EC%8B%A4%ED%96%89>)
   - ShedLock을 사용하여 한개의 인스턴스만 스케쥴러를 실행
 
-##  📕  API 명세서
- 🔗 https://documenter.getpostman.com/view/33322261/2sB34bJhnz
