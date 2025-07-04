@@ -71,7 +71,6 @@ HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정된 수량의 상
 
 ##  🎨 주요 구현 내용
 - MSA 적용
--
   -  모놀리식 구조를 MSA로 리팩토링
 - Eureka, API Gateway 적용
   - 각 서비스 관리 및 라우팅
@@ -107,12 +106,11 @@ HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정된 수량의 상
   - 주문 흐름 내 불필요한 DB 접근 최소화
   - **TPS 약 20%, 평균 Latency 약 16%  개선**
 
-
-**재고 점유 API 테스트 시나리오**<br>
+**재고 점유 API 성능 테스트**<br>
 더미 데이터 : 1만개의 핫딜, 10만개의 상품<br>
-시나리오 : 50개의 상품중 **1~ 3 개 랜덤** 주문
+시나리오 : 50개의 상품중 **1~ 3 개 랜덤 점유 요청**
 
-<img src="https://github.com/user-attachments/assets/ce123995-d20b-4672-b395-da51d5cad122" alt="image" width="700" />
+<img src="https://github.com/user-attachments/assets/38bea379-0b1e-4649-8c1a-eb0e133cc420" alt="image" width="700" />
 
 <br>
 <br>
@@ -122,35 +120,68 @@ HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정된 수량의 상
 > 기존 Feign 동기 요청에서 Outbox + 이벤트 기반 비동기 처리.  
 > -> 통신 병목 제거로 Latency, TPS 개선 효과를 얻음.
 
+- 주문 생성 **트랜잭션 내부에서 Outbox 생성**
+- **트랜잭션 Commit후** 스케쥴러에 의해 **이벤트 기반 처리**
 
+**주문 API 성능 테스트**
 
-3. 결제 생성 비동기화
-- 기존 **Feign 기반 동기 통신 → Outbox + 이벤트 기반 비동기 처리**로 전환
-- 주문 처리 시 **통신 병목 제거 및 시스템 부하 감소**
+더미 데이터 : 1만개의 핫딜, 10만개의 상품<br>
+시나리오 : 50개의 상품중 **1 ~ 3개 랜덤 주문**
+
+<img src="https://github.com/user-attachments/assets/d7adef4e-0a85-4737-9ad8-0243526b6e8d" alt="image" width="700" />
 
 ##  🧑‍💻 트러블 슈팅 및 의사결정
 - [모놀로직 구조에서 MSA 구조로 전환시 인증/인가 처리](<https://github.com/ekdan38/HotDealService/wiki/MSA-%EC%97%90%EC%84%9C%EC%9D%98-%EC%9D%B8%EC%A6%9D-%EC%9D%B8%EA%B0%80-%EC%B2%98%EB%A6%AC>)
-  - 모놀로직 구조에서는 SpringSecurity 로 전체적인 인증 인가 필요한 엔드포인트 관리
-  - MSA 구조로 변환 하면서 기존 인증/인가 방식 사용 불가
-  - ApiGateway의 Filter에서 Jwt Token 검증, 결과에 따라 각 서비스 라우팅시 인증 인가 Filter 처리
-    -  @`authenticationprincipal `
-       사용 불가능, ApiGateway 에서 요청 헤더에 User 에대한 필요 정보 전달
+  - **모놀로직 구조**에서는 Filter, SecurityConfig로 시스템의 **전체적인 인증/인가 관리**
+  - **MSA 구조**에서는 **각 서비스가 독립적으로** Filter, SecurityConfig를 구성하여 **서비스별 인증/인가 처리 가능**
+    - 서비스 개수에 따라 인증/인가 중복 처리 및 유지보수 부담 증가
+  - **API Gateway에서 인증/인가 처리 후 각 서비스로 라우팅 적용**
+    -  API Gateway의 **Filter에서 JWT Token의 유효성 검증**
+    - 서비스별 엔드포인트가 요구하는 **`requiredRole`을 비교하여 접근 제어**
+    - 인증된 **사용자 정보는 헤더에 담아 각 서비스**로 전달
+    - `X-User-Id` : userId
+    - `X-User-Role` : userRole
+***
 
 - [재고 관리 방식 및 동시성 제어](<https://github.com/ekdan38/HotDealService/wiki/%EC%9E%AC%EA%B3%A0-%EC%B2%98%EB%A6%AC-%EB%B0%A9%EB%B2%95(%EB%B0%A9%EC%8B%9D-%EB%B0%8F-%EB%8F%99%EC%8B%9C%EC%84%B1-%EC%A0%9C%EC%96%B4)>)
-  - 결제 처리 결과에 따른 재고 반영 처리
-  - Redis + 점유 테이블 사용으로 안정적인 재고 관리
-  - 동시성 제어를 위해 MSA 환경에 적합한 Redis 분산락 사용
+  - **재고 관리 구조**
+    -  상품의 원본 재고 수량은 RDB 테이블에 저장
+    - **실시간 재고 변동**에 대응하기 위해 **Redis를 사용한 재고 캐싱**
+    - 빠른 재고 조회 및 재고 감소 처리
+    - **RDB 병목 완화**
+    - 스케쥴러를 통해 **기간이 종료된 핫딜**의 Redis 재고 RDB에 **동기화 처리**
 
-- [서비스 간 통신 방법 고민](<https://github.com/ekdan38/HotDealService/wiki/MS-%EA%B0%84-%ED%86%B5%EC%8B%A0-%EB%B0%A9%EC%8B%9D-%EA%B3%A0%EB%AF%BC>)
-  - RestTemplate vs FeignClient 중 인터페이스 기반인 FeignClient 선택
-  - 비동기 처리시 Kafka vs FeignClient 중 FeignClient 선택
-    - "Outbox + FeignClient + 이벤트" 방식 사용
-    -  실패건에 대한 재시도 환경 구성
+  -  **재고 점유 방식**
+    - Redis는 조회용 캐시로만 사용하고, **실제 점유는 DB에 기록하여 결제 이전까지 사용자의 재고 점유 보장**
+    - 재고 점유 테이블로 **상품 점유 추적 가능**
+    - **Redis**는 장애시 **재고 데이터 유실 위험**
+    - 결제 실패에 따른 재고 복구 용이 `RESERVED -> CANCELED`
+    - Redis + 점유 테이블 사용으로 안정적인 재고 관리
+
+  - **동시성 문제 및 해결**
+    - 여러 트랜잭션이 동일한 재고에 대해 **점유 가능 여부 판단 + 재고 점유 테이블에 INSERT** 처리하는 과정에서 **동시성 문제 발생**
+    - MSA 환경에 적합한 **Redis 기반 분산 락**을 사용하여 동시성 해결
+      - **다중 인스턴스에서도 락 공유 가능**
+    - "재고 점유 판단 및 INSERT" 전체 과정을 **임계 구역** 처리
+
+*** 
 
 - [회복 탄력성을 위한 CircuitBreaker, Retry 도입](<https://github.com/ekdan38/HotDealService/wiki/%ED%9A%8C%EB%B3%B5-%ED%83%84%EB%A0%A5%EC%84%B1%EC%9D%84-%EC%9C%84%ED%95%9C-CuircuitBreaker,-Retry-%EB%8F%84%EC%9E%85>)
-  - MSA 구조에서 서비스간 서비스의 장애가 연쇄 장애로 확산 될 수 있음
-  - Resilience4J의 CircuitBreaker, Retry 도입으로 회복 탄력성 적용
+  - MSA 구조에서는 각 서비스가 네트워크를 통해 통신하기 때문에, **하나의 서비스 장애가 다른 서비스로 전파될 위험** 존재
+  -  다른 서비스의 **일시적인 장애나 느린 응답**으로 인해 호출 실패가 발생하면, **사용자 경험에 큰 영향**을 줄 수 있음
+  - `Resilience4J`의 **CircuitBreaker, Retry 도입으로 회복 탄력성 적용**
+  - 테스트 코드로 Retry & CircuitBreaker **작동 검증**
 
-- [스케쥴러 작동시, 인스턴스가 N개라면 동일한 스케쥴러가 N개의 인스턴스에서 실행](<https://github.com/ekdan38/HotDealService/wiki/%EC%84%9C%EB%B9%84%EC%8A%A4%EC%9D%98-%EC%9D%B8%EC%8A%A4%ED%84%B4%EC%8A%A4%EC%97%90-%EB%94%B0%EB%A5%B8-%EC%8A%A4%EC%BC%80%EC%A5%B4%EB%9F%AC-%EC%A4%91%EB%B3%B5-%EC%8B%A4%ED%96%89>)
-  - ShedLock을 사용하여 한개의 인스턴스만 스케쥴러를 실행
+*** 
 
+- [서비스 간 통신 방법 고민](<https://github.com/ekdan38/HotDealService/wiki/%EC%84%9C%EB%B9%84%EC%8A%A4-%EA%B0%84-%ED%86%B5%EC%8B%A0-%EB%B0%A9%EC%8B%9D-%EA%B3%A0%EB%AF%BC>)
+  - RestTemplate vs FeignClient 중 **인터페이스 기반인 FeignClient 선택**
+  - 비동기 처리시 Kafka vs FeignClient 중 FeignClient 선택
+    - **"Outbox + FeignClient + 이벤트"** 방식 사용
+    -  CircuitBreaker + Retry 로 회복 탄력성이 존재하지만, **비동기 처리에 대한 실패건 재시도 환경 구성**
+
+***
+
+- [여러 인스턴스가 스케쥴러를 중복 처리하는 문제 발생](<https://github.com/ekdan38/HotDealService/wiki/%EC%84%9C%EB%B9%84%EC%8A%A4%EC%9D%98-%EC%9D%B8%EC%8A%A4%ED%84%B4%EC%8A%A4%EC%97%90-%EB%94%B0%EB%A5%B8-%EC%8A%A4%EC%BC%80%EC%A5%B4%EB%9F%AC-%EC%A4%91%EB%B3%B5-%EC%8B%A4%ED%96%89>)
+  - 서비스의 **인스턴스가 N개**라면 **동일한 스케쥴러가 N개의 인스턴스에서 실행**
+  - `ShedLock`을 사용하여 **한개의 인스턴스만 스케쥴러를 실행**
