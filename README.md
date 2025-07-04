@@ -80,7 +80,7 @@ HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정된 수량의 상
 - Resilience4J의 CircuitBreaker, Retry를 통한 회복 탄력성
 
 
-## 성능 개선 사례
+##  ❗ 성능 개선 사례
 >[성능 개선 사례 바로가기](<https://github.com/ekdan38/HotDealService/wiki/%EC%84%B1%EB%8A%A5-%EA%B0%9C%EC%84%A0-%EC%82%AC%EB%A1%80-%EB%AA%A9%EB%A1%9D>)
 
 ### 테스트 환경
