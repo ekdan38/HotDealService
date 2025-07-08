@@ -4,12 +4,12 @@ WORKDIR /app
 
 COPY --chown=gradle:gradle . .
 
-RUN gradle :eureka-server:clean :eureka-server:bootJar -x test --no-daemon
+RUN gradle :payment-service:clean :payment-service:bootJar -x test --no-daemon
 
 FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
-COPY --from=build /app/eureka-server/build/libs/*.jar app.jar
+COPY --from=build /app/payment-service/build/libs/*.jar app.jar
 
 ENTRYPOINT ["java", "-jar", "app.jar"]

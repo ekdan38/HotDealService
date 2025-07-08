@@ -6,7 +6,7 @@ COPY --chown=gradle:gradle . .
 
 RUN gradle :order-service:clean :order-service:bootJar -x test --no-daemon
 
-FROM openjdk:21-jdk-slim
+FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
