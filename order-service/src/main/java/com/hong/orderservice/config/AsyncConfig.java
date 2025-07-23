@@ -17,9 +17,9 @@ public class AsyncConfig {
         // 최소 스레드
         executor.setCorePoolSize(10);
         // 최대 스레드
-        executor.setMaxPoolSize(50);
+        executor.setMaxPoolSize(16);
         // 큐가 찼을 때만 maxPool 만큼 늘어남
-        executor.setQueueCapacity(10000);
+        executor.setQueueCapacity(500);
         executor.setThreadNamePrefix("AsyncExecutor-");
         executor.initialize();
         return executor;
