@@ -1,8 +1,10 @@
 package com.hong.orderservice.domain;
 
+import com.hong.common.status.AggregateType;
+import com.hong.common.status.EventType;
+import com.hong.common.status.OutboxDeliveryMethod;
+import com.hong.common.status.OutboxStatus;
 import com.hong.orderservice.domain.base.TimeEntity;
-import com.hong.orderservice.domain.status.EventType;
-import com.hong.orderservice.domain.status.OutboxStatus;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -25,7 +27,8 @@ public class Outbox extends TimeEntity {
 
     // Outbox 발행 도메인
     @Column(nullable = false)
-    private String aggregateType; // 예: "ORDER", "PAYMENT"
+    @Enumerated(value = EnumType.STRING)
+    private AggregateType aggregateType; // 예: "ORDER", "PAYMENT"
 
     // 발행 도메인의 PK
     @Column(nullable = false)
@@ -35,6 +38,11 @@ public class Outbox extends TimeEntity {
     @Column(nullable = false)
     @Enumerated(value = EnumType.STRING)
     private EventType eventType;     // 예: "order.created", "payment.requested"
+
+    // 이벤트 처리 타입
+    @Column(nullable = false)
+    @Enumerated(value = EnumType.STRING)
+    private OutboxDeliveryMethod deliveryMethod;
 
     // 이벤트 데이터 Json
     @Column(nullable = false)
@@ -51,10 +59,11 @@ public class Outbox extends TimeEntity {
     // 발행 날짜
     private LocalDateTime publishedAt;
 
-    private Outbox(String aggregateId, EventType eventType, String payload) {
-        this.aggregateType = "ORDER";
+    private Outbox(AggregateType aggregateType, String aggregateId, EventType eventType, OutboxDeliveryMethod deliveryMethod, String payload) {
+        this.aggregateType = aggregateType;
         this.aggregateId = aggregateId;
         this.eventType = eventType;
+        this.deliveryMethod = deliveryMethod;
         this.payload = payload;
         this.outboxStatus= OutboxStatus.PENDING;
         this.tryCount = 0;
@@ -62,8 +71,8 @@ public class Outbox extends TimeEntity {
     }
 
     // 생성 메서드
-    public static Outbox create(String aggregateId, EventType eventType, String payload) {
-        return new Outbox(aggregateId, eventType, payload);
+    public static Outbox create(AggregateType aggregateType, String aggregateId, EventType eventType, OutboxDeliveryMethod deliveryMethod, String payload) {
+        return new Outbox(aggregateType, aggregateId, eventType, deliveryMethod, payload);
     }
 
     public void updateToPublished(){
@@ -73,5 +82,6 @@ public class Outbox extends TimeEntity {
 
     public void updateToFailed(){
         this.outboxStatus = OutboxStatus.FAILED;
+        tryCount++;
     }
 }
