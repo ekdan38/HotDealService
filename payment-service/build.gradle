@@ -61,8 +61,13 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.cloud:spring-cloud-starter'
 
+    // kafka
+    implementation 'org.springframework.kafka:spring-kafka';
+
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.mysql:mysql-connector-j'
+    // kafka test
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.amqp:spring-rabbit-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
