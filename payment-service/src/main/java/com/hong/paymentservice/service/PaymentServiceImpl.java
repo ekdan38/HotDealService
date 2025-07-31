@@ -1,22 +1,28 @@
 package com.hong.paymentservice.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hong.common.dto.kafka.PaymentResultEventDto;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.PaymentException;
 import com.hong.common.exception.custom.PaymentSessionException;
-import com.hong.paymentservice.client.Resilience4JOrderServiceClient;
+import com.hong.common.status.AggregateType;
+import com.hong.common.status.EventType;
+import com.hong.common.status.OutboxDeliveryMethod;
+import com.hong.paymentservice.domain.Outbox;
 import com.hong.paymentservice.domain.Payment;
 import com.hong.paymentservice.domain.PaymentSession;
-import com.hong.paymentservice.domain.outbox.OrderStatusOutbox;
 import com.hong.paymentservice.domain.status.PaymentSessionStatus;
 import com.hong.paymentservice.dto.PaymentPerformResponseDto;
 import com.hong.paymentservice.dto.PaymentPrepareResponseDto;
-import com.hong.paymentservice.repository.OrderStatusOutboxRepository;
+import com.hong.paymentservice.event.OutboxEvent;
+import com.hong.paymentservice.event.OutboxService;
 import com.hong.paymentservice.repository.PaymentRepository;
 import com.hong.paymentservice.repository.PaymentSessionRepository;
 import com.hong.paymentservice.web.dto.PaymentPerformRequestDto;
 import com.hong.paymentservice.web.dto.PaymentPrepareRequestDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,10 +35,11 @@ import java.time.temporal.ChronoUnit;
 @Slf4j(topic = "[PaymentServiceImpl]")
 public class PaymentServiceImpl implements PaymentService {
 
+    private final ObjectMapper objectMapper;
+    private final OutboxService outboxService;
+    private final ApplicationEventPublisher eventPublisher;
     private final PaymentSessionRepository paymentSessionRepository;
     private final PaymentRepository paymentRepository;
-    private final OrderStatusOutboxRepository orderStatusOutboxRepository;
-    private final Resilience4JOrderServiceClient resilience4JOrderServiceClient;
 
     // 결제 진입
     @Transactional
@@ -75,14 +82,26 @@ public class PaymentServiceImpl implements PaymentService {
             session.updateStatusToFail();
             payment.updateToFail(session.getId());
         }
+        // 5. outbox 생성 및 save
+        Outbox outbox = saveOutbox(payment.getId(), payment.getOrderId(), userId, payment.getPaidAt(), paymentResult, OutboxDeliveryMethod.KAFKA);
 
-        // 5. payment 결과에 따라 orderService 로 Feign 호출 이벤트 발행 및 비동기 처리
-        // Outbox 저장
-        OrderStatusOutbox outboxEvent = OrderStatusOutbox.create(payment.getOrderId(), userId, payment.getStatus());
-        orderStatusOutboxRepository.save(outboxEvent);
+        // 6. outbox 이벤트 발행
+        eventPublisher.publishEvent(new OutboxEvent(outbox));
 
-        // 6. 응답 Dto 반환
+        // 7. 응답 Dto 반환
         return new PaymentPerformResponseDto(session.getStatus().name(), payment.getTransactionId());
+    }
+
+    private Outbox saveOutbox(Long paymentId, String orderId, Long userId, LocalDateTime paidAt, boolean paymentResult, OutboxDeliveryMethod deliveryMethod){
+        try{
+            PaymentResultEventDto payloadDto = new PaymentResultEventDto(orderId, userId, paymentResult, paidAt);
+            String payload = objectMapper.writeValueAsString(payloadDto);
+            return outboxService.save(Outbox.create(AggregateType.PAYMENT, paymentId, EventType.PAYMENT_RESULT, deliveryMethod, payload));
+
+        }catch (Exception e){
+            log.error("결제 처리 중 오류 발생. errorMessage = {}", e.getMessage());
+            throw new PaymentException(ErrorCode.PAYMENT_INTERNAL_SERVER_ERROR);
+        }
     }
 
     private Payment getPaymentAndValidate(Long userId, PaymentSession session) {
