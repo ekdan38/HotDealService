@@ -43,7 +43,7 @@ public class KafkaMessageProducer {
                 log.info("OutboxEvent Kafka produce 완료. PUBLISHED 처리. OutboxId = {}, EventType = {}", outboxId, eventType);
                 outboxService.updateToPublished(outboxId);
             }
-            // 실패 => Kafka Retry 모두 소진 or deliveryTimeout
+            // 실패 => Kafka Retry 모두 소진 or deliveryTimeout or broker로 전송 과정 예외
             else{
                 // Outbox Status => FAILED, tryCnt++;
                 log.error("OutboxEvent Kafka produce 실패. Failed 처리. OutboxId = {}, EventType = {}", outboxId, eventType);
