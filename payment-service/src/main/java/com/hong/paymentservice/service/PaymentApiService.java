@@ -2,7 +2,6 @@ package com.hong.paymentservice.service;
 
 import com.hong.common.dto.*;
 import com.hong.common.exception.ErrorCode;
-import com.hong.common.exception.custom.PaymentAlreadyProcessedException;
 import com.hong.common.exception.custom.PaymentException;
 import com.hong.paymentservice.domain.Payment;
 import com.hong.paymentservice.repository.PaymentRepository;
@@ -10,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -23,15 +24,18 @@ public class PaymentApiService {
     public PaymentCreateResponseDto createPayment(PaymentCreateRequestDto requestDto){
         String orderId = requestDto.getOrderId();
         // 1. 이미 생성된 결제인지 확인
-        paymentRepository.findByOrderId(orderId).orElseThrow(() -> {
-            log.error("이미 생성된 Payment입니다. orderId = {}", orderId);
-            return new PaymentAlreadyProcessedException("이미 생성된 PaymentId입니다. paymentId = " + orderId);
-        });
-
-        // 2. 결제 생성
-        Payment payment = Payment.create(orderId, requestDto.getAmount(), requestDto.getUserId(), requestDto.getExpireAt());
-        paymentRepository.save(payment);
-        return new PaymentCreateResponseDto(payment.getId(), true);
+        Optional<Payment> optionalPayment = paymentRepository.findByOrderId(orderId);
+        if(optionalPayment.isPresent()){
+            Payment payment = optionalPayment.get();
+            log.warn("이미 생성된 결제입니다. orderId = {}", orderId);
+            return new PaymentCreateResponseDto(payment.getId(), true);
+        }
+        // 2. 없다면 생성
+        else{
+            Payment payment = Payment.create(orderId, requestDto.getAmount(), requestDto.getUserId(), requestDto.getExpireAt());
+            paymentRepository.save(payment);
+            return new PaymentCreateResponseDto(payment.getId(), true);
+        }
     }
 
     // payment 만료 처리
