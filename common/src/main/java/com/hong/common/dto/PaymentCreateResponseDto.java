@@ -14,7 +14,7 @@ public class PaymentCreateResponseDto {
 
     public PaymentCreateResponseDto(boolean retriable) {
         this.success = false;
-        this.retriable = true;
+        this.retriable = retriable;
     }
 
     public PaymentCreateResponseDto(Long paymentId, boolean success) {

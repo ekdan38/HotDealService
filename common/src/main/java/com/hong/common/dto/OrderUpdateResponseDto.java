@@ -9,6 +9,4 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class OrderUpdateResponseDto {
     private boolean success;
-    private boolean retriable;
-
 }
