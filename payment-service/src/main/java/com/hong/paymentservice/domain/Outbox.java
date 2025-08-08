@@ -17,7 +17,7 @@ import java.time.temporal.ChronoUnit;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "outbox",
-        indexes = {@Index(name = "idx_outbox_status", columnList = "outbox_status"),
+        indexes = {@Index(name = "idx_outbox_status_created_at", columnList = "outbox_status, created_at"),
                 @Index(name = "idx_event_type", columnList = "event_type")})
 public class Outbox extends TimeEntity {
 
@@ -83,5 +83,13 @@ public class Outbox extends TimeEntity {
     public void updateToFailed(){
         this.outboxStatus = OutboxStatus.FAILED;
         tryCount++;
+    }
+
+    public void updateToAborted(){
+        this.outboxStatus = OutboxStatus.ABORTED;
+    }
+
+    public void updateToInProgress(){
+        this.outboxStatus = OutboxStatus.IN_PROGRESS;
     }
 }

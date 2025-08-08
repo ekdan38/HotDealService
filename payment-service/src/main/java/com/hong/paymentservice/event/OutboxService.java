@@ -48,4 +48,31 @@ public class OutboxService {
             log.warn("outboxId = {} FAILED 업데이트 실패", outboxId);
         }
     }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void updateToAborted(Long outboxId){
+        Optional<Outbox> optionalOutbox = outboxRepository.findById(outboxId);
+        if(optionalOutbox.isPresent()){
+            Outbox outbox = optionalOutbox.get();
+            outbox.updateToAborted();
+            outboxRepository.save(outbox);
+        }
+        else{
+            log.warn("outboxId = {} Aborted 업데이트 실패", outboxId);
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void updateToInProgress(Long outboxId){
+        Optional<Outbox> optionalOutbox = outboxRepository.findById(outboxId);
+        if(optionalOutbox.isPresent()){
+            Outbox outbox = optionalOutbox.get();
+            outbox.updateToInProgress();
+            outboxRepository.save(outbox);
+        }
+        else{
+            log.warn("outboxId = {} IN_PROGRESS 업데이트 실패", outboxId);
+        }
+    }
+
 }
