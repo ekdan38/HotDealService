@@ -1,6 +1,9 @@
 package com.hong.orderservice.client.payment;
 
-import com.hong.common.dto.*;
+import com.hong.common.dto.PaymentCancelRequestDto;
+import com.hong.common.dto.PaymentCancelResponseDto;
+import com.hong.common.dto.PaymentCreateRequestDto;
+import com.hong.common.dto.PaymentCreateResponseDto;
 import com.hong.common.exception.custom.OrderException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
@@ -34,29 +37,6 @@ public class Resilience4JPaymentServiceClient {
     // createPayment Retry Fallback
     private PaymentCreateResponseDto fallbackForRetryCreatePayment(PaymentCreateRequestDto requestDto, Throwable throwable) {
         log.error("[RETRY Fallback] payment-service 호출 최종 재시도 실패. orderId={}, error={}", requestDto.getOrderId(), throwable.getMessage());
-        if(throwable instanceof OrderException) throw (OrderException) throwable;
-        throw new RuntimeException();
-    }
-
-    /**
-     * paymentService payment Expire 요청
-     */
-    @CircuitBreaker(name = "custom", fallbackMethod = "fallBackForCircuitBreakerExpirePayment")
-    @Retry(name = "custom", fallbackMethod = "fallbackForRetryExpirePayment")
-    public ExpirePaymentResponseDto expirePayment(ExpirePaymentRequestDto requestDto) {
-        return paymentServiceClient.expirePayment(requestDto);
-    }
-
-    // expirePayment CircuitBreaker Fallback
-    private ExpirePaymentResponseDto fallBackForCircuitBreakerExpirePayment(ExpirePaymentRequestDto requestDto, Throwable throwable) {
-        log.error("[CircuitBreaker Fallback] payment-service 호출 실패. orderIds = {}, error = {}", requestDto.getOrderId(), throwable.getMessage());
-        if(throwable instanceof OrderException) throw (OrderException) throwable;
-        return new ExpirePaymentResponseDto(false, true);
-    }
-
-    // expirePayment Retry Fallback
-    private ExpirePaymentResponseDto fallbackForRetryExpirePayment(ExpirePaymentRequestDto requestDto, Throwable throwable) {
-        log.error("[RETRY Fallback] payment-service 호출 최종 재시도 실패. orderIds = {}, error = {}", requestDto.getOrderId(), throwable.getMessage());
         if(throwable instanceof OrderException) throw (OrderException) throwable;
         throw new RuntimeException();
     }
