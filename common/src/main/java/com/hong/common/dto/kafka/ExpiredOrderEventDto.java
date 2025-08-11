@@ -1,15 +1,13 @@
-package com.hong.common.dto;
+package com.hong.common.dto.kafka;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
-@Data
-@NoArgsConstructor
 @AllArgsConstructor
-public class ReleaseReservedStockRequestDto {
+@NoArgsConstructor
+@Data
+public class ExpiredOrderEventDto {
 
     private String orderId;
 }
