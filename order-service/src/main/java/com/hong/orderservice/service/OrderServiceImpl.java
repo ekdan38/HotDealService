@@ -1,26 +1,32 @@
 package com.hong.orderservice.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hong.common.dto.*;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.OrderException;
+import com.hong.common.status.AggregateType;
+import com.hong.common.status.EventType;
+import com.hong.common.status.OutboxDeliveryMethod;
 import com.hong.orderservice.client.hotdeal.Resilience4JHotDealServiceClient;
 import com.hong.orderservice.client.payment.Resilience4JPaymentServiceClient;
 import com.hong.orderservice.domain.Delivery;
 import com.hong.orderservice.domain.Order;
 import com.hong.orderservice.domain.OrderProduct;
+import com.hong.orderservice.domain.Outbox;
 import com.hong.orderservice.domain.base.Address;
-import com.hong.orderservice.domain.outbox.CreatePaymentOutbox;
 import com.hong.orderservice.domain.status.DeliveryStatus;
 import com.hong.orderservice.domain.status.OrderStatus;
 import com.hong.orderservice.dto.OrderPagingResponseDto;
 import com.hong.orderservice.dto.OrderProductResponseDto;
 import com.hong.orderservice.dto.OrderResponseDto;
+import com.hong.orderservice.event.OutboxEvent;
+import com.hong.orderservice.event.OutboxService;
 import com.hong.orderservice.repository.OrderRepository;
-import com.hong.orderservice.repository.outbox.CreatePaymentOutboxRepository;
 import com.hong.orderservice.web.dto.OrderProductRequest;
 import com.hong.orderservice.web.dto.OrderRequestDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,7 +49,9 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final Resilience4JHotDealServiceClient hotDealServiceClient;
     private final Resilience4JPaymentServiceClient paymentServiceClient;
-    private final CreatePaymentOutboxRepository createPaymentOutboxRepository;
+    private final OutboxService outboxService;
+    private final ApplicationEventPublisher eventPublisher;
+    private final ObjectMapper objectMapper;
 
     // 주문 생성
     @Transactional
@@ -57,10 +65,13 @@ public class OrderServiceImpl implements OrderService {
         // 2. orderProduct, order 생성 및 save
         Order savedOrder = createOrderProductAndOrder(orderId, userId, requestDto, reserveStockResponse);
 
-        // 4. payment 생성 outbox
-        saveCreatePaymentOutbox(userId, savedOrder);
+        // 4. outbox 생성 및 save
+        Outbox outbox = saveOutbox(userId, savedOrder, OutboxDeliveryMethod.FEIGN);
 
-        // 3. 응답 Dto 변환
+        // 5. outbox 이벤트 발행
+        eventPublisher.publishEvent(new OutboxEvent(outbox));
+
+        // 6. 응답 Dto 변환
         return convertToCreateResponseDto(savedOrder);
     }
 
@@ -171,7 +182,7 @@ public class OrderServiceImpl implements OrderService {
                         && o.getDelivery().getStatus() == DeliveryStatus.RETURN_REQUESTED
                         && o.getDelivery().getReturnStartedAt().isBefore(oneDayAgo))
                 .toList();
-        updateToReturned.forEach(o -> o.updateStatusReturned(now));
+        updateToReturned.forEach(Order::updateStatusReturned);
 
         if(!updateToReturned.isEmpty()){
             // 3.1. 결제 취소 요청 paymentService FeignClient 호출
@@ -192,9 +203,16 @@ public class OrderServiceImpl implements OrderService {
         });
     }
 
-    private void saveCreatePaymentOutbox(Long userId, Order savedOrder){
-        CreatePaymentOutbox outbox = CreatePaymentOutbox.create(savedOrder.getId(), userId, savedOrder.getAmount(), savedOrder.getExpiresAt());
-        createPaymentOutboxRepository.save(outbox);
+    private Outbox saveOutbox(Long userId, Order savedOrder, OutboxDeliveryMethod deliveryMethod){
+        try{
+            PaymentCreateRequestDto payloadDto = new PaymentCreateRequestDto(savedOrder.getId(), userId, savedOrder.getAmount(), savedOrder.getExpiresAt());
+            String payload = objectMapper.writeValueAsString(payloadDto);
+            return outboxService.save(Outbox.create(AggregateType.ORDER, savedOrder.getId(), EventType.PAYMENT_CREATE, deliveryMethod, payload));
+
+        }catch (Exception e){
+            log.error("주문 생성 Outbox 생성 중 오류 발생. errorMessage = {}", e.getMessage());
+            throw new OrderException(ErrorCode.ORDER_INTERNAL_SERVER_ERROR);
+        }
     }
 
     // order 생성 및 save

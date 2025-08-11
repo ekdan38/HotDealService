@@ -52,7 +52,7 @@ public interface OrderRepository extends JpaRepository<Order, String> {
             "WHERE o.status = 'RETURN_REQUESTED' " +
             "AND d.status = 'RETURN_REQUESTED' " +
             "AND d.returnStartedAt < :oneDayAgo")
-    Page<Order> findRefundedOrders(@Param("oneDayAgo") LocalDateTime oneDayAgo, Pageable pageable);
+    List<Order> findRefundedOrders(@Param("oneDayAgo") LocalDateTime oneDayAgo);
 
 
 
@@ -79,7 +79,6 @@ public interface OrderRepository extends JpaRepository<Order, String> {
     @Query("SELECT o FROM Order o " +
             "JOIN FETCH o.delivery " +
             "WHERE o.status = 'PENDING_PAYMENT' " +
-            "AND o.expiresAt <= :now " +
-            "ORDER BY o.id ASC")
+            "AND o.expiresAt <= :now ")
     List<Order> findExpiredPendingOrders(@Param("now") LocalDateTime now);
 }
