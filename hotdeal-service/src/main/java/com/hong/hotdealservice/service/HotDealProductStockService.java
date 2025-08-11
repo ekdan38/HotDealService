@@ -1,6 +1,9 @@
 package com.hong.hotdealservice.service;
 
 import com.hong.common.dto.*;
+import com.hong.common.dto.kafka.ExpiredOrderEventDto;
+import com.hong.common.dto.kafka.RefundOrderEventDto;
+import com.hong.common.dto.kafka.StockFinalizeEventDto;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.HotDealException;
 import com.hong.common.exception.custom.HotDealProductException;
@@ -69,21 +72,21 @@ public class HotDealProductStockService {
      * 2. 결제 실패 => reserveStock 내역 삭제
      */
     @Transactional
-    public StockFinalizeResponseDto handleStockFinalization(StockFinalizeRequestDto requestDto){
-        String orderId = requestDto.getOrderId();
+    public StockFinalizeResponseDto handleStockFinalization(StockFinalizeEventDto dto){
+        String orderId = dto.getOrderId();
         // 1. orderId 기준 reserveStock 조회 및 검증
         List<StockReservation> reservations = getStockReservationsAndValidate(orderId);
 
         // 2. 최종 stock 반영
-        return handleStockAndCovertToResponseDto(requestDto, reservations, orderId);
+        return handleStockAndCovertToResponseDto(dto, reservations, orderId);
     }
 
     /**
      * reserveStock 점유 해제
      */
     @Transactional
-    public ReleaseReservedStockResponseDto releaseReservedStocks(ReleaseReservedStockRequestDto requestDto){
-        String orderId = requestDto.getOrderId();
+    public ReleaseReservedStockResponseDto releaseReservedStocks(ExpiredOrderEventDto dto){
+        String orderId = dto.getOrderId();
 
         // 1. 모든 reservation 조회
         List<StockReservation> allReservations = stockReservationRepository.findAllByOrderId(orderId);
@@ -124,8 +127,8 @@ public class HotDealProductStockService {
      *  동기화 되지 않았다면 Redis에 반영
      */
     @Transactional
-    public StockRestoreResponseDto restoreStock(StockRestoreRequestDto requestDto){
-        String orderId = requestDto.getOrderId();
+    public StockRestoreResponseDto restoreStock(RefundOrderEventDto dto){
+        String orderId = dto.getOrderId();
 
         // 1. 재고 점유 테이블 조회
         List<StockReservation> allReservations = stockReservationRepository.findAllByOrderId(orderId);
@@ -187,7 +190,7 @@ public class HotDealProductStockService {
     }
 
 
-    private StockFinalizeResponseDto handleStockAndCovertToResponseDto(StockFinalizeRequestDto requestDto, List<StockReservation> reservations, String orderId) {
+    private StockFinalizeResponseDto handleStockAndCovertToResponseDto(StockFinalizeEventDto dto, List<StockReservation> reservations, String orderId) {
         // 1. 락 획득
         List<Long> productIds = extractProductIdsFromStockFinalize(reservations);
         List<RLock> rLocks = acquireLocks(productIds);
@@ -196,7 +199,7 @@ public class HotDealProductStockService {
             // 2. 최종 stock 반영
             // 결제 성공
             List<Long> successIds = new ArrayList<>();
-            if(requestDto.isSuccess()){
+            if(dto.isPaySuccess()){
                 for (StockReservation reservation : reservations) {
                     // Redis 재고 감소
                     Long result = productRedisRepository.decreaseStockWithLua(reservation.getProductId(), reservation.getReservedQuantity());
@@ -355,83 +358,6 @@ public class HotDealProductStockService {
         }
     }
 
-
-//    private ProductReservationResponseDto reserveStockAndConvertToResponse(ProductReservationRequestDto requestDtos,
-//                                                                           Map<Long, ProductCacheDto> productMap,
-//                                                                           List<Long> productIds) {
-//        // 1. 락 획득
-//        List<RLock> rLocks = acquireLocks(productIds);
-//        try {
-//            // order 구분 하는 unique 한 order 값
-//            String reservationToken = UUID.randomUUID().toString();
-//
-//            List<StockReservation> stockReservations = new ArrayList<>();
-//            List<ReservedProductDto> reservedProducts = new ArrayList<>();
-//            LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS);
-//
-//            String orderId = requestDtos.getOrderId();
-//            // 2. 요청 product 에 대한 재고 확인 및 점유 테이블 확인
-//            // 재고 점유 처리 및 응답 처리
-//            ArrayList<Long> notEnoughStockProductIds = new ArrayList<>();
-//            for (ProductReservationDto request : requestDtos.getProducts()) {
-//                Long productId = request.getProductId();
-//                Integer quantity = request.getQuantity();
-//
-//                // Redis 에서 stock 조회
-//                Integer redisStock = productRedisRepository.getStock(productId);
-//                if(redisStock == null){
-//                    log.debug("Redis 에 재고가 없습니다. productId = {}", productId);
-//                    throw new HotDealProductException(ErrorCode.HOTDEAL_PRODUCT_NOT_FOUND_STOCK_IN_REDIS);
-//                }
-//
-//                // DB의 StockReservation 테이블에서 해당 상품의 예약된 수량 조회
-//            ReserveStatus reserveStatus = ReserveStatus.RESERVED;
-//
-//                int reservedStock = stockReservationRepository.sumReservedQuantityByProductId(productId, reserveStatus);
-//
-//                // 실제 주문 가능 재고 계산
-//                int availableStock = redisStock - reservedStock;
-//                if (availableStock < quantity) {
-//                    log.error("재고 부족. productId = {}, 요청 수량 = {}, 사용 가능 재고 = {}", productId, quantity, availableStock);
-//                    notEnoughStockProductIds.add(productId);
-//                }
-//
-//                // stock 점유
-//                // stockReservation 생성
-//                stockReservations.add(StockReservation.create(
-//                        orderId,
-//                        reservationToken,
-//                        productId,
-//                        quantity,
-//                        now.plusMinutes(15))
-//                );
-//
-//                // response
-//                ProductCacheDto productCacheDto = productMap.get(productId);
-//                reservedProducts.add(new ReservedProductDto(
-//                        productId,
-//                        productCacheDto.getTitle(),
-//                        quantity,
-//                        productCacheDto.getPrice()
-//                ));
-//            }
-//            if(!notEnoughStockProductIds.isEmpty()){
-//                throw new HotDealProductException(ErrorCode.HOTDEAL_PRODUCT_NOT_ENOUGH_STOCK, notEnoughStockProductIds);
-//            }
-//            // stock 점유 save
-//            stockReservationRepository.saveAll(stockReservations);
-//            return new ProductReservationResponseDto(reservationToken, reservedProducts);
-//        }
-//        finally {
-//            // 트랜잭션 성공 유무 상관 없이 트랜잭션 종료 시점 무조건 락 해제
-//            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-//                @Override
-//                public void afterCompletion(int status) {
-//                    releaseLocks(rLocks);
-//                }
-//            });
-//        }
-//    }
 
     // 재고 감소
     public void decreaseStockInRedis(Long productId, Integer quantity) {

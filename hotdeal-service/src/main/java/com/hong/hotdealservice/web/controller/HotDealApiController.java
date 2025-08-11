@@ -24,23 +24,6 @@ public class HotDealApiController {
         return ResponseEntity.ok(responseDto);
     }
 
-    @PostMapping("/products/stock/finalize")
-    public ResponseEntity<StockFinalizeResponseDto> finalizeStockReservation(@RequestBody StockFinalizeRequestDto requestDto) {
-        StockFinalizeResponseDto responseDto = hotDealProductStockService.handleStockFinalization(requestDto);
-        return ResponseEntity.ok(responseDto);
-    }
-
-    @PostMapping("/products/stock/release")
-    public ResponseEntity<ReleaseReservedStockResponseDto> releaseReservedStocks(@RequestBody ReleaseReservedStockRequestDto requestDto){
-        ReleaseReservedStockResponseDto responseDto = hotDealProductStockService.releaseReservedStocks(requestDto);
-        return ResponseEntity.ok(responseDto);
-    }
-
-    @PostMapping("/products/stock/restore")
-    public ResponseEntity<StockRestoreResponseDto> restoreStock(@RequestBody StockRestoreRequestDto requestDto){
-        StockRestoreResponseDto responseDto = hotDealProductStockService.restoreStock(requestDto);
-        return ResponseEntity.ok(responseDto);
-    }
 }
 
 

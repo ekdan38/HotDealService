@@ -1,7 +1,8 @@
-package com.hong.orderservice.service;
+package com.hong.hotdealservice.event;
 
-import com.hong.orderservice.domain.Outbox;
-import com.hong.orderservice.repository.OutboxRepository;
+
+import com.hong.hotdealservice.domain.Outbox;
+import com.hong.hotdealservice.repository.OutboxRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -17,12 +18,18 @@ public class OutboxService {
 
     private final OutboxRepository outboxRepository;
 
+    @Transactional
+    public Outbox save(Outbox outbox){
+        return outboxRepository.save(outbox);
+    }
+
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void updateToPublished(Long outboxId){
         Optional<Outbox> optionalOutbox = outboxRepository.findById(outboxId);
         if(optionalOutbox.isPresent()){
             Outbox outbox = optionalOutbox.get();
             outbox.updateToPublished();
+            outboxRepository.save(outbox);
         }
         else{
             log.warn("outboxId = {} PUBLISHED 업데이트 실패", outboxId);
@@ -35,6 +42,7 @@ public class OutboxService {
         if(optionalOutbox.isPresent()){
             Outbox outbox = optionalOutbox.get();
             outbox.updateToFailed();
+            outboxRepository.save(outbox);
         }
         else{
             log.warn("outboxId = {} FAILED 업데이트 실패", outboxId);
