@@ -33,8 +33,6 @@ public class KafkaMessageConsumer {
             containerFactory = "customKafkaListenerContainerFactory")
     public void consumeExpiredOrder(String eventData){
         try{
-            // todo 추후 학제 ,,, 확인용
-            log.info("dto = {}", eventData);
             // 1. String 형태의 Json -> 역직렬화
             ExpiredOrderEventDto expiredOrderEventDto = objectMapper.readValue(eventData, ExpiredOrderEventDto.class);
 
@@ -59,8 +57,7 @@ public class KafkaMessageConsumer {
             containerFactory = "customKafkaListenerContainerFactory")
     public void consumeRefundOrder(String eventData){
         try{
-            // todo 추후 학제 ,,, 확인용
-            log.info("dto = {}", eventData);
+
             // 1. String 형태의 Json -> 역직렬화
             RefundOrderEventDto refundOrderEventDto = objectMapper.readValue(eventData, RefundOrderEventDto.class);
 

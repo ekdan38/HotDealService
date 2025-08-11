@@ -31,8 +31,6 @@ public class KafkaMessageConsumer {
             containerFactory = "customKafkaListenerContainerFactory")
     public void consumePaymentResult(String eventData){
         try{
-            // todo 추후 학제 ,,, 확인용
-            log.info("dto = {}", eventData);
             // 1. String 형태의 Json -> 역직렬화
             PaymentResultEventDto paymentResultEventDto = objectMapper.readValue(eventData, PaymentResultEventDto.class);
 
