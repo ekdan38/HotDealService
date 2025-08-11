@@ -26,7 +26,7 @@ public class OutboxScheduler {
     private final OutboxService outboxService;
     private final KafkaMessageProducer kafkaMessageProducer;
 
-    private static final int MAX_RETRY_COUNT = 5;
+    private static final int MAX_RETRY_COUNT = 6;
     private static final int PENDING_TIMEOUT_MINUTES = 5;
 
     @Scheduled(fixedDelay = 3_0000) // 30초 주기
@@ -38,7 +38,7 @@ public class OutboxScheduler {
         // 1. Outbox.Status = FAILED, PENDING(PENDING_TIME_OUT 지난) 조회
         LocalDateTime cutOffTime = LocalDateTime.now().minusMinutes(PENDING_TIMEOUT_MINUTES);
         List<Outbox> foundOutboxes =
-                outboxRepository.findByOutboxStatusAndCreatedAtBefore(
+                outboxRepository.findByOutboxStatusInAndCreatedAtBefore(
                         List.of(OutboxStatus.FAILED, OutboxStatus.PENDING), cutOffTime
                 );
 

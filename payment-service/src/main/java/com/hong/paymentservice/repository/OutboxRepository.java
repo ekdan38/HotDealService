@@ -9,5 +9,5 @@ import java.util.List;
 
 public interface OutboxRepository extends JpaRepository<Outbox, Long> {
 
-    List<Outbox> findByOutboxStatusAndCreatedAtBefore(List<OutboxStatus> outboxStatuses, LocalDateTime createdAt);
+    List<Outbox> findByOutboxStatusInAndCreatedAtBefore(List<OutboxStatus> outboxStatuses, LocalDateTime createdAt);
 }
