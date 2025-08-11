@@ -1,6 +1,8 @@
 package com.hong.paymentservice.service;
 
 import com.hong.common.dto.*;
+import com.hong.common.dto.kafka.ExpiredOrderEventDto;
+import com.hong.common.dto.kafka.RefundOrderEventDto;
 import com.hong.common.exception.ErrorCode;
 import com.hong.common.exception.custom.PaymentException;
 import com.hong.paymentservice.domain.Payment;
@@ -40,22 +42,22 @@ public class PaymentApiService {
 
     // payment 만료 처리
     @Transactional
-    public ExpirePaymentResponseDto expirePayment(ExpirePaymentRequestDto requestDto){
-        String orderId = requestDto.getOrderId();
+    public ExpirePaymentResponseDto updateToExpired(ExpiredOrderEventDto dto){
+        String orderId = dto.getOrderId();
         Payment payment = paymentRepository.findByOrderId(orderId).orElseThrow(() -> {
             log.error("존재 하지 않는 결제입니다. orderId = {}", orderId);
             return new PaymentException(ErrorCode.PAYMENT_NOT_FOUND, null, orderId);
         });
         payment.updateToExpired();
-        log.info("payment Expired 처리 완료. orderId = {}", orderId);
+        log.info("payment Expired 처리 완료. orderId = {}, paymentId = {}", orderId, payment.getId());
         return new ExpirePaymentResponseDto(true, false);
     }
 
     // payment 취소 처리
     @Transactional
-    public PaymentCancelResponseDto cancelPayment(PaymentCancelRequestDto requestDto) {
-        String orderId = requestDto.getOrderId();
-        Long userId = requestDto.getUserId();
+    public PaymentCancelResponseDto updtaeToCanceled(RefundOrderEventDto dto) {
+        String orderId = dto.getOrderId();
+        Long userId = dto.getUserId();
 
         Payment payment = paymentRepository.findByOrderIdAndUserId(orderId, userId).orElseThrow(() -> {
             log.error("존재 하지 않는 결제입니다. userId = {}, orderId = {}", userId, orderId);

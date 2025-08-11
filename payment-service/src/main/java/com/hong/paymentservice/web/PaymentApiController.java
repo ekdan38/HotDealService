@@ -1,6 +1,7 @@
 package com.hong.paymentservice.web;
 
 import com.hong.common.dto.*;
+import com.hong.common.dto.kafka.RefundOrderEventDto;
 import com.hong.paymentservice.service.PaymentApiService;
 import lombok.RequiredArgsConstructor;
 import org.apache.http.HttpStatus;
@@ -24,17 +25,11 @@ public class PaymentApiController {
         return ResponseEntity.status(HttpStatus.SC_CREATED).body(resultDto);
     }
 
-    // order 만료로 인한 payment Expired 처리
-    @PostMapping("/payments/expire")
-    public ResponseEntity<ExpirePaymentResponseDto> expirePayment(@RequestBody ExpirePaymentRequestDto requestDto){
-        ExpirePaymentResponseDto resultDto = paymentApiService.expirePayment(requestDto);
-        return ResponseEntity.ok().body(resultDto);
-    }
 
     // 환불로 인한 payment 취소
     @PostMapping("/payments/cancel")
     public ResponseEntity<PaymentCancelResponseDto> cancelPayment(@RequestBody PaymentCancelRequestDto requestDto){
-        PaymentCancelResponseDto resultDto = paymentApiService.cancelPayment(requestDto);
+        PaymentCancelResponseDto resultDto = paymentApiService.updtaeToCanceled(new RefundOrderEventDto(requestDto.getOrderId(), requestDto.getUserId()));
         return ResponseEntity.ok().body(resultDto);
     }
 
