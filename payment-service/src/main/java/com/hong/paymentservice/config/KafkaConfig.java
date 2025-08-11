@@ -52,6 +52,7 @@ public class KafkaConfig {
     public ConcurrentKafkaListenerContainerFactory<String, String> customKafkaListenerContainerFactory() {
         // 여러 컨슈머 스레드를 동시에 실행하여 메시지 처리에 동시성을 제공
         ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConcurrency(3);
         // 정의된 ConsumerFactory를 사용하여 컨테이너 팩토리를 설정
         factory.setConsumerFactory(consumerFactory());
         return factory;
