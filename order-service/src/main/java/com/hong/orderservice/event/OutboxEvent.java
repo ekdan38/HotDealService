@@ -1,4 +1,4 @@
-package com.hong.orderservice.listener;
+package com.hong.orderservice.event;
 
 import com.hong.common.status.EventType;
 import com.hong.common.status.OutboxDeliveryMethod;

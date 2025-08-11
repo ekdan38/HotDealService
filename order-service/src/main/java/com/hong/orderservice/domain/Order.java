@@ -97,9 +97,9 @@ public class Order extends TimeEntity {
     }
 
     // == 반품 완료 메서드 ==
-    public void updateStatusReturned(LocalDateTime endTime){
+    public void updateStatusReturned(){
         this.status = OrderStatus.RETURNED;
-        this.delivery.updateToReturned(endTime);
+        this.delivery.updateToReturned(LocalDateTime.now());
     }
 
     // == 결제 성공 적용 메서드 ==

@@ -84,4 +84,12 @@ public class Outbox extends TimeEntity {
         this.outboxStatus = OutboxStatus.FAILED;
         tryCount++;
     }
+
+    public void updateToAborted(){
+        this.outboxStatus = OutboxStatus.ABORTED;
+    }
+
+    public void updateToInProgress(){
+        this.outboxStatus = OutboxStatus.IN_PROGRESS;
+    }
 }
