@@ -4,7 +4,7 @@
 HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정된 수량의 상품을 "핫 딜 가격"으로 판매하는 온라인 플랫폼의 MSA 아키텍처 백엔드 API 서버 입니다.
 
 프로젝트 진행 기간
-2024.12 ~ 2025.05
+2024.12 ~ 2025.08
 
 ##  📕  API 명세서
 🔗 [API 명세서 보기](<https://documenter.getpostman.com/view/33322261/2sB34bJhnz>)
@@ -23,6 +23,10 @@ HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정된 수량의 상
   <br>
   <img src="https://img.shields.io/badge/Hibernate-59666C?style=for-the-badge&logo=Hibernate&logoColor=white" alt="Hibernate">
   <img src="https://img.shields.io/badge/RabbitMQ-FF6600?style=for-the-badge&logo=RabbitMQ&logoColor=white" alt="RabbitMQ">
+
+
+  <img src="https://img.shields.io/badge/Kafka-231F20?style=for-the-badge&logo=apachekafka&logoColor=#231F20" alt="Kafka">
+
   <img src="https://img.shields.io/badge/Resilience4J-59666C?style=for-the-badge&&logoColor=white" alt="Resilience4J">
 </div>
 <br>
@@ -56,13 +60,13 @@ HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정된 수량의 상
 <br>
 
 ## 🛠 아키텍처
-![Image](https://github.com/user-attachments/assets/41e21d7e-87ea-41a0-9705-a652134e8b37)
+![Image](https://github.com/user-attachments/assets/6617dc79-a66d-42ac-9f65-44c100381217)
 
 ## 🔍️ Flow Diagram
-![Image](https://github.com/user-attachments/assets/1f66ccff-0f0e-45e7-9266-dd538193f5c0)
+![Image](https://github.com/user-attachments/assets/c8e80969-2399-4389-96c0-169f00e99e44)
 
 ## 🛠 ERD
-![Image](https://github.com/user-attachments/assets/8169c851-18d6-459b-8546-97a030ac21f6)
+![Image](https://github.com/user-attachments/assets/9ffca3b9-08fe-4453-8f17-da73c46dd217)
 
 <br>
 
