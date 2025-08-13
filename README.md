@@ -66,12 +66,12 @@ HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정된 수량의 상
 
 <img src="https://github.com/user-attachments/assets/843613bd-fc34-466a-81aa-8b636f5d15b7" height="100%">
 
-## 🛠 ERD
+## ⚒️ ERD
 ![Image](https://github.com/user-attachments/assets/9ffca3b9-08fe-4453-8f17-da73c46dd217)
 
 <br>
 
-##  🎨 주요 구현 내용
+##  🔧 주요 구현 내용
 
 ### MSA 적용 배경 및 목표
 
@@ -86,17 +86,29 @@ HotDeal 프로젝트는 "핫 딜"이라는 이벤트에서 **높은 트래픽과
 
 ### 주요 구현 내용 및 패턴
 - **모놀리식 구조를 MSA로 리팩토링**
-  - 비지니스 도메인별 서비스 분리
-- **Eureka, API Gateway 적용**
-  - 서비스를 관리하고, 클라이언트 요청을 서비스로 라우팅하며, 전역적인 인증/인가 처리
+  - **비즈니스 도메인별 서비스 분리** : 유저, 핫딜, 주문, 결제 서비스로 분리하여 유연한 확장성 확보
+  - **데이터베이스 분리** : 서비스별 데이터베이스를 구축하여 독립성, 유연성, 확장성, 안정성 확보
+
+- **Eureka & API Gateway 적용**
+  - **Eureka(Service Discovery)** : Eureka에 서비스 등록 및 discovery를 통한 서비스 호출
+  - **API Gateway 적용** : 클라이언트의 요청 라우팅 및 전역 인증/인가 처리
+
 - **동시성 처리를 통한 상품 재고 관리**
-  - Redis 기반 분산락을 활용하여 핫 딜 상품의 재고 관리
-- **"Outbox + FeignClient + 이벤트"를 통한 서비스 간 비동기 통신**
-  - 결합도를 낮추고, 데이터 일관성을 유지하며 서비스 간 통신 병목 해소
-- **ErrordDecoder로 서비스 통신 간 발생하는 예외 처리**
-  - 서비스 간 호출 시 발생하는 예외를 일관되게 처리하여 시스템의 안정성 향상
-- **Resilience4J의 CircuitBreaker, Retry를 통한 회복 탄력성**
-  - 서비스 간 호출 시 특정 서비스의 장애가 다른 서비스로 전파되는 문제 예방
+  - **Redis 기반 분산락(Redisson) 적용** : 스케일 아웃을 고려한 다중 서버 환경에서도 분산락을 활용해 재고 일관성 유지
+  -  **재고 점유 테이블** : 결제 완료까지 사용자 재고를 보장
+
+- **Outbox패턴 기반 서비스 간 비동기 통신(Kafka & FeignClient)**
+  - **원자성 보장** : 비즈니스 로직과 Outbox 저장을 같은 트랜잭션에서 처리 및 이벤트 발행
+  - **비동기 이벤트 발행** : `@TransactionalEventListener(afterCommit)`와 `@Async`가 선언된 EventListener를 통해 트랜잭션 커밋 이후 Kafka 또는 FeignClient를 통해 전송
+  - **Kafka를 통한 메시지 발행/구독** : Kafka를 사용하여 서비스 간 직접 호출 의존도를 낮추고 MS간 메시지 처리
+    - `@RetryableTopic`으로 재시도/실패 메시지(DLT) 관리
+  -  **FeignClient를 통한 즉시 호출** : 비동기 통신이지만, 필요에 따라 Kafka 대신 FeignClient를 사용한 호출
+
+- **안정성 및 회복 탄력성 적용**
+  - **ErrorDecoder를 통한 예외 처리** : MS간 호출시 발생하는 예외 전파 및 CircuitBreaker & Retry와 연계
+  - **Resilience4J의 CircuitBreaker & Retry를 통한 회복 탄력성 적용** : 장애 발생 시 호출 차단으로 장애 전파 방지
+    - **CircuitBreaker** : 장애가 발생한 MS에 대한 호출을 차단하여 장애 전파 방지
+    - **Retry** : 일시적인 오류에 대해 재시도를 처리
 
 ##  ❗ 성능 개선 사례
 >[성능 개선 사례 바로가기](<https://github.com/ekdan38/HotDealService/wiki/%EC%84%B1%EB%8A%A5-%EA%B0%9C%EC%84%A0-%EC%82%AC%EB%A1%80-%EB%AA%A9%EB%A1%9D>)
@@ -108,8 +120,8 @@ HotDeal 프로젝트는 핫 딜 이벤트 시 **수천 명의 동시 접속자�
 ### 테스트 환경
 - **CPU** : Intel i5-8250U 1.6GHz
 - **RAM** : 8GB
-- **OS** : Window10
-- **Databse** : MySQL 8.0
+- **OS** : Windows 10
+- **Database** : MySQL 8.0
 - **Test Tool** : K6
 
 ### 주문 API 성능 개선 요약
@@ -143,11 +155,17 @@ HotDeal 프로젝트는 핫 딜 이벤트 시 **수천 명의 동시 접속자�
 
 재고 점유 완료 후 결제 생성 요청 방식을 동기 호출에서 비동기 방식으로 전환하여 통신 병목을 제거하고 Latency, TPS 개선
 > 재고 점유 완료 후, 주문, 주문 상품을 생성하고 결제 생성 요청.  
-> 기존 Feign 동기 요청에서 Outbox + 이벤트 기반 비동기 처리.  
-> -> 통신 병목 제거로 Latency, TPS 개선 효과를 얻음.
+> 기존 Feign 동기 요청에서 Outbox + 이벤트 기반 비동기로 전환.
+> 주문 생성 트랜잭션 내부에서 Outbox 이벤트를 생성하고, 트랜잭션 커밋 후 이벤트를 비동기 처리함.  
+> 이를 통해 통신 병목이 제거되어 Latency와 TPS가 개선됨.
 
-- **개선 전** : Feign 동기 요청
-- **개선 후** : **Outbox 패턴 + 이벤트 기반 비동기 처리** 적용. 주문 생성 트랜잭션 내부에서 Outbox를 생성하고, 트랜잭션 Commit 후 스케줄러에 의해 이벤트 기반으로 처리
+- **개선 전** : FeignClient 동기 요청
+- **개선 후** : **Outbox 패턴 + 이벤트 기반 비동기 처리**
+> Kafka 기반 비동기 처리도 테스트 시도하였으나, 테스트 환경에서 브로커에 메시지를 발행하지 못하는 문제(TimeoutException)발생.  
+> `linger.ms`, `batch.size` 조정 후에도 동일 현상이 발생.  
+> `delivery.timeout.ms` 조정 후에 부하 테스트 종료 시 브로커에 메시지를 발행 함.  
+>  부하 테스트 시 CPU/메모리 리소스 부족으로 인해 `TimeoutException` 발생으로 유추. 따라서 실제 서비스 상황에서 이러한 문제가 생기면 결제 생성이 길어지기에 `Outbox + 이벤트 + FeignClient`기반 방식으로 최종 적용.  
+> (다른 비동기 통신은 Kafka적용)
 
 **주문 API 성능 테스트 결과**
 
@@ -180,14 +198,16 @@ HotDeal 프로젝트는 높은 트래픽과 순간적인 대량의 요청에도 
 ##  🧑‍💻 트러블 슈팅 및 의사결정
 ### [모놀로직 구조에서 MSA 구조로 전환시 인증/인가 처리](<https://github.com/ekdan38/HotDealService/wiki/MSA-%EC%97%90%EC%84%9C%EC%9D%98-%EC%9D%B8%EC%A6%9D-%EC%9D%B8%EA%B0%80-%EC%B2%98%EB%A6%AC>)
 - **문제**
-  - 모놀리식에서는 Filter, SecurityConfig로 시스템의 전체적인 인증/인가 관리
-  - MSA에서 각 서비스가 독립적으로 인증/인가를 처리하면 코드 중복 및 유지보수 부담 증가
+  - 모놀리식에서는 `Filter`, `SecurityConfig`로 **시스템 전체 인증/인가** 관리
+  - MSA에서 각 서비스가 독립적으로 인증/인가 처리 시 **코드 중복 및 유지보수 부담** 증가
 - **해결**
-  - **API Gateway에서 인증/인가를 처리**하고, **검증된 사용자 정보를 헤더에 담아 각 서비스로 전달**하여 중복 구현 방지
-  -   API Gateway의 Filter에서 JWT Token의 유효성 검증
-  - 서비스별 엔드포인트가 요구하는 `requiredRole`을 비교하여 접근 제어
-  - `X-User-Id` : userId
-  - `X-User-Role` : userRole
+  - **API Gateway에서 인증/인가 처리**
+  -  검증된 사용자 정보를 **헤더(`X-User-Id`, `X-User-Role`)** 에 담아 각 서비스로 전달
+  -   API Gateway의 Filter에서 **JWT Token 유효성 검증**
+  - 서비스별 엔드포인트가 요구하는 `requiredRole`을 비교하여 **접근 제어**
+- **성과**
+  - 유지보수 용이성 및 확장성 향상
+  - 사용자 정보 전달과 권한 기반 접근 제어 가능
 ***
 
 ### [재고 관리 방식 및 동시성 제어](<https://github.com/ekdan38/HotDealService/wiki/%EC%9E%AC%EA%B3%A0-%EC%B2%98%EB%A6%AC-%EB%B0%A9%EB%B2%95(%EB%B0%A9%EC%8B%9D-%EB%B0%8F-%EB%8F%99%EC%8B%9C%EC%84%B1-%EC%A0%9C%EC%96%B4)>)
@@ -196,7 +216,7 @@ HotDeal 프로젝트는 높은 트래픽과 순간적인 대량의 요청에도 
   - **실시간 재고 변동**에 대응하기 위해 **Redis를 사용한 재고 캐싱**
   - 빠른 재고 조회 및 재고 감소 처리
   - **RDB 병목 완화**
-  - 스케쥴러를 통해 **기간이 종료된 핫딜**의 Redis 재고 RDB에 **동기화 처리**
+  - 스케줄러를 통해 **기간이 종료된 핫딜**의 Redis 재고 RDB에 **동기화 처리**
 
 - **재고 점유 방식**
   - Redis는 조회용 캐시로만 사용, **실제 점유는 DB에 기록하여 결제 이전까지 사용자의 재고 점유 보장**
@@ -210,44 +230,61 @@ HotDeal 프로젝트는 높은 트래픽과 순간적인 대량의 요청에도 
     - **"점유 가능 여부 판단 + 재고 점유 테이블에 INSERT"** 과정에서 **동시성 문제 발생**
   - **해결**
     - MSA 환경에 적합한 **Redis 기반 분산 락**을 사용하여 동시성 해결
-    - 다중 인스턴스에서도 락 공유 가능
+
+- **성과**
+  - 안정적인 재고 관리 가능
+  - Redis + 재고 점유 테이블 사용으로 장애 시 데이터 유실 방지
+  - 다중 인스턴스 환경에서도 동시성 안전 확보
 *** 
 
 ### [회복 탄력성을 위한 CircuitBreaker, Retry 도입](<https://github.com/ekdan38/HotDealService/wiki/%ED%9A%8C%EB%B3%B5-%ED%83%84%EB%A0%A5%EC%84%B1%EC%9D%84-%EC%9C%84%ED%95%9C-CuircuitBreaker,-Retry-%EB%8F%84%EC%9E%85>)
 - **문제**
-  - MSA 환경에서 서비스 간 통신 시, **하나의 서비스 장애가 다른 서비스로 전파될 위험** 존재
-  -  다른 서비스의 일시적인 장애나 느린 응답으로 인해 호출 실패가 발생하면, 사용자 경험에 큰 영향을 줄 수 있음
+  -  FeignCleint를 사용 시, **하나의 서비스 장애가 다른 서비스로 전파될 위험** 존재
+  -  장애 상황, 느린 응답으로 인해 **사용자 경험 저하** 발생
 - **해결**
-  - `Resilience4J`의 **CircuitBreaker, Retry** 도입으로 일시적인 장애나 느린 응답에도 시스템이 안정적으로 동작하도록 회복 탄력성 적용
+  - `Resilience4J`의 **CircuitBreaker & Retry** 도입
   - 테스트 코드로 CircuitBreaker & Retry작동 검증
+- **성과**
+  - 일시적 장애 발생 시에도 시스템 안정성 확보
+  - MS 간 호출 실패 시 사용자 경험 저하 최소화
 
 *** 
-### [서비스 간 통신 방법 고민](<https://github.com/ekdan38/HotDealService/wiki/%EC%84%9C%EB%B9%84%EC%8A%A4-%EA%B0%84-%ED%86%B5%EC%8B%A0-%EB%B0%A9%EC%8B%9D-%EA%B3%A0%EB%AF%BC>)
-- RestTemplate vs FeignClient 중 **인터페이스 기반인 FeignClient 선택**
-- **비동기 처리**
-  - **"Outbox + FeignClient + 이벤트"** 방식 사용
-  -  CircuitBreaker + Retry 로 회복 탄력성이 존재하지만, 비동기 처리에 대한 실패건 **재시도 환경**을 구성하여 안정성 강화
+### [Kafka 기반 비동기 메시징 및 Outbox, Saga 패턴 적용](<https://github.com/ekdan38/HotDealService/wiki/Kafka-%EB%8F%84%EC%9E%85-(Outbox%ED%8C%A8%ED%84%B4,-Saga-%ED%8C%A8%ED%84%B4)>)
+- **문제**
+  - 기존 `Outbox + 이벤트 + FeignClient` 방식은 비동기 이벤트 발행 구조를 사용했지만, FeignClient 호출은 근본적으로 **동기 호출**
+  - 결제 처리 후(결제 처리 -> 주문 상태 변경 -> 재고 처리) MS 간 비동기 통신에서 **강한 결합**과 동기 방식으로 인한 **성능 저하** 발생
+  - MSA 환경에서의 **분산 트랜잭션 제어 문제** 존재 (예시 : 이전 작업에 대한 롤백 필요할때)
+- **해결**
+  - Kafka를 도입하여 결제 결과 이벤트를 **메시지 기반 비동기 통신** 전환
+  - **Outbox 패턴**을 사용하여 비즈니스 트랜잭션 안에서 이벤트 저장 및 이벤트 발행 -> 트랜잭션 commit 후 Kafka 발행
+    - `@TransactionalEventListener(afterCommit)`와 `@Async`가 선언된 EventListener를 통해 트랜잭션 커밋 이후 Kafka 또는 FeignClient를 통해 전송
+  - `@RetryableTopic`을 사용한 메시지 **재처리 및 DLT처리**로 실패 메시지 처리
+  - **Saga 패턴(코레오그래피)** 을 사용한 분산 트랜잭션 문제 해결
+    - 각 MS는 로컬 트랜잭션 이후, 비지니스 로직 흐름에서 실패 시 이전 단계의 **보상 트랜잭션**을 실행하여 비지니스 로직의 일관성 유지 (예시 : 결제 실패로 인한 주문 상태 변경, 재고 점유 해제)
+  -  **Kafka에 발행 실패한 메시지 처리**
+    - Kafka에 발행은 성공했지만 Outbox 상태 변경 트랜잭션 오류 발생, Kafka자체의 장애로 발행 실패. 이 두가지 경우를 대비하여 스케줄러를 통해 재시도 처리 (`FAILED`, `PENDING`이지만 created_at이 오래된 Outbox 대상)
+    - 재시도 횟수를 기록하여 초과된 경우 `ABORTED`로 변경하여 추후 수동으로 원인 분석후 처리 가능
+
+-  **성과**
+    - 서비스 간 안전한 비동기 이벤트 처리
+    - 분산 트랜잭션 문제 해결
 
 ***
 
-### [여러 인스턴스가 스케쥴러를 중복 처리하는 문제 발생](<https://github.com/ekdan38/HotDealService/wiki/%EC%84%9C%EB%B9%84%EC%8A%A4%EC%9D%98-%EC%9D%B8%EC%8A%A4%ED%84%B4%EC%8A%A4%EC%97%90-%EB%94%B0%EB%A5%B8-%EC%8A%A4%EC%BC%80%EC%A5%B4%EB%9F%AC-%EC%A4%91%EB%B3%B5-%EC%8B%A4%ED%96%89>)
+### [여러 인스턴스가 스케줄러를 중복 처리하는 문제 발생](<https://github.com/ekdan38/HotDealService/wiki/%EC%84%9C%EB%B9%84%EC%8A%A4%EC%9D%98-%EC%9D%B8%EC%8A%A4%ED%84%B4%EC%8A%A4%EC%97%90-%EB%94%B0%EB%A5%B8-%EC%8A%A4%EC%BC%80%EC%A5%B4%EB%9F%AC-%EC%A4%91%EB%B3%B5-%EC%8B%A4%ED%96%89>)
 - **문제**
   - 서비스의 인스턴스가 N개라면 동일한 스케쥴러가 N개의 인스턴스에서 실행
+  - 불필요한 작업 중복 및 처리되는 데이터 충돌 야기
 - **해결**
-  - `ShedLock`을 사용하여 **한개의 인스턴스만 스케쥴러를 실행**하도록하여 중복 실행 문제 해결
+  - `ShedLock`을 사용하여 **한개의 인스턴스만 스케쥴러를 실행**
+- **성과**
+  - 스케줄러 중복 실행 문제 해결
+
 
 ## 🚀 추후 개선사항 및 계획
 HotDeal 프로젝트는 현재까지 구축된 MSA 기반의 안정적인 시스템을 바탕으로, 사용자 경험 향상 및 더욱 효율적인 운영을 위해 다음과 같은 개선사항을 계획하고 있습니다.
 
-**1. 이벤트 기반 아키텍처 확장 (Kafka 도입) => 🚀진행중🚀**
-
-"Outbox + FeignClient + 이벤트" 방식을 통해 서비스 간 비동기 통신을 구현했지만, 더 높은 확장성과 메시지 처리의 안정성을 위해 **Kafka 도입**
-
-- **목표**
-  - 대규모 이벤트 발생 시 메시지 유실 없는 안정적인 처리 보장
-  - 비동기 로직 및 이벤트 기반 데이터 동기화 구현
-
-**2. 데이터베이스 최적화 및 확장 (읽기 전용 DB 분리)**
+**1. 데이터베이스 최적화 및 확장 (읽기 전용 DB 분리)**
 
 MySQL과 Redis를 활용하고 있지만, 읽기 작업이 많은 핫 딜 서비스의 특성을 고려하여 읽기 전용 DB(Read Replica)를 분리하여 데이터베이스 부하를 분산하고 성능을 더욱 향상시킬 계획입니다.
 
@@ -255,9 +292,11 @@ MySQL과 Redis를 활용하고 있지만, 읽기 작업이 많은 핫 딜 서비
   - 읽기 트래픽 분산을 통한 메인 DB의 부하 감소
   - 전체적인 응답 시간 단축 및 처리량 증가
 
-**3. 로깅 및 모니터링 강화**
+**2. 로깅 및 모니터링 강화**
 
 서비스의 안정적인 운영을 위해 통합 로깅 및 모니터링 시스템을 구축할 예정입니다.
 
 - **목표**
   - Prometheus/Grafana와 같은 도구를 활용한 중앙 집중식 로그 관리 및 시각화
+
+
