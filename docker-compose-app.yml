@@ -1,26 +1,28 @@
-version: '3.9'
+version: '3.8'
+
 services:
+  #MySQL_hotdeal
   mysql:
     image: mysql:8.0
     container_name: mysql
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE_HOTDEAL}
     ports:
       - "3306:3306"
     volumes:
-      - mysql-data:/var/lib/mysql
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql # db 초기화
+      - ./mysql-init:/docker-entrypoint-initdb.d  # 초기화 SQL 연결
+      - ./mysql-data:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD-SHELL", "mysqladmin ping -h 127.0.0.1" ]
+      interval: 10s
+      retries: 30
     networks:
       - hotdeal-network
-    healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
+  #Redis
   redis:
     image: redis:latest
     container_name: redis
@@ -34,6 +36,7 @@ services:
     networks:
       - hotdeal-network
 
+  #RabbitMQ
   rabbitmq:
     image: rabbitmq:management
     container_name: rabbitmq
@@ -44,32 +47,28 @@ services:
       - "5672:5672"
       - "15672:15672"
     healthcheck:
-      test: [ "CMD-SHELL", "rabbitmqctl status" ]
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+#      test: [ "CMD", "rabbitmqctl", "status" ]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      retries: 30
     networks:
       - hotdeal-network
 
+  #Config-Service
   config-service:
     build:
       context: .
       dockerfile: config-service/Dockerfile
-    container_name: config-service
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SERVER_PORT=8888
-      - GIT_USERNAME=${GIT_USERNAME}
-      - GIT_PASSWORD=${GIT_PASSWORD}
     ports:
       - "8888:8888"
-    depends_on:
-      - mysql
-      - redis
-      - rabbitmq
+    container_name: config-service
+    environment:
+      - GIT_USERNAME=${GIT_USERNAME}
+      - GIT_PASSWORD=${GIT_PASSWORD}
     networks:
       - hotdeal-network
 
+  #Eureka-Server
   eureka-server:
     build:
       context: .
@@ -82,9 +81,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 60s
-    depends_on:
-      - config-service
     networks:
       - hotdeal-network
 
@@ -96,54 +92,102 @@ services:
     ports:
       - "8080:8080"
     depends_on:
+      config-service:
+        condition: service_started
       eureka-server:
-          condition: service_healthy
+        condition: service_started
     networks:
       - hotdeal-network
 
-  user-service:
-    build:
-      context: .
-      dockerfile: user-service/Dockerfile
-    container_name: user-service
-    depends_on:
-      - apigateway-service
-    networks:
-      - hotdeal-network
-
+  #Hotdeal-Service
   hotdeal-service:
     build:
       context: .
       dockerfile: hotdeal-service/Dockerfile
     container_name: hotdeal-service
     depends_on:
-      - apigateway-service
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+      apigateway-service:
+        condition: service_started
+      config-service:
+        condition: service_started
     networks:
       - hotdeal-network
 
+  #User-Service
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    container_name: user-service
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+      apigateway-service:
+        condition: service_started
+      config-service:
+        condition: service_started
+    networks:
+      - hotdeal-network
 
+  #Order-Service
   order-service:
     build:
       context: .
       dockerfile: order-service/Dockerfile
     container_name: order-service
     depends_on:
-      - apigateway-service
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+      apigateway-service:
+        condition: service_started
+      config-service:
+        condition: service_started
     networks:
       - hotdeal-network
 
+  #payment-Service
   payment-service:
     build:
       context: .
       dockerfile: payment-service/Dockerfile
     container_name: payment-service
     depends_on:
-      - apigateway-service
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+      apigateway-service:
+        condition: service_started
+      config-service:
+        condition: service_started
     networks:
       - hotdeal-network
+
 
 networks:
   hotdeal-network:
     driver: bridge
-volumes:
-  mysql-data:
