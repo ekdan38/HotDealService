@@ -8,6 +8,7 @@ COPY --chown=gradle:gradle . .
 
 RUN gradle :config-service:bootJar -x test --no-daemon
 
+
 FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
