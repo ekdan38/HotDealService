@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY --chown=gradle:gradle . .
 
+
 RUN gradle :eureka-server:clean :eureka-server:bootJar -x test --no-daemon
 
 FROM eclipse-temurin:21-jre-alpine
