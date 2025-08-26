@@ -7,11 +7,9 @@ import org.springframework.http.HttpStatus;
 public enum ErrorCode {
 
     // hotDealProduct
-    //TODO
     HOTDEAL_PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "HOTDEAL_PRODUCT_00",
             "요청된 핫딜 상품이 존재 하지 않습니다. hotDealProductIds = %s"),
 
-    //todo
     HOTDEAL_PRODUCT_TITLE_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "HOTDEAL_PRODUCT_01",
             "이미 존재 하는 핫딜 상품 title 입니다. requestedTitle = %s"),
 
@@ -19,7 +17,6 @@ public enum ErrorCode {
             "요청 수량보다 재고가 부족합니다. hotDealProductId = %s, 요청 수량 = %s, 재고 수량 = %s"),
 
 
-    // todo
     HOTDEAL_PRODUCT_NOT_ENOUGH_STOCK(HttpStatus.BAD_REQUEST, "HOTDEAL_PRODUCT_03",
             "요청 수량보다 재고가 부족합니다. hotDealProductId = %s"),
 
@@ -49,19 +46,13 @@ public enum ErrorCode {
 
 
 
-
-
-
     // hotDeal
-    // todo
     HOTDEAL_NOT_FOUND(HttpStatus.NOT_FOUND, "HOTDEAL_00",
             "요청된 핫딜이 존재하지 않습니다. hotDealId = %s"),
 
-    // todo
     HOTDEAL_TITLE_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "HOTDEAL_01",
             "이미 존재하는 핫딜 Title 입니다. hotDealTitle = %s"),
 
-    // todo
     HOTDEAL_INVALID_TIME(HttpStatus.BAD_REQUEST, "HOTDEAL_02",
             "시작 시간이 종료 시간보다 이후일 수 없습니다. startTime = %s, endTime = %s"),
 
@@ -72,41 +63,32 @@ public enum ErrorCode {
             "hotDeal_status 에 대한 락 획득 중 입터럽트가 발생했습니다."),
 
 
- //todo
    //reserve
    RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "RESERVATION_00",
            "요청된 재고 점유 내역이 존재하지 않습니다. orderId = %s"),
 
 
-
-
-
-
-
-
-
     // order
-    //TODO
 
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "ORDER_00",
             "요청된 주문이 존재하지 않습니다. orderId = %s, userId = %s"),
-    //TODO
-    // 주문 취소
+
     ORDER_INVALID_CANCEL(HttpStatus.BAD_REQUEST, "ORDER_01",
             "결제 완료된 주문만 주문 취소 할 수 있습니다. userId = %s, orderId = %s"),
-    //TODO
 
     ORDER_CANCEL_EXPIRED(HttpStatus.BAD_REQUEST, "ORDER_02",
             "주문 취소는 주문 후 하루 이내 가능합니다. userId = %s, orderId = %s"),
-    //TODO
 
     // 환불
     ORDER_INVALID_REFUND(HttpStatus.BAD_REQUEST, "ORDER_03",
             "환불은 배송 완료된 주문만 가능합니다. userId = %s, orderId = %s"),
-    //TODO
 
     ORDER_REFUND_EXPIRED(HttpStatus.BAD_REQUEST, "ORDER_04",
             "환불은 배송 완료 후 1일 이내에만 가능합니다. userId = %s, orderId = %s"),
+
+    ORDER_INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "ORDER_13",
+            "주문 서비스에서 오류가 발생했습니다."),
+
 
     // Feign
     // hotdeal
@@ -125,26 +107,23 @@ public enum ErrorCode {
     ORDER_PAYMENT_SERVICE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "ORDER_11",
             "%s"),
     ORDER_PAYMENT_EXPIRE_NOT_FOUND(HttpStatus.NOT_FOUND, "ORDER_12", "%s"),
+
+
     // order 끝
 
 
-    // paymentSession
-    // todo
+    // paymentSession, payment
     PAYMENT_SESSION_NOT_FOUND(HttpStatus.BAD_REQUEST, "PAYMENT_SESSION_00",
             "결제 세션이 존재하지 않습니다. userId = %s, sessionId = %s"),
 
-    // todo
     PAYMENT_SESSION_INVALID_STATUS(HttpStatus.BAD_REQUEST, "PAYMENT_SESSION_01",
             "결제 수행 가능한 결제 세션이 아닙니다. userId = %s, sessionId = %s"),
 
-    // todo
     PAYMENT_SESSION_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "PAYMENT_SESSION_02",
             "이미 진행 중인 결제 세션이 존재합니다. userId = %s, sessionId = %s"),
 
-    // todo
     PAYMENT_NOT_READY(HttpStatus.NOT_FOUND, "PAYMENT_00",
             "결제가 준비되지 않았습니다. 잠시 후 다시 시도해주세요. userId = %s, orderId = %s"),
-    // todo
     PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "PAYMENT_01",
             "존재 하지 않는 결제입니다. userId = %s, orderId = %s, paymentId = %s"),
 
@@ -154,6 +133,9 @@ public enum ErrorCode {
     PAYMENT_FETCH_ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "ORDER_03", "%s"),
 
     PAYMENT_UPDATE_ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "ORDER_04", "%s"),
+
+    PAYMENT_INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "ORDER_13",
+            "결제 처리 중 오류가 발생했습니다."),
 
     // Delivery
     DELIVERY_LOCK_INTERRUPTED(HttpStatus.SERVICE_UNAVAILABLE, "DELIVERY_00",
@@ -168,38 +150,30 @@ public enum ErrorCode {
 
 
     // SIGNUP_EMAIL
-    //TODO 회원가입
-    // OK
+
     EMAIL_EMPTY_CODE(HttpStatus.BAD_REQUEST, "SIGNUP_EMAIL_00",
             "해당 이메일로 생성 된 인증 코드가 없습니다. email = %s"),
 
-    // TODO OK
     EMAIL_VERIFICATION_STATUS_NOT_FOUND(HttpStatus.BAD_REQUEST, "SIGNUP_EMAIL_01",
             "이메일 인증 상태가 존재하지 않습니다. email = %s"),
 
-    // TODO
     EMAIL_VERIFICATION_NOT_VERIFIED(HttpStatus.BAD_REQUEST, "SIGNUP_EMAIL_02",
             "이메일 인증을 받지 않았습니다. email = %s"),
 
-    // TODO
     EMAIL_VERIFICATION_STATUS_ALREADY_VERIFIED(HttpStatus.BAD_REQUEST, "SIGNUP_EMAIL_03",
             "이미 이메일 인증을 완료 했습니다. email = %s"),
 
-    // TODO
     EMAIL_VERIFICATION_CODE_MISMATCH(HttpStatus.BAD_REQUEST, "SIGNUP_EMAIL_04",
             "이메일 인증 코드가 다릅니다. email = %s"),
 
-    // TODO
     EMAIL_SENDER_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "SIGNUP_EMAIL_05",
             "이메일 인증 코드 전송을 실패했습니다. errorMessage = %s"),
 
     // SIGNUP_USER
 
-    //TODO
     USER_USERNAME_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "SIGNUP_USER_00",
             "이미 존재하는 username 입니다. username = %s"),
 
-    // TODO
     USER_EMAIL_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "SINGUP_USER_02",
             "이미 존재하는 email 입니다. email = %s"),
 
@@ -214,7 +188,6 @@ public enum ErrorCode {
             "RefreshToken 이 존재 하지 않습니다."),
 
     // 암호, 복호화 오류
-    // TODO
     CRYPTO_ENCRYPT_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "CRYPTO_00",
             "암호화 처리중 오류가 발생했습니다."),
 
