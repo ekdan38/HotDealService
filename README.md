@@ -62,12 +62,13 @@ HotDeal 프로젝트는 "핫 딜" 이벤트 기간동안 한정된 수량의 상
 ## 🛠 아키텍처
 ![Image](https://github.com/user-attachments/assets/6617dc79-a66d-42ac-9f65-44c100381217)
 
-## 🔍️ Flow Diagram
-
-<img src="https://github.com/user-attachments/assets/843613bd-fc34-466a-81aa-8b636f5d15b7" height="100%">
-
 ## ⚒️ ERD
 ![Image](https://github.com/user-attachments/assets/9ffca3b9-08fe-4453-8f17-da73c46dd217)
+
+## 🔍️ Flow Diagram
+
+[//]: # (<img src="https://github.com/user-attachments/assets/843613bd-fc34-466a-81aa-8b636f5d15b7" height="100%">)
+<img src="https://github.com/user-attachments/assets/8eeb02da-9340-460b-8bc9-60e5b2b152bd" height="100%">
 
 <br>
 
@@ -272,12 +273,12 @@ HotDeal 프로젝트는 높은 트래픽과 순간적인 대량의 요청에도 
   - **Saga 패턴(코레오그래피)** 을 사용한 분산 트랜잭션 문제 해결
     - 각 MS는 로컬 트랜잭션 이후, 비지니스 로직 흐름에서 실패 시 이전 단계의 **보상 트랜잭션**을 실행하여 비지니스 로직의 일관성 유지 (예시 : 결제 실패로 인한 주문 상태 변경, 재고 점유 해제)
   -  **Kafka에 발행 실패한 메시지 처리**
-    - Kafka에 발행은 성공했지만 Outbox 상태 변경 트랜잭션 오류 발생, Kafka자체의 장애로 발행 실패. 이 두가지 경우를 대비하여 스케줄러를 통해 재시도 처리 (`FAILED`, `PENDING`이지만 created_at이 오래된 Outbox 대상)
-    - 재시도 횟수를 기록하여 초과된 경우 `ABORTED`로 변경하여 추후 수동으로 원인 분석후 처리 가능
+  - Kafka에 발행은 성공했지만 Outbox 상태 변경 트랜잭션 오류 발생, Kafka자체의 장애로 발행 실패. 이 두가지 경우를 대비하여 스케줄러를 통해 재시도 처리 (`FAILED`, `PENDING`이지만 created_at이 오래된 Outbox 대상)
+  - 재시도 횟수를 기록하여 초과된 경우 `ABORTED`로 변경하여 추후 수동으로 원인 분석후 처리 가능
 
 -  **성과**
-    - 서비스 간 안전한 비동기 이벤트 처리
-    - 분산 트랜잭션 문제 해결
+  - 서비스 간 안전한 비동기 이벤트 처리
+  - 분산 트랜잭션 문제 해결
 
 ***
 
